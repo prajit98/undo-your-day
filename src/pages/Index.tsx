@@ -90,9 +90,9 @@ const Index = () => {
 
 function SectionHeader({ kicker, sub }: { kicker: string; sub: string }) {
   return (
-    <div>
-      <h2 className="font-display text-lg leading-tight text-foreground">{kicker}</h2>
-      <p className="mt-0.5 text-[12.5px] text-muted-foreground">{sub}</p>
+    <div className="px-1">
+      <h2 className="font-display text-[22px] leading-tight text-foreground">{kicker}</h2>
+      <p className="mt-1 text-[12px] text-muted-foreground">{sub}</p>
     </div>
   );
 }
