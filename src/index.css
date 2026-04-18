@@ -1,68 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;450;500;550;600;650&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Undo — calm, premium, reassuring design system. All colors HSL. */
+/* Undo — calm, futuristic, premium. Mist white surfaces, electric sage accent.
+   All colors HSL. */
 
 @layer base {
   :root {
-    /* Warm paper background */
-    --background: 36 30% 97%;
-    --foreground: 24 15% 16%;
+    /* Surfaces */
+    --background: 180 20% 98%;        /* mist white */
+    --surface: 180 25% 96%;            /* faintly cool surface */
+    --foreground: 200 25% 12%;         /* near-black with cool undertone */
 
     --card: 0 0% 100%;
-    --card-foreground: 24 15% 16%;
+    --card-foreground: 200 25% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 24 15% 16%;
+    --popover-foreground: 200 25% 12%;
 
-    /* Sage — primary calm accent */
-    --primary: 152 22% 38%;
-    --primary-foreground: 36 30% 97%;
-    --primary-soft: 152 28% 92%;
+    /* Single brand accent — electric sage / cool teal-green */
+    --primary: 168 55% 38%;
+    --primary-foreground: 180 20% 98%;
+    --primary-soft: 168 50% 94%;
+    --primary-glow: 168 65% 48%;
 
-    /* Clay — warm secondary */
-    --secondary: 24 35% 94%;
-    --secondary-foreground: 24 25% 22%;
+    /* Neutrals */
+    --secondary: 200 20% 95%;
+    --secondary-foreground: 200 20% 22%;
 
-    --muted: 30 15% 94%;
-    --muted-foreground: 24 8% 46%;
+    --muted: 200 18% 95%;
+    --muted-foreground: 200 12% 45%;
 
-    --accent: 28 60% 88%;
-    --accent-foreground: 24 35% 25%;
+    --accent: 168 50% 94%;
+    --accent-foreground: 168 55% 28%;
 
-    --destructive: 8 65% 55%;
-    --destructive-foreground: 36 30% 97%;
+    /* Critical — refined coral, only for true urgency */
+    --critical: 6 75% 58%;
+    --critical-soft: 8 80% 96%;
+    --critical-foreground: 0 0% 100%;
 
-    /* Category tints */
-    --cat-trial: 28 70% 60%;        /* warm amber */
-    --cat-trial-soft: 28 80% 94%;
-    --cat-renewal: 262 35% 58%;     /* dusty violet */
-    --cat-renewal-soft: 262 45% 95%;
-    --cat-return: 152 25% 45%;      /* sage */
-    --cat-return-soft: 152 30% 93%;
-    --cat-bill: 12 60% 55%;         /* terracotta */
-    --cat-bill-soft: 12 65% 94%;
-    --cat-followup: 210 40% 50%;    /* slate blue */
-    --cat-followup-soft: 210 45% 94%;
+    --destructive: 6 75% 58%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Urgency + outcome */
-    --critical: 8 70% 52%;
-    --critical-soft: 8 75% 96%;
-    --saved: 152 35% 42%;
-    --saved-soft: 152 35% 94%;
+    --saved: 168 45% 38%;
+    --saved-soft: 168 40% 94%;
 
+    /* Single neutral for category chips — category meaning lives in the icon + label, not color */
+    --chip: 200 18% 94%;
+    --chip-foreground: 200 22% 30%;
 
-    --border: 30 15% 90%;
-    --input: 30 15% 90%;
-    --ring: 152 22% 38%;
+    --border: 200 18% 91%;
+    --input: 200 18% 91%;
+    --ring: 168 55% 38%;
 
-    --radius: 1.25rem;
+    --radius: 1.5rem;
 
-    --shadow-card: 0 1px 2px hsl(24 15% 16% / 0.04), 0 8px 24px -12px hsl(24 15% 16% / 0.08);
-    --shadow-soft: 0 2px 8px hsl(24 15% 16% / 0.04);
+    --shadow-card: 0 1px 2px hsl(200 25% 12% / 0.03), 0 8px 28px -16px hsl(200 25% 12% / 0.08);
+    --shadow-soft: 0 1px 2px hsl(200 25% 12% / 0.04);
+    --shadow-glow: 0 8px 32px -12px hsl(var(--primary) / 0.35);
+
+    --gradient-mist: linear-gradient(180deg, hsl(180 25% 98%) 0%, hsl(180 20% 96%) 100%);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -75,26 +74,28 @@
   }
 
   .dark {
-    --background: 24 12% 10%;
-    --foreground: 36 20% 92%;
-    --card: 24 12% 13%;
-    --card-foreground: 36 20% 92%;
-    --popover: 24 12% 13%;
-    --popover-foreground: 36 20% 92%;
-    --primary: 152 28% 60%;
-    --primary-foreground: 24 12% 10%;
-    --primary-soft: 152 22% 18%;
-    --secondary: 24 10% 18%;
-    --secondary-foreground: 36 20% 92%;
-    --muted: 24 10% 18%;
-    --muted-foreground: 30 10% 65%;
-    --accent: 28 25% 22%;
-    --accent-foreground: 36 20% 92%;
-    --destructive: 8 60% 50%;
-    --destructive-foreground: 36 20% 92%;
-    --border: 24 10% 20%;
-    --input: 24 10% 20%;
-    --ring: 152 28% 60%;
+    --background: 200 25% 8%;
+    --foreground: 180 20% 96%;
+    --card: 200 22% 11%;
+    --card-foreground: 180 20% 96%;
+    --popover: 200 22% 11%;
+    --popover-foreground: 180 20% 96%;
+    --primary: 168 60% 55%;
+    --primary-foreground: 200 25% 8%;
+    --primary-soft: 168 30% 18%;
+    --secondary: 200 18% 16%;
+    --secondary-foreground: 180 20% 96%;
+    --muted: 200 18% 16%;
+    --muted-foreground: 200 10% 65%;
+    --accent: 168 30% 18%;
+    --accent-foreground: 168 60% 70%;
+    --critical: 6 75% 62%;
+    --critical-soft: 6 30% 18%;
+    --border: 200 18% 18%;
+    --input: 200 18% 18%;
+    --ring: 168 60% 55%;
+    --chip: 200 18% 16%;
+    --chip-foreground: 180 15% 75%;
   }
 }
 
@@ -104,17 +105,43 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: "ss01", "cv11", "cv02";
+    -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, .font-display {
-    font-family: 'Fraunces', Georgia, serif;
-    font-optical-sizing: auto;
-    letter-spacing: -0.01em;
+    font-family: 'Instrument Serif', 'Times New Roman', serif;
+    letter-spacing: -0.015em;
+    font-weight: 400;
   }
 }
 
 @layer utilities {
   .shadow-card { box-shadow: var(--shadow-card); }
   .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .bg-mist { background: var(--gradient-mist); }
   .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
+  .text-balance { text-wrap: balance; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--background)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.35); }
+    70% { box-shadow: 0 0 0 12px hsl(var(--primary) / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  }
+  .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 }

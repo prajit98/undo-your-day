@@ -14,12 +14,12 @@ export interface UndoItem {
   status: ItemStatus;
 }
 
-export const categoryMeta: Record<Category, { label: string; soft: string; fg: string; icon: string; description: string }> = {
-  trial: { label: "Trial", soft: "bg-cat-trial-soft", fg: "text-cat-trial", icon: "Sparkles", description: "Free trials about to convert" },
-  renewal: { label: "Renewal", soft: "bg-cat-renewal-soft", fg: "text-cat-renewal", icon: "RotateCcw", description: "Subscriptions renewing soon" },
-  return: { label: "Return", soft: "bg-cat-return-soft", fg: "text-cat-return", icon: "PackageOpen", description: "Items you can still send back" },
-  bill: { label: "Bill", soft: "bg-cat-bill-soft", fg: "text-cat-bill", icon: "Receipt", description: "Payments and deadlines" },
-  followup: { label: "Follow-up", soft: "bg-cat-followup-soft", fg: "text-cat-followup", icon: "MessageCircle", description: "People you said you'd get back to" },
+export const categoryMeta: Record<Category, { label: string; icon: string; description: string }> = {
+  trial: { label: "Trial", icon: "Sparkles", description: "Free trials about to convert" },
+  renewal: { label: "Renewal", icon: "RefreshCw", description: "Subscriptions renewing soon" },
+  return: { label: "Return", icon: "PackageOpen", description: "Items you can still send back" },
+  bill: { label: "Bill", icon: "Receipt", description: "Payments and deadlines" },
+  followup: { label: "Follow-up", icon: "MessageCircle", description: "People you said you'd get back to" },
 };
 
 const today = new Date();

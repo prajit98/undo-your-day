@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Clock, Bell, Archive, Undo2, MoreHorizontal, ShieldAlert } from "lucide-react";
+import { Check, Clock, Bell, Archive, ArrowRight, MoreHorizontal } from "lucide-react";
 import { UndoItem } from "@/lib/undo-data";
 import { useUndo } from "@/context/UndoContext";
 import { CategoryBadge } from "./CategoryBadge";
@@ -30,34 +30,31 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
   return (
     <article
       className={cn(
-        "relative overflow-hidden rounded-3xl p-5 transition-all duration-200 animate-fade-up",
-        isCritical
-          ? "bg-card shadow-card ring-1 ring-critical/25"
-          : "bg-card shadow-card",
+        "relative overflow-hidden rounded-3xl bg-card p-5 shadow-card transition-all duration-200 animate-fade-up",
+        isCritical && "ring-1 ring-critical/20",
         exiting && "scale-[0.98] opacity-0"
       )}
     >
-      {isCritical && (
-        <span className="absolute inset-y-0 left-0 w-1 bg-critical" aria-hidden />
-      )}
-
-      {/* Urgency line */}
+      {/* Top meta row */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {isCritical && <ShieldAlert className="h-3.5 w-3.5 text-critical" strokeWidth={2.4} />}
+          {isCritical && (
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-critical/60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-critical" />
+            </span>
+          )}
           <span
             className={cn(
-              "text-[11px] font-semibold uppercase tracking-[0.12em]",
-              urgency.level === "critical" && "text-critical",
-              urgency.level === "soon" && "text-foreground/75",
-              urgency.level === "later" && "text-muted-foreground"
+              "text-[10.5px] font-semibold uppercase tracking-[0.16em]",
+              isCritical ? "text-critical" : "text-muted-foreground"
             )}
           >
             {urgency.label} · {shortDue(item.dueAt)}
           </span>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger className="rounded-full p-1 text-muted-foreground hover:bg-muted">
+          <DropdownMenuTrigger className="rounded-full p-1 text-muted-foreground/70 hover:text-foreground">
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -71,65 +68,64 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
         </DropdownMenu>
       </div>
 
-      {/* Headline = consequence */}
+      {/* Headline */}
       <h3
         className={cn(
-          "mt-2.5 font-display leading-snug text-foreground",
-          isCritical ? "text-[21px]" : "text-[18px]"
+          "mt-3 font-display leading-[1.15] text-foreground text-balance",
+          isCritical ? "text-[24px]" : "text-[21px]"
         )}
       >
         {item.title}
       </h3>
 
-      {/* What can still be saved */}
       {item.detail && (
-        <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
+        <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
           {item.detail}
         </p>
       )}
 
-      {/* Meta row */}
-      <div className="mt-3 flex items-center justify-between gap-3">
+      {/* Meta */}
+      <div className="mt-4 flex items-center justify-between gap-3">
         <CategoryBadge category={item.category} />
         {item.amount && (
           <span
             className={cn(
-              "text-xs font-semibold tabular-nums",
-              isCritical ? "text-critical" : "text-foreground/70"
+              "text-[11px] font-semibold uppercase tracking-wider tabular-nums",
+              isCritical ? "text-critical" : "text-foreground/55"
             )}
           >
-            {isCritical ? "Avoid losing " : ""}{item.amount}
+            {isCritical ? "Save " : ""}{item.amount}
           </span>
         )}
       </div>
 
       {/* Actions */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex items-center gap-2">
         <button
           onClick={() => handle(() => setStatus(item.id, "done"), "Nicely caught.")}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-transform active:scale-95",
+            "group inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-medium transition-all active:scale-[0.98]",
             isCritical
-              ? "bg-critical text-destructive-foreground"
-              : "bg-primary text-primary-foreground"
+              ? "bg-critical text-critical-foreground hover:bg-critical/90"
+              : "bg-foreground text-background hover:bg-foreground/90"
           )}
         >
-          <Undo2 className="h-3.5 w-3.5" strokeWidth={2.2} />
           {isCritical ? "Fix now" : "Undo now"}
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
         <button
-          onClick={() => handle(() => snooze(item.id, 24), "Snoozed for a day")}
-          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/70"
+          onClick={() => handle(() => snooze(item.id, 24), "Snoozed")}
+          aria-label="Snooze"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
         >
-          <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-          Snooze
+          <Clock className="h-4 w-4" strokeWidth={1.7} />
         </button>
         <button
-          onClick={() => handle(() => setStatus(item.id, "done"), "Marked as done")}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => handle(() => setStatus(item.id, "done"), "Marked done")}
+          aria-label="Done"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
         >
-          <Check className="h-3.5 w-3.5" strokeWidth={2} />
-          Done
+          <Check className="h-4 w-4" strokeWidth={1.7} />
         </button>
       </div>
     </article>

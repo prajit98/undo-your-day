@@ -22,11 +22,11 @@ const Settings = () => {
 
   return (
     <MobileShell>
-      <header className="px-5 pb-2 pt-10">
-        <h1 className="font-display text-[32px] leading-tight">Settings</h1>
-        <p className="mt-2 text-[15px] text-muted-foreground">
-          Tune Undo to feel like yours.
+      <header className="px-5 pb-2 pt-12">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Preferences
         </p>
+        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">Tune Undo.</h1>
       </header>
 
       <div className="mt-6 space-y-6 px-5">
