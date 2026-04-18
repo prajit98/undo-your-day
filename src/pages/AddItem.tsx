@@ -9,6 +9,7 @@ import { useUndo } from "@/context/UndoContext";
 import { Category, categoryMeta } from "@/lib/undo-data";
 import { CategoryIconRound } from "@/components/CategoryBadge";
 import { extractFromText, extractFromScreenshot, ExtractionResult } from "@/lib/extract";
+import { onboarding } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -72,7 +73,12 @@ const AddItem = () => {
       amountValue: draft.amountValue,
       source: draft.source,
     });
-    toast.success("Added — we'll catch it in time.");
+    const firstEver = !onboarding.hasFirstCapture();
+    onboarding.markFirstCapture();
+    toast.success(
+      firstEver ? "First undo saved. We've got it from here." : "Added — we'll catch it in time.",
+      { duration: firstEver ? 2600 : 1800 }
+    );
     navigate("/");
   };
 
