@@ -38,7 +38,7 @@ const Index = () => {
             Undo
           </span>
         </div>
-        <h1 className="mt-3 font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
+        <h1 className="mt-3 whitespace-pre-line font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
           {critical.length > 0 ? "A few things\nto undo today." : "Quiet today.\nNicely done."}
         </h1>
         <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
