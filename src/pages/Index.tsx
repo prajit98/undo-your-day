@@ -1,9 +1,12 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { useUndo } from "@/context/UndoContext";
 import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
 import { FeedSummary } from "@/components/FeedSummary";
 import { urgencyFor } from "@/lib/urgency";
+import { onboarding } from "@/lib/onboarding";
 
 const Index = () => {
   const { items, active } = useUndo();
@@ -48,6 +51,26 @@ const Index = () => {
 
       <FeedSummary items={items} />
 
+      {!onboarding.hasFirstCapture() && (
+        <Link
+          to="/add"
+          className="group mx-5 mt-5 flex items-center gap-3 rounded-3xl border border-primary/20 bg-primary-soft/60 p-4 transition-all hover:bg-primary-soft active:scale-[0.99] animate-fade-up"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-card text-primary shadow-soft">
+            <Sparkles className="h-4 w-4" strokeWidth={1.8} />
+          </span>
+          <div className="flex-1">
+            <p className="text-[13.5px] font-medium leading-tight text-foreground">
+              Add your first undo
+            </p>
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+              Paste anything — we'll do the rest in seconds.
+            </p>
+          </div>
+          <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
+        </Link>
+      )}
+
       {critical.length > 0 && (
         <section className="mt-6 px-5">
           <SectionHeader
@@ -77,11 +100,23 @@ const Index = () => {
       )}
 
       {active.length === 0 && (
-        <div className="mx-5 mt-12 rounded-3xl border border-dashed border-border bg-card/50 p-10 text-center">
-          <p className="font-display text-xl">Nothing slipping.</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            We're watching. You'll hear from us only when it matters.
+        <div className="mx-5 mt-10 rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center animate-fade-up">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+            <Sparkles className="h-5 w-5" strokeWidth={1.8} />
+          </div>
+          <p className="mt-4 font-display text-[22px] leading-tight text-foreground">
+            Nothing slipping yet.
           </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+            Add a trial, a return, or a bill — Undo will quietly watch the clock.
+          </p>
+          <Link
+            to="/add"
+            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
+          >
+            Add your first undo
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+          </Link>
         </div>
       )}
     </MobileShell>
