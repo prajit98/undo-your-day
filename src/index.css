@@ -1,105 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Undo — calm, premium, reassuring design system. All colors HSL. */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Warm paper background */
+    --background: 36 30% 97%;
+    --foreground: 24 15% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 24 15% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 24 15% 16%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Sage — primary calm accent */
+    --primary: 152 22% 38%;
+    --primary-foreground: 36 30% 97%;
+    --primary-soft: 152 28% 92%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Clay — warm secondary */
+    --secondary: 24 35% 94%;
+    --secondary-foreground: 24 25% 22%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 30 15% 94%;
+    --muted-foreground: 24 8% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 28 60% 88%;
+    --accent-foreground: 24 35% 25%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 8 65% 55%;
+    --destructive-foreground: 36 30% 97%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Category tints */
+    --cat-trial: 28 70% 60%;        /* warm amber */
+    --cat-trial-soft: 28 80% 94%;
+    --cat-renewal: 262 35% 58%;     /* dusty violet */
+    --cat-renewal-soft: 262 45% 95%;
+    --cat-return: 152 25% 45%;      /* sage */
+    --cat-return-soft: 152 30% 93%;
+    --cat-bill: 12 60% 55%;         /* terracotta */
+    --cat-bill-soft: 12 65% 94%;
+    --cat-followup: 210 40% 50%;    /* slate blue */
+    --cat-followup-soft: 210 45% 94%;
 
-    --radius: 0.5rem;
+    --border: 30 15% 90%;
+    --input: 30 15% 90%;
+    --ring: 152 22% 38%;
+
+    --radius: 1.25rem;
+
+    --shadow-card: 0 1px 2px hsl(24 15% 16% / 0.04), 0 8px 24px -12px hsl(24 15% 16% / 0.08);
+    --shadow-soft: 0 2px 8px hsl(24 15% 16% / 0.04);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 24 12% 10%;
+    --foreground: 36 20% 92%;
+    --card: 24 12% 13%;
+    --card-foreground: 36 20% 92%;
+    --popover: 24 12% 13%;
+    --popover-foreground: 36 20% 92%;
+    --primary: 152 28% 60%;
+    --primary-foreground: 24 12% 10%;
+    --primary-soft: 152 22% 18%;
+    --secondary: 24 10% 18%;
+    --secondary-foreground: 36 20% 92%;
+    --muted: 24 10% 18%;
+    --muted-foreground: 30 10% 65%;
+    --accent: 28 25% 22%;
+    --accent-foreground: 36 20% 92%;
+    --destructive: 8 60% 50%;
+    --destructive-foreground: 36 20% 92%;
+    --border: 24 10% 20%;
+    --input: 24 10% 20%;
+    --ring: 152 28% 60%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  * { @apply border-border; }
+  html, body, #root { @apply h-full; }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
   }
+  h1, h2, h3, .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
 }
