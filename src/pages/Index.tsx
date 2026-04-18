@@ -28,14 +28,20 @@ const Index = () => {
 
   return (
     <MobileShell>
-      <header className="px-5 pb-1 pt-10">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {today}
-        </p>
-        <h1 className="mt-2 font-display text-[32px] leading-[1.1] text-foreground">
-          Undo Feed
+      <header className="px-5 pb-1 pt-12">
+        <div className="flex items-center justify-between">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {today}
+          </p>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Undo
+          </span>
+        </div>
+        <h1 className="mt-3 font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
+          {critical.length > 0 ? "A few things\nto undo today." : "Quiet today.\nNicely done."}
         </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
           {headline}
         </p>
       </header>
