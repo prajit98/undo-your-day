@@ -1,0 +1,128 @@
+import { useState } from "react";
+import { MobileShell } from "@/components/MobileShell";
+import { Switch } from "@/components/ui/switch";
+import { Bell, Moon, Mail, ChevronRight, Sparkles } from "lucide-react";
+import { categoryMeta, Category } from "@/lib/undo-data";
+import { CategoryIconCircle } from "@/components/CategoryBadge";
+
+const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
+
+const Settings = () => {
+  const [push, setPush] = useState(true);
+  const [email, setEmail] = useState(false);
+  const [quiet, setQuiet] = useState(true);
+  const [enabledCats, setEnabledCats] = useState<Record<Category, boolean>>({
+    trial: true,
+    renewal: true,
+    return: true,
+    bill: true,
+    followup: true,
+  });
+  const [timing, setTiming] = useState<"morning" | "afternoon" | "evening">("morning");
+
+  return (
+    <MobileShell>
+      <header className="px-5 pb-2 pt-10">
+        <h1 className="font-display text-[32px] leading-tight">Settings</h1>
+        <p className="mt-2 text-[15px] text-muted-foreground">
+          Tune Undo to feel like yours.
+        </p>
+      </header>
+
+      <div className="mt-6 space-y-6 px-5">
+        {/* Account */}
+        <section className="rounded-3xl bg-card p-4 shadow-soft">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft font-display text-lg text-primary">
+              A
+            </div>
+            <div className="flex-1">
+              <p className="font-medium">Alex Morgan</p>
+              <p className="text-xs text-muted-foreground">alex@undoapp.com</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </section>
+
+        {/* Notifications */}
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Reminders
+          </h2>
+          <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+            <Row icon={<Bell className="h-4 w-4" />} label="Push notifications" right={<Switch checked={push} onCheckedChange={setPush} />} />
+            <Row icon={<Mail className="h-4 w-4" />} label="Email digest" right={<Switch checked={email} onCheckedChange={setEmail} />} />
+            <Row icon={<Moon className="h-4 w-4" />} label="Quiet hours (9pm – 8am)" right={<Switch checked={quiet} onCheckedChange={setQuiet} />} />
+          </div>
+        </section>
+
+        {/* Timing */}
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            When to nudge
+          </h2>
+          <div className="grid grid-cols-3 gap-2">
+            {(["morning", "afternoon", "evening"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTiming(t)}
+                className={`rounded-2xl bg-card py-3 text-sm font-medium capitalize shadow-soft transition-all ${
+                  timing === t ? "ring-2 ring-primary/30 text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Categories */}
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            What you want to catch
+          </h2>
+          <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+            {cats.map((c) => (
+              <div key={c} className="flex items-center gap-3 p-3">
+                <CategoryIconCircle category={c} />
+                <span className="flex-1 text-sm font-medium">{categoryMeta[c].label}</span>
+                <Switch
+                  checked={enabledCats[c]}
+                  onCheckedChange={(v) => setEnabledCats((p) => ({ ...p, [c]: v }))}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl bg-primary-soft p-5">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
+            <div>
+              <p className="font-display text-base text-foreground">Undo, calmly</p>
+              <p className="mt-1 text-xs text-foreground/70">
+                We'll only nudge you when there's still time to fix something. Never just to remind you that you exist.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <p className="pt-2 text-center text-[11px] text-muted-foreground">Undo · v1.0</p>
+      </div>
+    </MobileShell>
+  );
+};
+
+function Row({ icon, label, right }: { icon: React.ReactNode; label: string; right: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 p-4">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground/70">
+        {icon}
+      </span>
+      <span className="flex-1 text-sm">{label}</span>
+      {right}
+    </div>
+  );
+}
+
+export default Settings;
