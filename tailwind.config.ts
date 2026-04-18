@@ -58,6 +58,14 @@ export default {
           followup: "hsl(var(--cat-followup))",
           "followup-soft": "hsl(var(--cat-followup-soft))",
         },
+        critical: {
+          DEFAULT: "hsl(var(--critical))",
+          soft: "hsl(var(--critical-soft))",
+        },
+        saved: {
+          DEFAULT: "hsl(var(--saved))",
+          soft: "hsl(var(--saved-soft))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
