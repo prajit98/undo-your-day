@@ -9,7 +9,9 @@ import AddItem from "./pages/AddItem.tsx";
 import Categories from "./pages/Categories.tsx";
 import Timeline from "./pages/Timeline.tsx";
 import Settings from "./pages/Settings.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { OnboardingGate } from "./components/OnboardingGate";
 
 const queryClient = new QueryClient();
 
@@ -20,8 +22,10 @@ const App = () => (
       <Sonner position="top-center" />
       <UndoProvider>
         <BrowserRouter>
+          <OnboardingGate />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/add" element={<AddItem />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/timeline" element={<Timeline />} />
