@@ -48,6 +48,13 @@
     --cat-followup: 210 40% 50%;    /* slate blue */
     --cat-followup-soft: 210 45% 94%;
 
+    /* Urgency + outcome */
+    --critical: 8 70% 52%;
+    --critical-soft: 8 75% 96%;
+    --saved: 152 35% 42%;
+    --saved-soft: 152 35% 94%;
+
+
     --border: 30 15% 90%;
     --input: 30 15% 90%;
     --ring: 152 22% 38%;

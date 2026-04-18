@@ -2,14 +2,18 @@ import { useMemo } from "react";
 import { useUndo } from "@/context/UndoContext";
 import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
+import { FeedSummary } from "@/components/FeedSummary";
+import { urgencyFor } from "@/lib/urgency";
 
 const Index = () => {
-  const { active } = useUndo();
+  const { items, active } = useUndo();
 
-  const sorted = useMemo(
-    () => [...active].sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt)),
-    [active]
-  );
+  const { critical, upcoming } = useMemo(() => {
+    const sorted = [...active].sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
+    const critical = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "critical");
+    const upcoming = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level !== "critical");
+    return { critical, upcoming };
+  }, [active]);
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -17,39 +21,74 @@ const Index = () => {
     day: "numeric",
   });
 
-  const urgent = sorted.filter((i) => +new Date(i.dueAt) - Date.now() < 1000 * 60 * 60 * 48).length;
+  const headline =
+    critical.length > 0
+      ? `${critical.length} undo moment${critical.length > 1 ? "s" : ""} need you today.`
+      : "Nothing urgent. The week is yours.";
 
   return (
     <MobileShell>
-      <header className="px-5 pb-2 pt-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+      <header className="px-5 pb-1 pt-10">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {today}
         </p>
-        <h1 className="mt-2 font-display text-[32px] leading-tight text-foreground">
+        <h1 className="mt-2 font-display text-[32px] leading-[1.1] text-foreground">
           Undo Feed
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-          {urgent > 0
-            ? `${urgent} small thing${urgent > 1 ? "s" : ""} you can still fix today.`
-            : "You're all caught up. Nothing slipping through."}
+          {headline}
         </p>
       </header>
 
-      <section className="space-y-3 px-5 pt-5">
-        {sorted.map((item) => (
-          <UndoCard key={item.id} item={item} />
-        ))}
-        {sorted.length === 0 && (
-          <div className="mt-12 rounded-3xl border border-dashed border-border bg-card/50 p-10 text-center">
-            <p className="font-display text-xl">A quiet day.</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Nothing to undo right now. We'll let you know.
-            </p>
+      <FeedSummary items={items} />
+
+      {critical.length > 0 && (
+        <section className="mt-6 px-5">
+          <SectionHeader
+            kicker="Fix today"
+            sub="Closing windows. Act now and you keep the option."
+          />
+          <div className="mt-3 space-y-3">
+            {critical.map((item) => (
+              <UndoCard key={item.id} item={item} />
+            ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
+
+      {upcoming.length > 0 && (
+        <section className="mt-7 px-5">
+          <SectionHeader
+            kicker="Coming up"
+            sub="Still plenty of time — we'll keep an eye on these."
+          />
+          <div className="mt-3 space-y-3">
+            {upcoming.map((item) => (
+              <UndoCard key={item.id} item={item} emphasis="calm" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {active.length === 0 && (
+        <div className="mx-5 mt-12 rounded-3xl border border-dashed border-border bg-card/50 p-10 text-center">
+          <p className="font-display text-xl">Nothing slipping.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We're watching. You'll hear from us only when it matters.
+          </p>
+        </div>
+      )}
     </MobileShell>
   );
 };
+
+function SectionHeader({ kicker, sub }: { kicker: string; sub: string }) {
+  return (
+    <div>
+      <h2 className="font-display text-lg leading-tight text-foreground">{kicker}</h2>
+      <p className="mt-0.5 text-[12.5px] text-muted-foreground">{sub}</p>
+    </div>
+  );
+}
 
 export default Index;
