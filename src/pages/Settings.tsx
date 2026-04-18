@@ -1,13 +1,16 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MobileShell } from "@/components/MobileShell";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Moon, Mail, ChevronRight, Sparkles } from "lucide-react";
+import { Bell, Moon, Mail, ChevronRight, Sparkles, PlayCircle } from "lucide-react";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { CategoryIconCircle } from "@/components/CategoryBadge";
+import { onboarding } from "@/lib/onboarding";
 
 const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
 
 const Settings = () => {
+  const navigate = useNavigate();
   const [push, setPush] = useState(true);
   const [email, setEmail] = useState(false);
   const [quiet, setQuiet] = useState(true);
@@ -106,6 +109,23 @@ const Settings = () => {
             </div>
           </div>
         </section>
+
+        <button
+          onClick={() => {
+            onboarding.reset();
+            navigate("/onboarding");
+          }}
+          className="flex w-full items-center gap-3 rounded-3xl bg-card p-4 text-left shadow-soft transition-all active:scale-[0.99]"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground/70">
+            <PlayCircle className="h-4 w-4" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-medium">Replay the intro</p>
+            <p className="text-[11.5px] text-muted-foreground">See how Undo works again, in 30 seconds.</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
 
         <p className="pt-2 text-center text-[11px] text-muted-foreground">Undo · v1.0</p>
       </div>
