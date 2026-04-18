@@ -22,11 +22,11 @@ const Timeline = () => {
 
   return (
     <MobileShell>
-      <header className="px-5 pb-2 pt-10">
-        <h1 className="font-display text-[32px] leading-tight">Timeline</h1>
-        <p className="mt-2 text-[15px] text-muted-foreground">
-          A gentle look ahead, day by day.
+      <header className="px-5 pb-2 pt-12">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          What's ahead
         </p>
+        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">Timeline.</h1>
       </header>
 
       <div className="mt-8 px-5">
