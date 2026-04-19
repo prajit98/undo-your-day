@@ -238,39 +238,39 @@ function PermissionStep({
         </button>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
           <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-          Private to you
+          Only you see this
         </span>
         <div className="w-10" />
       </header>
 
       <main className="flex-1 px-7 pt-12">
         <h1 className="font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
-          Let Undo quietly watch for things worth catching.
+          Let Undo quietly catch the things that slip by.
         </h1>
         <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
-          Undo looks for likely trials, renewals, returns, and bill deadlines — and turns them into items you can review.
+          Undo only looks for likely trials, renewals, returns, and bills — nothing else. You see every suggestion before it joins your feed.
         </p>
 
         <div className="mt-9 space-y-3">
           <InfoCard
             icon={Eye}
-            title="What Undo looks for"
+            title="Only the four things that matter"
             tone="neutral"
             bullets={[
-              "Trial and renewal dates",
-              "Payment due dates",
-              "Return deadlines",
-              "Amounts and merchant names",
+              "Trial end and renewal dates",
+              "Bill due dates and amounts",
+              "Return windows closing soon",
+              "Merchant names tied to the above",
             ]}
           />
           <InfoCard
             icon={ShieldCheck}
-            title="You stay in control"
+            title="Nothing is saved without you"
             tone="primary"
             bullets={[
-              "Suggestions are surfaced for review",
-              "Keep, edit, or dismiss anything",
-              "Add items manually anytime",
+              "Suggestions wait for you to review",
+              "Keep, edit, or dismiss — one tap each",
+              "Disconnect anytime in Settings",
             ]}
           />
         </div>
@@ -282,13 +282,13 @@ function PermissionStep({
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           <Mail className="h-4 w-4" strokeWidth={1.9} />
-          Connect Gmail
+          Connect Gmail safely
         </button>
         <button
           onClick={onSkip}
           className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          Skip for now
+          Maybe later — I’ll add things myself
         </button>
       </footer>
     </div>
