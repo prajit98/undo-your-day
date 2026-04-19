@@ -1,290 +1,590 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Sparkles, RefreshCw, PackageOpen, Receipt, MessageCircle, ChevronLeft } from "lucide-react";
+import {
+  Sparkles, RefreshCw, PackageOpen, Receipt, Check, ChevronLeft,
+  ShieldCheck, Eye, Mail, Pencil, X, ArrowRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category, categoryMeta } from "@/lib/undo-data";
-import { onboarding } from "@/lib/onboarding";
+import { onboarding, autoCategories } from "@/lib/onboarding";
+import { Candidate, candidateToItem, generateCandidates } from "@/lib/candidates";
+import { useUndo } from "@/context/UndoContext";
+import { CategoryBadge } from "@/components/CategoryBadge";
+import { shortDue } from "@/lib/urgency";
+import { toast } from "sonner";
 
-const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
+type Step = "categories" | "permission" | "scanning" | "review";
 
 const catIcon: Record<Category, typeof Sparkles> = {
   trial: Sparkles,
   renewal: RefreshCw,
   return: PackageOpen,
   bill: Receipt,
-  followup: MessageCircle,
+  followup: Sparkles,
 };
 
-const examples = [
-  {
-    kicker: "Trial",
-    title: "Notion AI converts to paid tomorrow",
-    detail: "Cancel before 6pm and you keep the $10/month.",
-    save: "Save $10",
-  },
-  {
-    kicker: "Return",
-    title: "Last 3 days to return the Adidas runners",
-    detail: "After Friday at midnight, the $128 is yours forever.",
-    save: "Save $128",
-  },
-  {
-    kicker: "Follow-up",
-    title: "Reply to Maya before it gets awkward",
-    detail: "She asked about Lisbon four days ago.",
-    save: "Stay close",
-  },
-];
+const catTagline: Record<Category, string> = {
+  trial: "before they convert",
+  renewal: "before they hit",
+  return: "before the window closes",
+  bill: "before late fees",
+  followup: "",
+};
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
-  const [picked, setPicked] = useState<Category[]>(["trial", "renewal", "bill"]);
+  const { addItem } = useUndo();
+  const [step, setStep] = useState<Step>("categories");
+  const [picked, setPicked] = useState<Category[]>(autoCategories);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const total = 4;
-
-  const next = () => {
-    if (step < total - 1) {
-      setStep(step + 1);
-      return;
-    }
-    // Final step → finish onboarding and route to capture
+  const finishWithItems = (items: Candidate[]) => {
+    items.forEach((c) => addItem(candidateToItem(c)));
     onboarding.savePrefs(picked);
     onboarding.complete();
-    navigate("/add");
-  };
-
-  const back = () => {
-    if (step === 0) return;
-    setStep(step - 1);
-  };
-
-  const skip = () => {
-    onboarding.savePrefs(picked.length ? picked : cats);
-    onboarding.complete();
+    onboarding.markFirstCapture();
+    toast.success("Undo is watching a few things for you now", { duration: 2800 });
     navigate("/");
   };
 
-  const togglePick = (c: Category) => {
-    setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
+  const skipGmail = () => {
+    onboarding.savePrefs(picked);
+    onboarding.setGmailConnected(false);
+    onboarding.complete();
+    navigate("/");
   };
 
   return (
     <div className="min-h-screen w-full bg-background">
       <div className="mx-auto flex min-h-screen max-w-md flex-col">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-5 pt-10">
-          <button
-            onClick={back}
-            disabled={step === 0}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground/70 shadow-soft transition-opacity disabled:opacity-0"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
-          </button>
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: total }).map((_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "h-1 rounded-full transition-all",
-                  i === step ? "w-6 bg-foreground" : "w-1.5 bg-border"
-                )}
-              />
-            ))}
-          </div>
-          <button
-            onClick={skip}
-            className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
-          >
-            Skip
-          </button>
-        </header>
+        {step === "categories" && (
+          <CategoryStep
+            picked={picked}
+            onToggle={(c) =>
+              setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]))
+            }
+            onContinue={() => setStep("permission")}
+          />
+        )}
 
-        {/* Step content */}
-        <main className="flex flex-1 flex-col px-6 pt-10">
-          {step === 0 && <StepIntro />}
-          {step === 1 && <StepPick picked={picked} onToggle={togglePick} />}
-          {step === 2 && <StepExamples />}
-          {step === 3 && <StepReady />}
-        </main>
+        {step === "permission" && (
+          <PermissionStep
+            onConnect={() => {
+              onboarding.setGmailConnected(true);
+              setStep("scanning");
+            }}
+            onSkip={skipGmail}
+            onBack={() => setStep("categories")}
+          />
+        )}
 
-        {/* CTA */}
-        <footer className="px-6 pb-10 pt-4">
-          <button
-            onClick={next}
-            disabled={step === 1 && picked.length === 0}
-            className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99] disabled:opacity-40"
-          >
-            {step === 0 && "Begin"}
-            {step === 1 && (picked.length === 0 ? "Pick at least one" : `Continue with ${picked.length}`)}
-            {step === 2 && "I get it"}
-            {step === 3 && "Add my first undo"}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
-          </button>
-          {step === 3 && (
-            <button
-              onClick={skip}
-              className="mt-3 block w-full text-center text-[12.5px] text-muted-foreground hover:text-foreground"
-            >
-              I'll do it later
-            </button>
-          )}
-        </footer>
+        {step === "scanning" && (
+          <ScanningStep
+            onDone={() => {
+              setCandidates(generateCandidates(picked));
+              setStep("review");
+            }}
+          />
+        )}
+
+        {step === "review" && (
+          <ReviewStep
+            candidates={candidates.filter((c) => !dismissed.has(c.id))}
+            onDismiss={(id) => setDismissed((s) => new Set(s).add(id))}
+            onKeepAll={(items) => finishWithItems(items)}
+            onKeep={(c) => {
+              addItem(candidateToItem(c));
+              setDismissed((s) => new Set(s).add(c.id));
+            }}
+            onFinish={() => {
+              onboarding.savePrefs(picked);
+              onboarding.complete();
+              onboarding.markFirstCapture();
+              toast.success("You're protected against a few easy-to-miss things already", {
+                duration: 2800,
+              });
+              navigate("/");
+            }}
+            onEmptyManual={() => {
+              onboarding.savePrefs(picked);
+              onboarding.complete();
+              navigate("/add");
+            }}
+          />
+        )}
       </div>
     </div>
   );
 };
 
-/* ------------------------------- Steps ------------------------------- */
+/* ---------------------------- 1. Categories ---------------------------- */
 
-function StepIntro() {
+function CategoryStep({
+  picked, onToggle, onContinue,
+}: {
+  picked: Category[];
+  onToggle: (c: Category) => void;
+  onContinue: () => void;
+}) {
   return (
-    <div className="animate-fade-up">
-      <div className="mb-10 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary-soft">
-        <span className="relative flex h-3 w-3">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
-          <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+    <div className="flex flex-1 flex-col">
+      <header className="px-6 pt-12">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          Welcome to Undo
+        </p>
+        <h1 className="mt-4 font-display text-[38px] leading-[1.05] tracking-snug text-foreground text-balance">
+          What should Undo help you catch?
+        </h1>
+        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
+          Pick the kinds of things that are easiest to miss.
+        </p>
+      </header>
+
+      <main className="flex-1 px-6 pt-8">
+        <div className="space-y-2.5">
+          {autoCategories.map((c) => {
+            const Icon = catIcon[c];
+            const meta = categoryMeta[c];
+            const active = picked.includes(c);
+            return (
+              <button
+                key={c}
+                onClick={() => onToggle(c)}
+                className={cn(
+                  "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.99]",
+                  active
+                    ? "border-primary/30 bg-card shadow-card"
+                    : "border-border bg-card/40"
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-11 w-11 items-center justify-center rounded-2xl transition-colors",
+                    active ? "bg-primary-soft text-primary" : "bg-surface text-muted-foreground"
+                  )}
+                >
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                </span>
+                <div className="flex-1">
+                  <p className={cn("text-[15px] font-medium", active ? "text-foreground" : "text-foreground/80")}>
+                    {meta.label}s
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    {catTagline[c]}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "flex h-6 w-6 items-center justify-center rounded-full border transition-all",
+                    active ? "border-foreground bg-foreground text-background" : "border-border bg-card"
+                  )}
+                >
+                  {active && <Check className="h-3 w-3" strokeWidth={2.4} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </main>
+
+      <footer className="px-6 pb-10 pt-6">
+        <button
+          onClick={onContinue}
+          disabled={picked.length === 0}
+          className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99] disabled:opacity-40"
+        >
+          Continue
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
+        </button>
+      </footer>
+    </div>
+  );
+}
+
+/* ---------------------------- 2. Permission ---------------------------- */
+
+function PermissionStep({
+  onConnect, onSkip, onBack,
+}: {
+  onConnect: () => void;
+  onSkip: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="flex flex-1 flex-col">
+      <header className="flex items-center justify-between px-5 pt-10">
+        <button
+          onClick={onBack}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground/70 shadow-soft"
+          aria-label="Back"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
+        </button>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Step 2 of 2
         </span>
-      </div>
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Welcome to Undo
-      </p>
-      <h1 className="mt-4 font-display text-[44px] leading-[1.02] tracking-snug text-foreground text-balance">
-        Catch the things you meant to fix — before it's too late.
-      </h1>
-      <p className="mt-5 text-[14.5px] leading-relaxed text-muted-foreground text-balance">
-        Trials that quietly convert. Returns you almost forgot. Replies you owe. Undo keeps the small stuff from becoming expensive.
-      </p>
+        <div className="w-10" />
+      </header>
+
+      <main className="flex-1 px-6 pt-8">
+        <h1 className="font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
+          Let Undo look for the things that quietly slip through.
+        </h1>
+        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
+          Undo looks for likely trials, renewals, return windows, and bill deadlines, then turns them into items you can review and fix in time.
+        </p>
+
+        <div className="mt-7 space-y-3">
+          <InfoCard
+            icon={Eye}
+            title="What Undo looks for"
+            bullets={[
+              "Trial and renewal dates",
+              "Payment due dates",
+              "Return deadlines",
+              "Amounts and merchant names",
+            ]}
+          />
+          <InfoCard
+            icon={ShieldCheck}
+            title="You stay in control"
+            bullets={[
+              "Undo surfaces suggestions for review",
+              "Keep, edit, or dismiss anything",
+              "You can still add items manually anytime",
+            ]}
+          />
+        </div>
+      </main>
+
+      <footer className="px-6 pb-10 pt-6">
+        <button
+          onClick={onConnect}
+          className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
+        >
+          <Mail className="h-4 w-4" strokeWidth={1.9} />
+          Connect Gmail
+        </button>
+        <button
+          onClick={onSkip}
+          className="mt-3 block w-full text-center text-[12.5px] text-muted-foreground hover:text-foreground"
+        >
+          Skip for now
+        </button>
+      </footer>
     </div>
   );
 }
 
-function StepPick({ picked, onToggle }: { picked: Category[]; onToggle: (c: Category) => void }) {
+function InfoCard({
+  icon: Icon, title, bullets,
+}: {
+  icon: typeof Eye;
+  title: string;
+  bullets: string[];
+}) {
   return (
-    <div className="animate-fade-up">
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Step 1
-      </p>
-      <h1 className="mt-4 font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
-        What do you usually forget?
-      </h1>
-      <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
-        Pick what matters. We'll watch for these and stay quiet about the rest.
-      </p>
-
-      <div className="mt-7 space-y-2">
-        {cats.map((c) => {
-          const Icon = catIcon[c];
-          const meta = categoryMeta[c];
-          const active = picked.includes(c);
-          return (
-            <button
-              key={c}
-              onClick={() => onToggle(c)}
-              className={cn(
-                "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all",
-                active
-                  ? "border-foreground/80 bg-card shadow-soft"
-                  : "border-border bg-card/50 text-foreground/80"
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
-                  active ? "bg-primary-soft text-primary" : "bg-surface text-muted-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" strokeWidth={1.8} />
-              </span>
-              <div className="flex-1">
-                <p className="text-[14px] font-medium">{meta.label}s</p>
-                <p className="text-[11.5px] text-muted-foreground">{meta.description}</p>
-              </div>
-              <span
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full border transition-all",
-                  active ? "border-foreground bg-foreground text-background" : "border-border"
-                )}
-              >
-                {active && <Check className="h-3 w-3" strokeWidth={2.4} />}
-              </span>
-            </button>
-          );
-        })}
+    <div className="rounded-3xl bg-card p-5 shadow-card">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <Icon className="h-4 w-4" strokeWidth={1.8} />
+        </span>
+        <p className="text-[13px] font-semibold text-foreground">{title}</p>
       </div>
-    </div>
-  );
-}
-
-function StepExamples() {
-  return (
-    <div className="animate-fade-up">
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Step 2
-      </p>
-      <h1 className="mt-4 font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
-        This is what an undo moment looks like.
-      </h1>
-      <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
-        A clear consequence, a tight window, and one small action that saves you.
-      </p>
-
-      <div className="mt-6 space-y-3">
-        {examples.map((ex, i) => (
-          <article
-            key={ex.title}
-            className="rounded-3xl bg-card p-4 shadow-card"
-            style={{ animation: `fade-up 0.5s ease-out ${i * 0.08}s both` }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                {ex.kicker}
-              </span>
-              <span className="text-[10.5px] font-semibold uppercase tracking-wider text-primary">
-                {ex.save}
-              </span>
-            </div>
-            <p className="mt-2 font-display text-[19px] leading-snug text-foreground text-balance">
-              {ex.title}
-            </p>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
-              {ex.detail}
-            </p>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StepReady() {
-  return (
-    <div className="animate-fade-up">
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Step 3
-      </p>
-      <h1 className="mt-4 font-display text-[40px] leading-[1.04] tracking-snug text-foreground text-balance">
-        Add your first undo. It takes 20 seconds.
-      </h1>
-      <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
-        Paste a receipt, a chat, an email — or type it. Undo finds the date, the amount, and what's at stake.
-      </p>
-
-      <ul className="mt-8 space-y-3">
-        {[
-          "Paste any text",
-          "We extract the details",
-          "You confirm in one tap",
-        ].map((t, i) => (
-          <li key={t} className="flex items-center gap-3 text-[13.5px] text-foreground/80">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
-              {i + 1}
-            </span>
-            {t}
+      <ul className="mt-3 space-y-2">
+        {bullets.map((b) => (
+          <li key={b} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-foreground/75">
+            <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/60" />
+            {b}
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/* ----------------------------- 3. Scanning ----------------------------- */
+
+const SCAN_MESSAGES = [
+  "Looking for trials and renewals",
+  "Checking for bill deadlines",
+  "Pulling out dates and amounts",
+  "Writing what's at stake",
+];
+
+function ScanningStep({ onDone }: { onDone: () => void }) {
+  const [msgIdx, setMsgIdx] = useState(0);
+
+  useEffect(() => {
+    const cycle = setInterval(() => {
+      setMsgIdx((i) => (i + 1) % SCAN_MESSAGES.length);
+    }, 1400);
+    const finish = setTimeout(onDone, 5400);
+    return () => {
+      clearInterval(cycle);
+      clearTimeout(finish);
+    };
+  }, [onDone]);
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+      {/* Calm pulsing orb */}
+      <div className="relative flex h-28 w-28 items-center justify-center">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/15" style={{ animationDuration: "2.4s" }} />
+        <span className="absolute inline-flex h-20 w-20 animate-ping rounded-full bg-primary/25" style={{ animationDuration: "2.4s", animationDelay: "0.4s" }} />
+        <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
+          <Sparkles className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+      </div>
+
+      <h1 className="mt-10 font-display text-[30px] leading-[1.1] tracking-snug text-foreground text-balance">
+        Undo is finding things that still can be fixed.
+      </h1>
+      <p className="mt-3 text-[13px] text-muted-foreground">
+        This usually takes a moment.
+      </p>
+
+      <div className="mt-8 h-5 overflow-hidden">
+        <p
+          key={msgIdx}
+          className="text-[12.5px] font-medium tracking-wide text-foreground/65 animate-fade-up"
+        >
+          {SCAN_MESSAGES[msgIdx]}
+        </p>
+      </div>
+
+      <div className="mt-10 h-[2px] w-40 overflow-hidden rounded-full bg-surface">
+        <div className="shimmer h-full w-full rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ 4. Review ------------------------------ */
+
+function ReviewStep({
+  candidates, onDismiss, onKeep, onKeepAll, onFinish, onEmptyManual,
+}: {
+  candidates: Candidate[];
+  onDismiss: (id: string) => void;
+  onKeep: (c: Candidate) => void;
+  onKeepAll: (items: Candidate[]) => void;
+  onFinish: () => void;
+  onEmptyManual: () => void;
+}) {
+  const [kept, setKept] = useState<Set<string>>(new Set());
+
+  const remaining = useMemo(() => candidates.filter((c) => !kept.has(c.id)), [candidates, kept]);
+  const anyKept = kept.size > 0;
+
+  if (candidates.length === 0) {
+    return <EmptyMatches onManual={onEmptyManual} onSkip={onFinish} />;
+  }
+
+  return (
+    <div className="flex flex-1 flex-col pb-32">
+      <header className="px-6 pt-12">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-primary">
+          From Gmail
+        </p>
+        <h1 className="mt-3 font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
+          Undo found a few things worth catching.
+        </h1>
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
+          Review what to keep, edit, or dismiss.
+        </p>
+
+        <div className="mt-5 flex items-center justify-between">
+          <span className="text-[12px] text-muted-foreground">
+            {remaining.length} suggestion{remaining.length === 1 ? "" : "s"}
+          </span>
+          {remaining.length > 1 && (
+            <button
+              onClick={() => onKeepAll(remaining)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3.5 py-1.5 text-[12px] font-medium text-primary hover:bg-primary-soft/80"
+            >
+              <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Keep all
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main className="mt-5 flex-1 space-y-3 px-5">
+        {remaining.map((c, i) => (
+          <CandidateCard
+            key={c.id}
+            candidate={c}
+            index={i}
+            onKeep={() => {
+              setKept((s) => new Set(s).add(c.id));
+              onKeep(c);
+            }}
+            onDismiss={() => onDismiss(c.id)}
+          />
+        ))}
+
+        {remaining.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-border bg-card/60 p-6 text-center">
+            <p className="font-display text-[20px] leading-tight text-foreground">
+              All set.
+            </p>
+            <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+              {anyKept ? "Undo will keep watch on what you kept." : "Nothing kept — that's okay."}
+            </p>
+          </div>
+        )}
+      </main>
+
+      {/* Sticky CTA */}
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background to-transparent px-6 pb-8 pt-6">
+        <button
+          onClick={onFinish}
+          className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
+        >
+          {anyKept ? `Continue with ${kept.size}` : "Continue"}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CandidateCard({
+  candidate, index, onKeep, onDismiss,
+}: {
+  candidate: Candidate;
+  index: number;
+  onKeep: () => void;
+  onDismiss: () => void;
+}) {
+  const isUrgent = !!candidate.urgent;
+
+  return (
+    <article
+      className={cn(
+        "relative overflow-hidden rounded-3xl bg-card p-5 shadow-card animate-fade-up",
+        isUrgent && "ring-1 ring-critical/20"
+      )}
+      style={{ animationDelay: `${index * 60}ms`, animationFillMode: "both" }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {isUrgent && (
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-critical/60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-critical" />
+            </span>
+          )}
+          <span
+            className={cn(
+              "text-[10.5px] font-semibold uppercase tracking-[0.16em]",
+              isUrgent ? "text-critical" : "text-muted-foreground"
+            )}
+          >
+            {shortDue(candidate.dueAt)}
+            {candidate.source && ` · ${candidate.source}`}
+          </span>
+        </div>
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
+        >
+          <X className="h-4 w-4" strokeWidth={1.7} />
+        </button>
+      </div>
+
+      <h3
+        className={cn(
+          "mt-3 font-display leading-[1.15] text-foreground text-balance",
+          isUrgent ? "text-[22px]" : "text-[20px]"
+        )}
+      >
+        {candidate.title}
+      </h3>
+
+      {candidate.detail && (
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          {candidate.detail}
+        </p>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <CategoryBadge category={candidate.category} />
+        {candidate.amount && (
+          <span
+            className={cn(
+              "text-[11px] font-semibold uppercase tracking-wider tabular-nums",
+              isUrgent ? "text-critical" : "text-foreground/55"
+            )}
+          >
+            {candidate.amount}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-5 flex items-center gap-2">
+        <button
+          onClick={onKeep}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[13px] font-medium text-background transition-transform active:scale-[0.98]"
+        >
+          <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
+          Keep
+        </button>
+        <button
+          aria-label="Edit"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
+          onClick={() => toast("You'll be able to edit on the feed.", { duration: 1600 })}
+        >
+          <Pencil className="h-4 w-4" strokeWidth={1.7} />
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col px-6 pb-10 pt-16">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-soft text-primary">
+        <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
+      </div>
+      <h1 className="mt-8 font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
+        Nothing urgent yet.
+      </h1>
+      <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
+        Undo didn't find strong matches right now. You can still add a trial, return, bill, or renewal manually and keep watch from here.
+      </p>
+
+      <div className="mt-8 space-y-2.5">
+        {[
+          { label: "Add manually", desc: "Type the details yourself" },
+          { label: "Upload screenshot", desc: "Drop in a receipt or order confirmation" },
+          { label: "Paste text", desc: "From an email, chat, or message" },
+        ].map((o) => (
+          <button
+            key={o.label}
+            onClick={onManual}
+            className="flex w-full items-center justify-between rounded-2xl bg-card p-4 text-left shadow-soft transition-transform active:scale-[0.99]"
+          >
+            <div>
+              <p className="text-[14px] font-medium text-foreground">{o.label}</p>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">{o.desc}</p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={onSkip}
+        className="mt-auto pt-8 text-center text-[12.5px] text-muted-foreground hover:text-foreground"
+      >
+        Take me to the feed
+      </button>
     </div>
   );
 }
