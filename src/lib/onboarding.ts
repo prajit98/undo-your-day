@@ -3,6 +3,10 @@ import { Category } from "./undo-data";
 const KEY = "undo.onboarded.v1";
 const PREFS_KEY = "undo.prefs.categories.v1";
 const FIRST_CAPTURE_KEY = "undo.first.capture.v1";
+const GMAIL_KEY = "undo.gmail.connected.v1";
+
+// Automatic categories only (follow-up not auto-detected yet)
+export const autoCategories: Category[] = ["trial", "renewal", "return", "bill"];
 
 export const onboarding = {
   isComplete(): boolean {
@@ -16,6 +20,7 @@ export const onboarding = {
     window.localStorage.removeItem(KEY);
     window.localStorage.removeItem(PREFS_KEY);
     window.localStorage.removeItem(FIRST_CAPTURE_KEY);
+    window.localStorage.removeItem(GMAIL_KEY);
   },
   savePrefs(cats: Category[]) {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify(cats));
@@ -34,5 +39,13 @@ export const onboarding = {
   },
   markFirstCapture() {
     window.localStorage.setItem(FIRST_CAPTURE_KEY, "1");
+  },
+  isGmailConnected(): boolean {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(GMAIL_KEY) === "1";
+  },
+  setGmailConnected(v: boolean) {
+    if (v) window.localStorage.setItem(GMAIL_KEY, "1");
+    else window.localStorage.removeItem(GMAIL_KEY);
   },
 };
