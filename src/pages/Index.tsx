@@ -38,7 +38,12 @@ const Index = () => {
             {today}
           </p>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            <span className="relative flex h-1.5 w-1.5">
+              {gmailConnected && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
+              )}
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+            </span>
             {gmailConnected ? "Watching Gmail" : "Undo"}
           </span>
         </div>
