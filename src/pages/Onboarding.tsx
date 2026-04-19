@@ -238,7 +238,7 @@ function PermissionStep({
         </button>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
           <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-          Private to you
+          Only you see this
         </span>
         <div className="w-10" />
       </header>
