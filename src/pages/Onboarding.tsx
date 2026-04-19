@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Sparkles, RefreshCw, PackageOpen, Receipt, Check, ChevronLeft,
-  ShieldCheck, Eye, Mail, Pencil, X, ArrowRight,
+  ShieldCheck, Eye, Mail, Pencil, X, ArrowRight, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category, categoryMeta } from "@/lib/undo-data";
@@ -39,15 +39,6 @@ const Onboarding = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const finishWithItems = (items: Candidate[]) => {
-    items.forEach((c) => addItem(candidateToItem(c)));
-    onboarding.savePrefs(picked);
-    onboarding.complete();
-    onboarding.markFirstCapture();
-    toast.success("Undo is watching a few things for you now", { duration: 2800 });
-    navigate("/");
-  };
-
   const skipGmail = () => {
     onboarding.savePrefs(picked);
     onboarding.setGmailConnected(false);
@@ -57,7 +48,17 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen w-full bg-background">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col">
+      {/* Subtle ambient gradient for cohesion across screens */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 h-[55vh] opacity-60"
+        style={{
+          background:
+            "radial-gradient(80% 60% at 50% 0%, hsl(var(--primary) / 0.07) 0%, transparent 70%)",
+        }}
+      />
+
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col">
         {step === "categories" && (
           <CategoryStep
             picked={picked}
@@ -92,18 +93,31 @@ const Onboarding = () => {
           <ReviewStep
             candidates={candidates.filter((c) => !dismissed.has(c.id))}
             onDismiss={(id) => setDismissed((s) => new Set(s).add(id))}
-            onKeepAll={(items) => finishWithItems(items)}
+            onKeepAll={(items) => {
+              items.forEach((c) => addItem(candidateToItem(c)));
+              onboarding.savePrefs(picked);
+              onboarding.complete();
+              onboarding.markFirstCapture();
+              toast.success("Undo is watching a few things for you now", {
+                description: `${items.length} item${items.length === 1 ? "" : "s"} on your feed`,
+                duration: 3200,
+              });
+              navigate("/");
+            }}
             onKeep={(c) => {
               addItem(candidateToItem(c));
               setDismissed((s) => new Set(s).add(c.id));
             }}
-            onFinish={() => {
+            onFinish={(keptCount) => {
               onboarding.savePrefs(picked);
               onboarding.complete();
-              onboarding.markFirstCapture();
-              toast.success("You're protected against a few easy-to-miss things already", {
-                duration: 2800,
-              });
+              if (keptCount > 0) onboarding.markFirstCapture();
+              toast.success(
+                keptCount > 0
+                  ? "You're protected against a few easy-to-miss things"
+                  : "All clear for now — Undo will keep watch",
+                { duration: 3000 },
+              );
               navigate("/");
             }}
             onEmptyManual={() => {
@@ -128,12 +142,12 @@ function CategoryStep({
   onContinue: () => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="px-6 pt-12">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="flex flex-1 flex-col animate-fade-in">
+      <header className="px-6 pt-14">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
           Welcome to Undo
         </p>
-        <h1 className="mt-4 font-display text-[38px] leading-[1.05] tracking-snug text-foreground text-balance">
+        <h1 className="mt-5 font-display text-[40px] leading-[1.04] tracking-snug text-foreground text-balance">
           What should Undo help you catch?
         </h1>
         <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
@@ -141,9 +155,9 @@ function CategoryStep({
         </p>
       </header>
 
-      <main className="flex-1 px-6 pt-8">
+      <main className="flex-1 px-6 pt-9">
         <div className="space-y-2.5">
-          {autoCategories.map((c) => {
+          {autoCategories.map((c, i) => {
             const Icon = catIcon[c];
             const meta = categoryMeta[c];
             const active = picked.includes(c);
@@ -152,16 +166,17 @@ function CategoryStep({
                 key={c}
                 onClick={() => onToggle(c)}
                 className={cn(
-                  "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.99]",
+                  "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] animate-fade-up-soft",
                   active
                     ? "border-primary/30 bg-card shadow-card"
-                    : "border-border bg-card/40"
+                    : "border-border bg-card/40 hover:bg-card/70",
                 )}
+                style={{ animationDelay: `${i * 60}ms`, animationFillMode: "both" }}
               >
                 <span
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-2xl transition-colors",
-                    active ? "bg-primary-soft text-primary" : "bg-surface text-muted-foreground"
+                    active ? "bg-primary-soft text-primary" : "bg-surface text-muted-foreground",
                   )}
                 >
                   <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} />
@@ -177,7 +192,7 @@ function CategoryStep({
                 <span
                   className={cn(
                     "flex h-6 w-6 items-center justify-center rounded-full border transition-all",
-                    active ? "border-foreground bg-foreground text-background" : "border-border bg-card"
+                    active ? "border-foreground bg-foreground text-background" : "border-border bg-card",
                   )}
                 >
                   {active && <Check className="h-3 w-3" strokeWidth={2.4} />}
@@ -212,34 +227,35 @@ function PermissionStep({
   onBack: () => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col animate-fade-in">
       <header className="flex items-center justify-between px-5 pt-10">
         <button
           onClick={onBack}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground/70 shadow-soft"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground/70 shadow-soft transition-colors hover:text-foreground"
           aria-label="Back"
         >
           <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
         </button>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          Step 2 of 2
+          <Lock className="h-2.5 w-2.5" strokeWidth={2} />
+          Private to you
         </span>
         <div className="w-10" />
       </header>
 
-      <main className="flex-1 px-6 pt-8">
+      <main className="flex-1 px-7 pt-12">
         <h1 className="font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
-          Let Undo look for the things that quietly slip through.
+          Let Undo quietly watch for things worth catching.
         </h1>
-        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
-          Undo looks for likely trials, renewals, return windows, and bill deadlines, then turns them into items you can review and fix in time.
+        <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
+          Undo looks for likely trials, renewals, returns, and bill deadlines — and turns them into items you can review.
         </p>
 
-        <div className="mt-7 space-y-3">
+        <div className="mt-9 space-y-3">
           <InfoCard
             icon={Eye}
             title="What Undo looks for"
+            tone="neutral"
             bullets={[
               "Trial and renewal dates",
               "Payment due dates",
@@ -250,16 +266,17 @@ function PermissionStep({
           <InfoCard
             icon={ShieldCheck}
             title="You stay in control"
+            tone="primary"
             bullets={[
-              "Undo surfaces suggestions for review",
+              "Suggestions are surfaced for review",
               "Keep, edit, or dismiss anything",
-              "You can still add items manually anytime",
+              "Add items manually anytime",
             ]}
           />
         </div>
       </main>
 
-      <footer className="px-6 pb-10 pt-6">
+      <footer className="px-7 pb-10 pt-8">
         <button
           onClick={onConnect}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
@@ -269,7 +286,7 @@ function PermissionStep({
         </button>
         <button
           onClick={onSkip}
-          className="mt-3 block w-full text-center text-[12.5px] text-muted-foreground hover:text-foreground"
+          className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
         >
           Skip for now
         </button>
@@ -279,24 +296,41 @@ function PermissionStep({
 }
 
 function InfoCard({
-  icon: Icon, title, bullets,
+  icon: Icon, title, bullets, tone = "neutral",
 }: {
   icon: typeof Eye;
   title: string;
   bullets: string[];
+  tone?: "neutral" | "primary";
 }) {
+  const isPrimary = tone === "primary";
   return (
-    <div className="rounded-3xl bg-card p-5 shadow-card">
+    <div
+      className={cn(
+        "rounded-3xl p-5 shadow-card transition-colors",
+        isPrimary ? "bg-primary-soft/60 ring-1 ring-primary/15" : "bg-card",
+      )}
+    >
       <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-soft text-primary">
+        <span
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-xl",
+            isPrimary ? "bg-card text-primary" : "bg-surface text-foreground/70",
+          )}
+        >
           <Icon className="h-4 w-4" strokeWidth={1.8} />
         </span>
-        <p className="text-[13px] font-semibold text-foreground">{title}</p>
+        <p className="text-[13px] font-semibold tracking-tight text-foreground">{title}</p>
       </div>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3.5 space-y-2.5">
         {bullets.map((b) => (
           <li key={b} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-foreground/75">
-            <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/60" />
+            <span
+              className={cn(
+                "mt-[7px] h-1 w-1 shrink-0 rounded-full",
+                isPrimary ? "bg-primary/70" : "bg-muted-foreground/60",
+              )}
+            />
             {b}
           </li>
         ))}
@@ -320,8 +354,8 @@ function ScanningStep({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const cycle = setInterval(() => {
       setMsgIdx((i) => (i + 1) % SCAN_MESSAGES.length);
-    }, 1400);
-    const finish = setTimeout(onDone, 5400);
+    }, 1700);
+    const finish = setTimeout(onDone, 6200);
     return () => {
       clearInterval(cycle);
       clearTimeout(finish);
@@ -329,33 +363,47 @@ function ScanningStep({ onDone }: { onDone: () => void }) {
   }, [onDone]);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-      {/* Calm pulsing orb */}
-      <div className="relative flex h-28 w-28 items-center justify-center">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/15" style={{ animationDuration: "2.4s" }} />
-        <span className="absolute inline-flex h-20 w-20 animate-ping rounded-full bg-primary/25" style={{ animationDuration: "2.4s", animationDelay: "0.4s" }} />
-        <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
-          <Sparkles className="h-5 w-5" strokeWidth={1.8} />
+    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center animate-fade-in">
+      {/* Calm, layered orb — slower, more premium */}
+      <div className="relative flex h-36 w-36 items-center justify-center">
+        <span
+          className="absolute inline-flex h-full w-full rounded-full bg-primary/8 animate-soft-pulse"
+          style={{ animationDelay: "0s" }}
+        />
+        <span
+          className="absolute inline-flex h-28 w-28 rounded-full bg-primary/12 animate-soft-pulse"
+          style={{ animationDelay: "0.5s" }}
+        />
+        <span
+          className="absolute inline-flex h-20 w-20 rounded-full bg-primary/18 animate-soft-pulse"
+          style={{ animationDelay: "1s" }}
+        />
+        <span
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[hsl(var(--primary-glow))] text-primary-foreground shadow-glow animate-breathe"
+        >
+          <Sparkles className="h-5 w-5" strokeWidth={1.7} />
         </span>
       </div>
 
-      <h1 className="mt-10 font-display text-[30px] leading-[1.1] tracking-snug text-foreground text-balance">
+      <h1 className="mt-12 font-display text-[30px] leading-[1.1] tracking-snug text-foreground text-balance">
         Undo is finding things that still can be fixed.
       </h1>
       <p className="mt-3 text-[13px] text-muted-foreground">
         This usually takes a moment.
       </p>
 
-      <div className="mt-8 h-5 overflow-hidden">
+      {/* Rotating micro-messages — more elegant timing, fixed slot */}
+      <div className="mt-10 flex h-6 items-center justify-center">
         <p
           key={msgIdx}
-          className="text-[12.5px] font-medium tracking-wide text-foreground/65 animate-fade-up"
+          className="text-[12.5px] font-medium tracking-[0.01em] text-foreground/70 animate-fade-up-soft"
         >
           {SCAN_MESSAGES[msgIdx]}
         </p>
       </div>
 
-      <div className="mt-10 h-[2px] w-40 overflow-hidden rounded-full bg-surface">
+      {/* Subtle progress whisper */}
+      <div className="mt-7 h-[2px] w-32 overflow-hidden rounded-full bg-surface">
         <div className="shimmer h-full w-full rounded-full" />
       </div>
     </div>
@@ -371,45 +419,69 @@ function ReviewStep({
   onDismiss: (id: string) => void;
   onKeep: (c: Candidate) => void;
   onKeepAll: (items: Candidate[]) => void;
-  onFinish: () => void;
+  onFinish: (keptCount: number) => void;
   onEmptyManual: () => void;
 }) {
   const [kept, setKept] = useState<Set<string>>(new Set());
 
   const remaining = useMemo(() => candidates.filter((c) => !kept.has(c.id)), [candidates, kept]);
   const anyKept = kept.size > 0;
+  const totalAtRisk = useMemo(
+    () =>
+      remaining.reduce((sum, c) => sum + (c.amountValue ?? 0), 0),
+    [remaining],
+  );
 
   if (candidates.length === 0) {
-    return <EmptyMatches onManual={onEmptyManual} onSkip={onFinish} />;
+    return <EmptyMatches onManual={onEmptyManual} onSkip={() => onFinish(0)} />;
   }
 
   return (
-    <div className="flex flex-1 flex-col pb-32">
+    <div className="flex flex-1 flex-col pb-32 animate-fade-in">
       <header className="px-6 pt-12">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-primary">
-          From Gmail
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
+          From your Gmail
         </p>
-        <h1 className="mt-3 font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
+        <h1 className="mt-3 font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
           Undo found a few things worth catching.
         </h1>
-        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
-          Review what to keep, edit, or dismiss.
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground text-balance">
+          Review what to keep. You can edit or dismiss anything.
         </p>
 
-        <div className="mt-5 flex items-center justify-between">
-          <span className="text-[12px] text-muted-foreground">
-            {remaining.length} suggestion{remaining.length === 1 ? "" : "s"}
-          </span>
-          {remaining.length > 1 && (
-            <button
-              onClick={() => onKeepAll(remaining)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3.5 py-1.5 text-[12px] font-medium text-primary hover:bg-primary-soft/80"
-            >
-              <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
-              Keep all
-            </button>
+        {/* Summary strip — establishes value at a glance */}
+        <div className="mt-5 flex items-center justify-between rounded-2xl bg-card/60 px-4 py-3 shadow-soft ring-1 ring-border/60">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-display text-[22px] leading-none text-foreground tabular-nums">
+              {remaining.length}
+            </span>
+            <span className="text-[11.5px] text-muted-foreground">
+              suggestion{remaining.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          {totalAtRisk > 0 && (
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                At risk
+              </span>
+              <span className="font-display text-[18px] leading-none text-foreground tabular-nums">
+                ${Math.round(totalAtRisk)}
+              </span>
+            </div>
           )}
         </div>
+
+        {remaining.length > 1 && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => onKeepAll(remaining)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3.5 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-soft/80"
+            >
+              <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Keep all {remaining.length}
+            </button>
+          </div>
+        )}
       </header>
 
       <main className="mt-5 flex-1 space-y-3 px-5">
@@ -427,9 +499,12 @@ function ReviewStep({
         ))}
 
         {remaining.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-border bg-card/60 p-6 text-center">
-            <p className="font-display text-[20px] leading-tight text-foreground">
-              All set.
+          <div className="rounded-3xl border border-dashed border-border bg-card/60 p-7 text-center animate-fade-up">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <Check className="h-4 w-4" strokeWidth={2.2} />
+            </div>
+            <p className="mt-4 font-display text-[22px] leading-tight text-foreground">
+              {anyKept ? "All reviewed." : "All clear."}
             </p>
             <p className="mt-1.5 text-[12.5px] text-muted-foreground">
               {anyKept ? "Undo will keep watch on what you kept." : "Nothing kept — that's okay."}
@@ -439,12 +514,16 @@ function ReviewStep({
       </main>
 
       {/* Sticky CTA */}
-      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background to-transparent px-6 pb-8 pt-6">
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background to-transparent px-6 pb-8 pt-8">
         <button
-          onClick={onFinish}
+          onClick={() => onFinish(kept.size)}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
-          {anyKept ? `Continue with ${kept.size}` : "Continue"}
+          {anyKept
+            ? `Continue with ${kept.size} item${kept.size === 1 ? "" : "s"}`
+            : remaining.length === 0
+              ? "Take me to the feed"
+              : "Skip the rest"}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
       </div>
@@ -466,9 +545,9 @@ function CandidateCard({
     <article
       className={cn(
         "relative overflow-hidden rounded-3xl bg-card p-5 shadow-card animate-fade-up",
-        isUrgent && "ring-1 ring-critical/20"
+        isUrgent && "ring-1 ring-critical/20",
       )}
-      style={{ animationDelay: `${index * 60}ms`, animationFillMode: "both" }}
+      style={{ animationDelay: `${index * 70}ms`, animationFillMode: "both" }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -481,7 +560,7 @@ function CandidateCard({
           <span
             className={cn(
               "text-[10.5px] font-semibold uppercase tracking-[0.16em]",
-              isUrgent ? "text-critical" : "text-muted-foreground"
+              isUrgent ? "text-critical" : "text-muted-foreground",
             )}
           >
             {shortDue(candidate.dueAt)}
@@ -499,15 +578,15 @@ function CandidateCard({
 
       <h3
         className={cn(
-          "mt-3 font-display leading-[1.15] text-foreground text-balance",
-          isUrgent ? "text-[22px]" : "text-[20px]"
+          "mt-3 font-display leading-[1.13] text-foreground text-balance",
+          isUrgent ? "text-[23px]" : "text-[20.5px]",
         )}
       >
         {candidate.title}
       </h3>
 
       {candidate.detail && (
-        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
           {candidate.detail}
         </p>
       )}
@@ -518,10 +597,10 @@ function CandidateCard({
           <span
             className={cn(
               "text-[11px] font-semibold uppercase tracking-wider tabular-nums",
-              isUrgent ? "text-critical" : "text-foreground/55"
+              isUrgent ? "text-critical" : "text-foreground/55",
             )}
           >
-            {candidate.amount}
+            {isUrgent ? "Save " : ""}{candidate.amount}
           </span>
         )}
       </div>
@@ -541,6 +620,13 @@ function CandidateCard({
         >
           <Pencil className="h-4 w-4" strokeWidth={1.7} />
         </button>
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
+        >
+          <X className="h-4 w-4" strokeWidth={1.7} />
+        </button>
       </div>
     </article>
   );
@@ -548,18 +634,18 @@ function CandidateCard({
 
 function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () => void }) {
   return (
-    <div className="flex flex-1 flex-col px-6 pb-10 pt-16">
+    <div className="flex flex-1 flex-col px-7 pb-10 pt-16 animate-fade-in">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-soft text-primary">
         <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
       </div>
-      <h1 className="mt-8 font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
-        Nothing urgent yet.
+      <h1 className="mt-8 text-center font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
+        Nothing slipping right now.
       </h1>
-      <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
-        Undo didn't find strong matches right now. You can still add a trial, return, bill, or renewal manually and keep watch from here.
+      <p className="mt-3 text-center text-[14px] leading-relaxed text-muted-foreground text-balance">
+        Undo didn't find strong matches today. We'll keep watching — and you can add anything yourself.
       </p>
 
-      <div className="mt-8 space-y-2.5">
+      <div className="mt-9 space-y-2.5">
         {[
           { label: "Add manually", desc: "Type the details yourself" },
           { label: "Upload screenshot", desc: "Drop in a receipt or order confirmation" },
@@ -581,7 +667,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () =
 
       <button
         onClick={onSkip}
-        className="mt-auto pt-8 text-center text-[12.5px] text-muted-foreground hover:text-foreground"
+        className="mt-auto pt-8 text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
       >
         Take me to the feed
       </button>
