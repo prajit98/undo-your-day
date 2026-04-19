@@ -22,13 +22,5 @@ export const categoryMeta: Record<Category, { label: string; icon: string; descr
   followup: { label: "Follow-up", icon: "MessageCircle", description: "People you said you'd get back to" },
 };
 
-const today = new Date();
-const day = (offset: number, h = 9, m = 0) => {
-  const d = new Date(today);
-  d.setDate(d.getDate() + offset);
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
-};
-
 // Feed starts empty — items are populated by Gmail onboarding (or manual add).
 export const seedItems: UndoItem[] = [];
