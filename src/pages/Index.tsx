@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Plus, Mail, ShieldCheck } from "lucide-react";
 import { useUndo } from "@/context/UndoContext";
 import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
@@ -10,6 +10,7 @@ import { onboarding } from "@/lib/onboarding";
 
 const Index = () => {
   const { items, active } = useUndo();
+  const gmailConnected = onboarding.isGmailConnected();
 
   const { critical, upcoming } = useMemo(() => {
     const sorted = [...active].sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
@@ -38,7 +39,7 @@ const Index = () => {
           </p>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Undo
+            {gmailConnected ? "Watching Gmail" : "Undo"}
           </span>
         </div>
         <h1 className="mt-3 whitespace-pre-line font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
@@ -49,27 +50,7 @@ const Index = () => {
         </p>
       </header>
 
-      <FeedSummary items={items} />
-
-      {!onboarding.hasFirstCapture() && (
-        <Link
-          to="/add"
-          className="group mx-5 mt-5 flex items-center gap-3 rounded-3xl border border-primary/20 bg-primary-soft/60 p-4 transition-all hover:bg-primary-soft active:scale-[0.99] animate-fade-up"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-card text-primary shadow-soft">
-            <Sparkles className="h-4 w-4" strokeWidth={1.8} />
-          </span>
-          <div className="flex-1">
-            <p className="text-[13.5px] font-medium leading-tight text-foreground">
-              Add your first undo
-            </p>
-            <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-              Paste anything — we'll do the rest in seconds.
-            </p>
-          </div>
-          <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
-        </Link>
-      )}
+      {active.length > 0 && <FeedSummary items={items} />}
 
       {critical.length > 0 && (
         <section className="mt-6 px-5">
@@ -99,24 +80,53 @@ const Index = () => {
         </section>
       )}
 
+      {/* Manual backup — secondary to the automatic-first story */}
+      {active.length > 0 && (
+        <Link
+          to="/add"
+          className="group mx-5 mt-7 flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3.5 transition-colors hover:bg-card active:scale-[0.99]"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-foreground/65">
+            <Plus className="h-4 w-4" strokeWidth={1.8} />
+          </span>
+          <div className="flex-1">
+            <p className="text-[13px] font-medium text-foreground/85">Add something Undo missed</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Paste, screenshot, or type it</p>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={1.8} />
+        </Link>
+      )}
+
       {active.length === 0 && (
         <div className="mx-5 mt-10 rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center animate-fade-up">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
-            <Sparkles className="h-5 w-5" strokeWidth={1.8} />
+            <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
           </div>
-          <p className="mt-4 font-display text-[22px] leading-tight text-foreground">
+          <p className="mt-4 font-display text-[24px] leading-tight text-foreground">
             Nothing slipping yet.
           </p>
-          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-            Add a trial, a return, or a bill — Undo will quietly watch the clock.
+          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
+            {gmailConnected
+              ? "Undo is watching. We'll surface things the moment they need you."
+              : "Connect Gmail to let Undo catch trials, renewals, returns, and bills automatically."}
           </p>
-          <Link
-            to="/add"
-            className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
-          >
-            Add your first undo
-            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
-          </Link>
+          {!gmailConnected ? (
+            <Link
+              to="/onboarding"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
+            >
+              <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
+              Connect Gmail
+            </Link>
+          ) : (
+            <Link
+              to="/add"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
+            >
+              Add something manually
+              <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+            </Link>
+          )}
         </div>
       )}
     </MobileShell>
