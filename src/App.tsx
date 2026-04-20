@@ -10,6 +10,7 @@ import Categories from "./pages/Categories.tsx";
 import Timeline from "./pages/Timeline.tsx";
 import Settings from "./pages/Settings.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
+import Landing from "./pages/Landing.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { OnboardingGate } from "./components/OnboardingGate";
 
@@ -25,6 +26,7 @@ const App = () => (
           <OnboardingGate />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/landing" element={<Landing />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/add" element={<AddItem />} />
             <Route path="/categories" element={<Categories />} />
