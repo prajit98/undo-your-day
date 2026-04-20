@@ -63,8 +63,8 @@ const Landing = () => {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pt-16 sm:pt-24">
-        <div className="grid items-center gap-14 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
+      <section className="mx-auto max-w-6xl px-6 pt-20 sm:pt-28">
+        <div className="grid items-center gap-16 lg:grid-cols-[1.1fr_1fr] lg:gap-24">
           <div className="animate-fade-up-soft">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft">
               <span className="relative flex h-1.5 w-1.5">
@@ -73,31 +73,32 @@ const Landing = () => {
               </span>
               Now with Gmail
             </span>
-            <h1 className="mt-6 font-display text-[44px] leading-[1.02] tracking-snug text-balance sm:text-[60px] lg:text-[68px]">
-              Catch the small things —{" "}
-              <em className="text-primary not-italic italic">before they cost you.</em>
+            <h1 className="mt-7 font-display text-[44px] leading-[1.02] tracking-snug text-balance sm:text-[60px] lg:text-[68px]">
+              Catch the things you meant to fix —{" "}
+              <em className="text-primary not-italic italic">before it’s too late.</em>
             </h1>
-            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-              Undo quietly watches your inbox for trials, renewals, returns, and bills — and gives you a
-              moment to fix them before they slip.
+            <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
+              Undo quietly looks for likely trials, renewals, returns, and bills, then turns them into
+              fixable items you can review before they become expensive, stressful, or awkward.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <div className="mt-9 flex flex-wrap items-center gap-3">
               <a
                 href="#waitlist"
-                className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition-transform hover:-translate-y-px"
+                className="inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background shadow-soft transition-transform hover:-translate-y-px"
               >
-                Join the early list
+                Get early access
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
                 href="#how"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3.5 text-[15px] font-medium text-foreground transition-colors hover:bg-secondary"
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-7 py-4 text-[15px] font-medium text-foreground transition-colors hover:bg-secondary"
               >
                 See how it works
               </a>
             </div>
-            <p className="mt-5 text-xs text-muted-foreground">
-              Free while in early access · No card · Takes 30 seconds
+            <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+              <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
+              Only the four things that matter. Nothing is kept without your review.
             </p>
           </div>
 
