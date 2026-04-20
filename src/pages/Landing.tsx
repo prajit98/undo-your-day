@@ -74,19 +74,19 @@ const Landing = () => {
               Now with Gmail
             </span>
             <h1 className="mt-6 font-display text-[44px] leading-[1.02] tracking-snug text-balance sm:text-[60px] lg:text-[68px]">
-              Catch the things you meant to fix —{" "}
-              <em className="text-primary not-italic italic">before it's too late.</em>
+              Catch the small things —{" "}
+              <em className="text-primary not-italic italic">before they cost you.</em>
             </h1>
             <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-              Undo quietly looks for likely trials, renewals, returns, and bills, then turns them into fixable
-              items you can review before they become expensive, stressful, or awkward.
+              Undo quietly watches your inbox for trials, renewals, returns, and bills — and gives you a
+              moment to fix them before they slip.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
                 href="#waitlist"
                 className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition-transform hover:-translate-y-px"
               >
-                Get early access
+                Join the early list
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
@@ -97,7 +97,7 @@ const Landing = () => {
               </a>
             </div>
             <p className="mt-5 text-xs text-muted-foreground">
-              Private to you · Review before keeping · No card required
+              Free while in early access · No card · Takes 30 seconds
             </p>
           </div>
 
@@ -122,10 +122,10 @@ const Landing = () => {
             The quiet cost
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            Small mistakes get expensive.
+            The small stuff adds up.
           </h2>
           <p className="mt-4 text-[16px] leading-relaxed text-muted-foreground">
-            None of these feel like emergencies — until they are. Undo notices them while you're busy living.
+            None of it feels urgent — until the charge lands. Undo notices while you're busy living.
           </p>
         </div>
 
@@ -133,23 +133,23 @@ const Landing = () => {
           {[
             {
               icon: Sparkles,
-              title: "Forgot to cancel a trial",
-              cost: "$19.99 charged",
+              title: "That free trial you forgot",
+              cost: "$19.99, every month",
             },
             {
               icon: RotateCcw,
-              title: "Missed a return window",
-              cost: "$84 stuck",
+              title: "The return you didn't get to",
+              cost: "$84 you can't get back",
             },
             {
               icon: CalendarClock,
-              title: "Renewal hit before you noticed",
-              cost: "Another year locked",
+              title: "The renewal that just hit",
+              cost: "Locked in for another year",
             },
             {
               icon: CreditCard,
-              title: "Bill slipped into a late fee",
-              cost: "$35 + interest",
+              title: "The bill that became a late fee",
+              cost: "$35 — plus a hit to your credit",
             },
           ].map((item) => (
             <div
@@ -173,8 +173,8 @@ const Landing = () => {
             How Undo works
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            Three calm steps. <br />
-            Then Undo watches for you.
+            Set it up once. <br />
+            Undo handles the watching.
           </h2>
         </div>
 
@@ -183,20 +183,20 @@ const Landing = () => {
             {
               step: "01",
               icon: Mail,
-              title: "Connect Gmail safely",
-              body: "Undo looks only for likely trials, renewals, returns, and bills — nothing else.",
+              title: "Connect Gmail",
+              body: "Undo only scans for trials, renewals, returns, and bills. Nothing else is touched.",
             },
             {
               step: "02",
               icon: Eye,
-              title: "Review what Undo found",
-              body: "You see every suggestion first. Keep, edit, or dismiss in seconds.",
+              title: "Review the suggestions",
+              body: "Every find is shown to you first. Keep, edit, or dismiss in a tap.",
             },
             {
               step: "03",
               icon: ShieldCheck,
-              title: "Fix what still can be saved",
-              body: "Cancel a trial, hit a return window, pay before a late fee. Quietly protected.",
+              title: "Fix it in time",
+              body: "Cancel before the charge. Return before the window. Pay before the fee.",
             },
           ].map((s) => (
             <div
@@ -226,19 +226,19 @@ const Landing = () => {
                 Only you see this
               </span>
               <h2 className="mt-5 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
-                Only the four things that matter.
+                Narrow by design.
               </h2>
               <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo is narrow on purpose. It looks for likely trials, renewals, returns, and bills — and
-                shows them to you before anything joins your feed.
+                Undo looks for four things — trials, renewals, returns, and bills. Nothing else is read,
+                stored, or shared. And nothing reaches your feed until you say so.
               </p>
 
               <ul className="mt-8 space-y-4">
                 {[
-                  "Looks for trial and renewal dates",
-                  "Looks for payment due dates",
-                  "Looks for return deadlines",
-                  "Looks for amounts and merchant names",
+                  "Trial endings and renewal dates",
+                  "Payment due dates and amounts",
+                  "Return windows before they close",
+                  "Merchant names — never message contents",
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-3 text-[15px]">
                     <CheckCircle2
@@ -266,16 +266,16 @@ const Landing = () => {
                 <div className="mt-6 space-y-4">
                   {[
                     {
-                      title: "Nothing is saved without you",
-                      body: "Every suggestion is reviewed before it joins your feed.",
+                      title: "Review before anything is kept",
+                      body: "No suggestion joins your feed until you tap Keep.",
                     },
                     {
-                      title: "Keep, edit, or dismiss anything",
-                      body: "You decide what's worth catching. Always.",
+                      title: "Edit or dismiss freely",
+                      body: "Wrong amount? Not relevant? One tap and it's gone.",
                     },
                     {
-                      title: "Disconnect anytime",
-                      body: "One tap and Undo stops looking. No questions.",
+                      title: "Disconnect in one tap",
+                      body: "Change your mind? Undo stops looking. Immediately.",
                     },
                   ].map((c) => (
                     <div
@@ -333,12 +333,12 @@ const Landing = () => {
           Why it feels different
         </p>
         <h2 className="mt-4 font-display text-[40px] leading-[1.04] tracking-snug text-balance sm:text-[56px]">
-          Not a to-do app. <br />
-          <em className="text-primary not-italic italic">A protection layer.</em>
+          Not another to-do app. <br />
+          <em className="text-primary not-italic italic">A quiet protection layer.</em>
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-[16.5px] leading-relaxed text-muted-foreground">
-          Undo is not about organizing your life. It is about catching the small things that quietly make
-          life worse.
+          You don't need more lists. You need a quiet second pair of eyes — catching the small things
+          before they turn into money, stress, or regret.
         </p>
       </section>
 
@@ -353,11 +353,15 @@ const Landing = () => {
             }}
           />
           <div className="relative text-center">
-            <h2 className="font-display text-[40px] leading-[1.05] tracking-snug sm:text-[56px]">
-              Be first to try Undo.
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+              Early access · Limited spots
+            </span>
+            <h2 className="mt-5 font-display text-[40px] leading-[1.05] tracking-snug sm:text-[56px]">
+              Get in early.
             </h2>
             <p className="mx-auto mt-5 max-w-lg text-[16px] leading-relaxed text-muted-foreground">
-              Join the early list and help shape the first version. Quiet emails. No spam. Ever.
+              Be one of the first to try Undo — and help shape what we build next. One quiet email when
+              your spot is ready.
             </p>
 
             {!submitted ? (
@@ -377,19 +381,19 @@ const Landing = () => {
                   type="submit"
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition-opacity hover:opacity-90"
                 >
-                  Get early access
+                  Save my spot
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </form>
             ) : (
               <div className="mx-auto mt-8 inline-flex items-center gap-2 rounded-full bg-primary-soft px-5 py-3 text-[14.5px] font-medium text-primary">
                 <Check className="h-4 w-4" strokeWidth={2.25} />
-                You're on the list. We'll be in touch.
+                You're in. We'll be in touch soon.
               </div>
             )}
 
             <p className="mt-5 text-xs text-muted-foreground">
-              Private to you · Review before keeping · Disconnect anytime
+              Free in early access · One email, never spam · Unsubscribe in a tap
             </p>
           </div>
         </div>
