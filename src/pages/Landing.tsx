@@ -117,39 +117,44 @@ const Landing = () => {
       </section>
 
       {/* Problem */}
-      <section className="mx-auto mt-32 max-w-6xl px-6">
+      <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             The quiet cost
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            The small stuff adds up.
+            Small mistakes get expensive.
           </h2>
-          <p className="mt-4 text-[16px] leading-relaxed text-muted-foreground">
-            None of it feels urgent — until the charge lands. Undo notices while you're busy living.
+          <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
+            It usually isn’t one big disaster. It’s the free trial you forgot to cancel. The return
+            window you meant to use. The renewal that hit before you noticed. The bill that quietly
+            became a late fee.
+          </p>
+          <p className="mt-3 text-[16px] leading-relaxed text-muted-foreground">
+            Undo helps catch those small things while they’re still fixable.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               icon: Sparkles,
-              title: "That free trial you forgot",
+              title: "Forgot to cancel a trial",
               cost: "$19.99, every month",
             },
             {
               icon: RotateCcw,
-              title: "The return you didn't get to",
-              cost: "$84 you can't get back",
+              title: "Missed a return window",
+              cost: "$84 you can’t get back",
             },
             {
               icon: CalendarClock,
-              title: "The renewal that just hit",
+              title: "Renewal hit before you noticed",
               cost: "Locked in for another year",
             },
             {
               icon: CreditCard,
-              title: "The bill that became a late fee",
+              title: "Bill slipped into a late fee",
               cost: "$35 — plus a hit to your credit",
             },
           ].map((item) => (
