@@ -173,14 +173,13 @@ const Landing = () => {
       </section>
 
       {/* How it works */}
-      <section id="how" className="mx-auto mt-32 max-w-6xl px-6">
+      <section id="how" className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             How Undo works
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            Set it up once. <br />
-            Undo handles the watching.
+            Three calm steps.
           </h2>
         </div>
 
@@ -189,20 +188,20 @@ const Landing = () => {
             {
               step: "01",
               icon: Mail,
-              title: "Connect Gmail",
-              body: "Undo only scans for trials, renewals, returns, and bills. Nothing else is touched.",
+              title: "Connect Gmail safely",
+              body: "Undo looks only for likely trials, renewals, returns, and bills.",
             },
             {
               step: "02",
               icon: Eye,
-              title: "Review the suggestions",
-              body: "Every find is shown to you first. Keep, edit, or dismiss in a tap.",
+              title: "Review what Undo found",
+              body: "Nothing goes into your feed until you keep it.",
             },
             {
               step: "03",
               icon: ShieldCheck,
-              title: "Fix it in time",
-              body: "Cancel before the charge. Return before the window. Pay before the fee.",
+              title: "Fix what still can be saved",
+              body: "See what matters now, act quickly, and move on.",
             },
           ].map((s) => (
             <div
