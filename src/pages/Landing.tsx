@@ -222,28 +222,27 @@ const Landing = () => {
       </section>
 
       {/* Trust section */}
-      <section className="mx-auto mt-32 max-w-6xl px-6">
+      <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
         <div className="overflow-hidden rounded-[36px] border border-border bg-card shadow-card">
           <div className="grid gap-0 lg:grid-cols-[1fr_1.1fr]">
-            <div className="p-10 sm:p-14">
+            <div className="p-10 sm:p-16">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
                 <Lock className="h-3 w-3" strokeWidth={2} />
                 Only you see this
               </span>
-              <h2 className="mt-5 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
-                Narrow by design.
+              <h2 className="mt-6 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
+                Only the four things that matter.
               </h2>
               <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo looks for four things — trials, renewals, returns, and bills. Nothing else is read,
-                stored, or shared. And nothing reaches your feed until you say so.
+                Undo looks for likely:
               </p>
 
-              <ul className="mt-8 space-y-4">
+              <ul className="mt-6 space-y-4">
                 {[
-                  "Trial endings and renewal dates",
-                  "Payment due dates and amounts",
-                  "Return windows before they close",
-                  "Merchant names — never message contents",
+                  "Trial and renewal dates",
+                  "Payment due dates",
+                  "Return deadlines",
+                  "Amounts and merchant names",
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-3 text-[15px]">
                     <CheckCircle2
@@ -254,9 +253,14 @@ const Landing = () => {
                   </li>
                 ))}
               </ul>
+
+              <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
+                Nothing is saved without you. Undo surfaces suggestions for review — keep, edit, or
+                dismiss anything. You stay in control the whole time.
+              </p>
             </div>
 
-            <div className="relative bg-mist p-10 sm:p-14">
+            <div className="relative bg-mist p-10 sm:p-16">
               <div
                 className="absolute inset-0 opacity-60"
                 style={{
@@ -268,7 +272,7 @@ const Landing = () => {
                 <h3 className="font-display text-[26px] leading-tight tracking-snug">
                   You stay in control.
                 </h3>
-                <div className="mt-6 space-y-4">
+                <div className="mt-7 space-y-4">
                   {[
                     {
                       title: "Review before anything is kept",
@@ -276,7 +280,7 @@ const Landing = () => {
                     },
                     {
                       title: "Edit or dismiss freely",
-                      body: "Wrong amount? Not relevant? One tap and it's gone.",
+                      body: "Wrong amount? Not relevant? One tap and it’s gone.",
                     },
                     {
                       title: "Disconnect in one tap",
@@ -299,26 +303,22 @@ const Landing = () => {
       </section>
 
       {/* Product preview */}
-      <section className="mx-auto mt-32 max-w-6xl px-6">
+      <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             Inside Undo
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            Calm intelligence, end to end.
+            See what Undo catches.
           </h2>
-          <p className="mt-4 text-[16px] leading-relaxed text-muted-foreground">
-            From the moment you connect Gmail to the day you save your first $19.99 — every screen feels
-            quiet, considered, and on your side.
-          </p>
         </div>
 
-        <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { variant: "permission", label: "Gmail permission" },
-            { variant: "scanning", label: "Scanning state" },
-            { variant: "review", label: "Review detected items" },
-            { variant: "feed", label: "Fix today feed" },
+            { variant: "permission", label: "Connect safely" },
+            { variant: "scanning", label: "Finding what matters" },
+            { variant: "review", label: "Review before keeping" },
+            { variant: "feed", label: "Fix today" },
           ].map((p) => (
             <div key={p.variant} className="flex flex-col items-center gap-4">
               <div className="w-full max-w-[260px]">
@@ -333,23 +333,23 @@ const Landing = () => {
       </section>
 
       {/* Why different */}
-      <section className="mx-auto mt-32 max-w-4xl px-6 text-center">
+      <section className="mx-auto mt-36 max-w-4xl px-6 text-center sm:mt-44">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
           Why it feels different
         </p>
         <h2 className="mt-4 font-display text-[40px] leading-[1.04] tracking-snug text-balance sm:text-[56px]">
-          Not another to-do app. <br />
-          <em className="text-primary not-italic italic">A quiet protection layer.</em>
+          Not a to-do app. <br />
+          <em className="text-primary not-italic italic">A protection layer.</em>
         </h2>
-        <p className="mx-auto mt-6 max-w-xl text-[16.5px] leading-relaxed text-muted-foreground">
-          You don't need more lists. You need a quiet second pair of eyes — catching the small things
-          before they turn into money, stress, or regret.
+        <p className="mx-auto mt-7 max-w-xl text-[16.5px] leading-relaxed text-muted-foreground">
+          Undo is not about organizing your life. It is about catching the small things that quietly
+          make life worse — before they turn into stress, wasted money, or awkwardness.
         </p>
       </section>
 
       {/* Waitlist */}
-      <section id="waitlist" className="mx-auto mt-32 max-w-5xl px-6 pb-24">
-        <div className="relative overflow-hidden rounded-[40px] border border-border bg-card p-10 shadow-card sm:p-16">
+      <section id="waitlist" className="mx-auto mt-36 max-w-5xl px-6 pb-28 sm:mt-44">
+        <div className="relative overflow-hidden rounded-[40px] border border-border bg-card p-10 shadow-card sm:p-20">
           <div
             className="absolute inset-0 opacity-70"
             style={{
@@ -359,20 +359,19 @@ const Landing = () => {
           />
           <div className="relative text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              Early access · Limited spots
+              Early access
             </span>
-            <h2 className="mt-5 font-display text-[40px] leading-[1.05] tracking-snug sm:text-[56px]">
-              Get in early.
+            <h2 className="mt-6 font-display text-[40px] leading-[1.05] tracking-snug sm:text-[56px]">
+              Be first to try Undo.
             </h2>
             <p className="mx-auto mt-5 max-w-lg text-[16px] leading-relaxed text-muted-foreground">
-              Be one of the first to try Undo — and help shape what we build next. One quiet email when
-              your spot is ready.
+              Join the early list and help shape the first version.
             </p>
 
             {!submitted ? (
               <form
                 onSubmit={handleSubmit}
-                className="mx-auto mt-8 flex w-full max-w-md flex-col items-stretch gap-2 sm:flex-row"
+                className="mx-auto mt-10 flex w-full max-w-md flex-col items-stretch gap-2 sm:flex-row"
               >
                 <input
                   type="email"
@@ -380,25 +379,25 @@ const Landing = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="flex-1 rounded-full border border-border bg-background px-5 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex-1 rounded-full border border-border bg-background px-5 py-4 text-[15px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition-opacity hover:opacity-90"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background shadow-soft transition-opacity hover:opacity-90"
                 >
-                  Save my spot
+                  Get early access
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </form>
             ) : (
-              <div className="mx-auto mt-8 inline-flex items-center gap-2 rounded-full bg-primary-soft px-5 py-3 text-[14.5px] font-medium text-primary">
+              <div className="mx-auto mt-10 inline-flex items-center gap-2 rounded-full bg-primary-soft px-5 py-3 text-[14.5px] font-medium text-primary">
                 <Check className="h-4 w-4" strokeWidth={2.25} />
-                You're in. We'll be in touch soon.
+                You’re in. We’ll be in touch soon.
               </div>
             )}
 
-            <p className="mt-5 text-xs text-muted-foreground">
-              Free in early access · One email, never spam · Unsubscribe in a tap
+            <p className="mt-6 text-xs text-muted-foreground">
+              We’ll only email when there’s something worth sending.
             </p>
           </div>
         </div>
