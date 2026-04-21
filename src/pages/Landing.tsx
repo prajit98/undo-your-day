@@ -388,55 +388,33 @@ const Landing = () => {
       </section>
 
       {/* Waitlist */}
-      <section id="waitlist" className="mx-auto mt-36 max-w-5xl px-6 pb-28 sm:mt-44">
-        <div className="relative overflow-hidden rounded-[40px] border border-border bg-card p-10 shadow-card sm:p-20">
+      <section id="waitlist" className="mx-auto mt-36 max-w-3xl px-6 pb-28 sm:mt-44">
+        <div className="relative overflow-hidden rounded-[40px] border border-border bg-card p-8 shadow-card sm:p-14">
           <div
-            className="absolute inset-0 opacity-70"
+            className="pointer-events-none absolute inset-0 opacity-70"
             style={{
               background:
                 "radial-gradient(700px 360px at 50% 0%, hsl(var(--primary) / 0.12), transparent 60%)",
             }}
           />
-          <div className="relative text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
-              Early access
-            </span>
-            <h2 className="mt-6 font-display text-[40px] leading-[1.05] tracking-snug sm:text-[56px]">
-              Be first to try Undo.
-            </h2>
-            <p className="mx-auto mt-5 max-w-lg text-[16px] leading-relaxed text-muted-foreground">
-              Join the early list and help shape the first version.
-            </p>
+          <div className="relative">
+            <div className="text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-primary">
+                Early access
+              </span>
+              <h2 className="mt-6 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[52px]">
+                Be first to try Undo.
+              </h2>
+              <p className="mx-auto mt-5 max-w-md text-[16px] leading-relaxed text-muted-foreground">
+                Join the early list and help shape the first version.
+              </p>
+            </div>
 
-            {!submitted ? (
-              <form
-                onSubmit={handleSubmit}
-                className="mx-auto mt-10 flex w-full max-w-md flex-col items-stretch gap-2 sm:flex-row"
-              >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="flex-1 rounded-full border border-border bg-background px-5 py-4 text-[15px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background shadow-soft transition-opacity hover:opacity-90"
-                >
-                  Get early access
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </form>
-            ) : (
-              <div className="mx-auto mt-10 inline-flex items-center gap-2 rounded-full bg-primary-soft px-5 py-3 text-[14.5px] font-medium text-primary">
-                <Check className="h-4 w-4" strokeWidth={2.25} />
-                You’re in. We’ll be in touch soon.
-              </div>
-            )}
+            <div className="mx-auto mt-10 w-full max-w-lg rounded-3xl border border-border/70 bg-background/70 p-4 shadow-soft backdrop-blur-sm sm:p-6">
+              <TallyForm />
+            </div>
 
-            <p className="mt-6 text-xs text-muted-foreground">
+            <p className="mx-auto mt-6 max-w-sm text-center text-xs text-muted-foreground">
               We’ll only email when there’s something worth sending.
             </p>
           </div>
