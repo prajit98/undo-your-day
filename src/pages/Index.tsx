@@ -5,6 +5,7 @@ import { useUndo } from "@/context/UndoContext";
 import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
 import { FeedSummary } from "@/components/FeedSummary";
+import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { urgencyFor } from "@/lib/urgency";
 import { onboarding } from "@/lib/onboarding";
 
@@ -56,6 +57,7 @@ const Index = () => {
       </header>
 
       {active.length > 0 && <FeedSummary items={items} />}
+      {active.length > 0 && <WeeklyRecap />}
 
       {critical.length > 0 && (
         <section className="mt-6 px-5">

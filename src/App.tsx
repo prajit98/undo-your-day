@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UndoProvider } from "@/context/UndoContext";
+import { PremiumProvider } from "@/context/PremiumContext";
+import { UpgradeSheet } from "@/components/UpgradeSheet";
 import Index from "./pages/Index.tsx";
 import AddItem from "./pages/AddItem.tsx";
 import Categories from "./pages/Categories.tsx";
@@ -22,19 +24,22 @@ const App = () => (
       <Toaster />
       <Sonner position="top-center" />
       <UndoProvider>
-        <BrowserRouter>
-          <OnboardingGate />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/add" element={<AddItem />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <PremiumProvider>
+          <BrowserRouter>
+            <OnboardingGate />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/add" element={<AddItem />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/timeline" element={<Timeline />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <UpgradeSheet />
+          </BrowserRouter>
+        </PremiumProvider>
       </UndoProvider>
     </TooltipProvider>
   </QueryClientProvider>
