@@ -2,15 +2,19 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileShell } from "@/components/MobileShell";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Moon, Mail, ChevronRight, Sparkles, PlayCircle } from "lucide-react";
+import { Bell, Moon, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check } from "lucide-react";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { CategoryIconCircle } from "@/components/CategoryBadge";
 import { onboarding } from "@/lib/onboarding";
+import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
+import { useUndo } from "@/context/UndoContext";
 
 const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { isPremium, showUpgrade } = usePremium();
+  const { active } = useUndo();
   const [push, setPush] = useState(true);
   const [email, setEmail] = useState(false);
   const [quiet, setQuiet] = useState(true);
