@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
 import { useUndo } from "@/context/UndoContext";
+import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { Category, categoryMeta } from "@/lib/undo-data";
 import { CategoryIconRound } from "@/components/CategoryBadge";
 import { extractFromText, extractFromScreenshot, ExtractionResult } from "@/lib/extract";
@@ -26,7 +27,8 @@ type Stage = "input" | "extracting" | "review";
 
 const AddItem = () => {
   const navigate = useNavigate();
-  const { addItem } = useUndo();
+  const { addItem, active } = useUndo();
+  const { isPremium, showUpgrade } = usePremium();
 
   const [stage, setStage] = useState<Stage>("input");
   const [text, setText] = useState("");
@@ -64,6 +66,10 @@ const AddItem = () => {
 
   const confirm = () => {
     if (!draft) return;
+    if (!isPremium && active.length >= FREE_ITEM_LIMIT) {
+      showUpgrade("limit");
+      return;
+    }
     addItem({
       title: draft.title,
       detail: draft.detail,
