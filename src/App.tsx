@@ -24,19 +24,22 @@ const App = () => (
       <Toaster />
       <Sonner position="top-center" />
       <UndoProvider>
-        <BrowserRouter>
-          <OnboardingGate />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/add" element={<AddItem />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <PremiumProvider>
+          <BrowserRouter>
+            <OnboardingGate />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/add" element={<AddItem />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/timeline" element={<Timeline />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <UpgradeSheet />
+          </BrowserRouter>
+        </PremiumProvider>
       </UndoProvider>
     </TooltipProvider>
   </QueryClientProvider>
