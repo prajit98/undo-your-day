@@ -51,7 +51,48 @@ const Settings = () => {
           </div>
         </section>
 
-        {/* Notifications */}
+        {/* Premium status */}
+        {isPremium ? (
+          <section className="rounded-3xl border border-primary/20 bg-primary-soft/60 p-4 shadow-soft">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <ShieldCheck className="h-4 w-4" strokeWidth={1.9} />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Undo Premium</p>
+                <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                  Unlimited protection. Stronger reminders. Richer recap.
+                </p>
+              </div>
+              <Check className="h-4 w-4 text-primary" strokeWidth={2.2} />
+            </div>
+          </section>
+        ) : (
+          <button
+            onClick={() => showUpgrade(active.length >= FREE_ITEM_LIMIT ? "limit" : "recap")}
+            className="w-full rounded-3xl bg-card p-4 text-left shadow-soft transition-all active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary">
+                <ShieldCheck className="h-4 w-4" strokeWidth={1.9} />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Upgrade to Premium</p>
+                <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                  Unlimited items, stronger reminders, richer recap.
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-2xl bg-surface/70 px-3 py-2 text-[11px]">
+              <span className="text-muted-foreground">Active items</span>
+              <span className="tabular-nums font-medium text-foreground">
+                {active.length} / {FREE_ITEM_LIMIT}
+              </span>
+            </div>
+          </button>
+        )}
+
         <section>
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Reminders
