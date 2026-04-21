@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, Clock, Bell, BellPlus, Archive, ArrowRight, MoreHorizontal, Lock } from "lucide-react";
+import { ReminderPlan } from "./ReminderPlan";
 import { UndoItem } from "@/lib/undo-data";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
