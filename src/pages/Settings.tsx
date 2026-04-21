@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobileShell } from "@/components/MobileShell";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Moon, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check } from "lucide-react";
+import { Bell, Moon, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock } from "lucide-react";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { CategoryIconCircle } from "@/components/CategoryBadge";
 import { onboarding } from "@/lib/onboarding";
 import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
+import { reminderPolicy } from "@/lib/reminders";
 
 const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
 
@@ -124,7 +125,59 @@ const Settings = () => {
           </div>
         </section>
 
-        {/* Categories */}
+        {/* Reminder rhythm — category-aware preview */}
+        <section>
+          <div className="mb-2 flex items-end justify-between px-1">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Reminder rhythm
+            </h2>
+            <span className="text-[10.5px] text-muted-foreground">
+              {isPremium ? "Premium" : "Free"}
+            </span>
+          </div>
+          <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+            {cats.map((c) => {
+              const p = reminderPolicy[c];
+              const schedule = isPremium ? p.premium : p.free;
+              return (
+                <div key={c} className="flex items-start gap-3 p-3.5">
+                  <CategoryIconCircle category={c} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] font-medium leading-tight text-foreground">
+                      {categoryMeta[c].label}
+                    </p>
+                    <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">
+                      {schedule.cadence}
+                    </p>
+                    {!isPremium && (
+                      <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-muted-foreground/80">
+                        <Lock className="h-2.5 w-2.5" strokeWidth={2} />
+                        Last-chance with Premium
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {!isPremium && (
+            <button
+              onClick={() => showUpgrade("reminders")}
+              className="mt-3 flex w-full items-center justify-between rounded-2xl bg-primary-soft/70 px-4 py-3 text-left transition-colors hover:bg-primary-soft"
+            >
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-medium text-foreground">
+                  Stronger reminders for things you really don't want to miss
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Multi-step cadence + last-chance nudge per category.
+                </p>
+              </div>
+              <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-primary" />
+            </button>
+          )}
+        </section>
+
         <section>
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             What you want to catch
