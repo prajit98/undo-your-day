@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, Clock, Bell, BellPlus, Archive, ArrowRight, MoreHorizontal, Lock } from "lucide-react";
+import { ReminderPlan } from "./ReminderPlan";
 import { UndoItem } from "@/lib/undo-data";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
@@ -113,7 +114,14 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
         )}
       </div>
 
-      {/* Actions */}
+      {/* Reminder plan — only on critical cards, where it earns its space */}
+      {isCritical && (
+        <div className="mt-3">
+          <ReminderPlan category={item.category} />
+        </div>
+      )}
+
+
       <div className="mt-5 flex items-center gap-2">
         <button
           onClick={() => handle(() => setStatus(item.id, "done"), "Nicely caught.")}
