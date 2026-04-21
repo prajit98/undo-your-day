@@ -1,35 +1,75 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Mail,
   ShieldCheck,
   Sparkles,
-  Receipt,
   RotateCcw,
   CalendarClock,
   CreditCard,
   Lock,
   Eye,
   CheckCircle2,
-  Check,
 } from "lucide-react";
-import { toast } from "sonner";
 
-const Landing = () => {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+const TALLY_SRC =
+  "https://tally.so/embed/q4EMaO?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1";
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !email.includes("@")) {
-      toast.error("Please enter a valid email");
+declare global {
+  interface Window {
+    Tally?: { loadEmbeds: () => void };
+  }
+}
+
+const TallyForm = () => {
+  useEffect(() => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://tally.so/widgets/embed.js"]',
+    );
+    const load = () => {
+      if (window.Tally) {
+        window.Tally.loadEmbeds();
+      } else {
+        document
+          .querySelectorAll<HTMLIFrameElement>("iframe[data-tally-src]:not([src])")
+          .forEach((el) => {
+            if (el.dataset.tallySrc) el.src = el.dataset.tallySrc;
+          });
+      }
+    };
+    if (window.Tally) {
+      load();
       return;
     }
-    setSubmitted(true);
-    toast.success("You're on the list. We'll be in touch.");
-  };
+    if (existing) {
+      existing.addEventListener("load", load);
+      return () => existing.removeEventListener("load", load);
+    }
+    const s = document.createElement("script");
+    s.src = "https://tally.so/widgets/embed.js";
+    s.async = true;
+    s.onload = load;
+    s.onerror = load;
+    document.body.appendChild(s);
+  }, []);
 
+  return (
+    <iframe
+      data-tally-src={TALLY_SRC}
+      loading="lazy"
+      width="100%"
+      height={251}
+      frameBorder={0}
+      marginHeight={0}
+      marginWidth={0}
+      title="Be first to try Undo"
+      className="w-full bg-transparent"
+    />
+  );
+};
+
+const Landing = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Ambient background */}
