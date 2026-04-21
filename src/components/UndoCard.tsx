@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Check, Clock, Bell, Archive, ArrowRight, MoreHorizontal } from "lucide-react";
+import { Check, Clock, Bell, BellPlus, Archive, ArrowRight, MoreHorizontal, Lock } from "lucide-react";
 import { UndoItem } from "@/lib/undo-data";
 import { useUndo } from "@/context/UndoContext";
+import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "./CategoryBadge";
 import { urgencyFor, shortDue } from "@/lib/urgency";
 import { cn } from "@/lib/utils";
@@ -9,12 +10,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis?: "auto" | "calm" }) {
   const { setStatus, snooze } = useUndo();
+  const { isPremium, registerReminder } = usePremium();
   const [exiting, setExiting] = useState(false);
   const urgency = urgencyFor(item.category, item.dueAt);
   const isCritical = emphasis === "auto" && urgency.level === "critical";
@@ -57,10 +60,21 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
           <DropdownMenuTrigger className="rounded-full p-1 text-muted-foreground/70 hover:text-foreground">
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => handle(() => snooze(item.id, 24), "Reminder set for tomorrow")}>
               <Bell className="mr-2 h-4 w-4" /> Remind me later
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                if (registerReminder(item.id)) {
+                  toast.success("Extra reminder added");
+                }
+              }}
+            >
+              <BellPlus className="mr-2 h-4 w-4" /> Add another reminder
+              {!isPremium && <Lock className="ml-auto h-3 w-3 text-muted-foreground" strokeWidth={2} />}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => handle(() => setStatus(item.id, "archived"), "Archived")}>
               <Archive className="mr-2 h-4 w-4" /> Archive
             </DropdownMenuItem>
