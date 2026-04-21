@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UndoProvider } from "@/context/UndoContext";
+import { PremiumProvider } from "@/context/PremiumContext";
+import { UpgradeSheet } from "@/components/UpgradeSheet";
 import Index from "./pages/Index.tsx";
 import AddItem from "./pages/AddItem.tsx";
 import Categories from "./pages/Categories.tsx";
