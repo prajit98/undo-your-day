@@ -76,7 +76,7 @@ const Settings = () => {
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Preferences
         </p>
-        <h1 className="mt-3 font-display text-[38px] leading-[1.04] tracking-snug">Tune Undo.</h1>
+        <h1 className="mt-3 font-display text-[38px] leading-[1.04] tracking-snug">Settings</h1>
       </header>
 
       <div className="mt-6 space-y-5 px-5">
@@ -140,8 +140,8 @@ const Settings = () => {
 
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                 {onboarding.gmailConnected
-                  ? "Automatic detection is not live yet. Undo keeps the scope narrow and review-first."
-                  : "Undo stays focused on those categories — and still waits for your review before anything is kept."}
+                  ? "Automatic detection is not live yet. Undo keeps the scope narrow, and you review everything first."
+                  : "Undo stays focused on those categories, and review still comes before anything is kept."}
               </p>
             </div>
           </div>
@@ -287,7 +287,7 @@ const Settings = () => {
             <div>
               <p className="font-display text-base text-foreground">Undo, calmly</p>
               <p className="mt-1 text-xs text-foreground/70">
-                Undo only surfaces reminders when there is still time to fix something. Never just to prove it’s paying attention.
+                Undo only surfaces reminders when there is still time to fix something. Never just to prove it's paying attention.
               </p>
             </div>
           </div>
@@ -340,7 +340,7 @@ const Settings = () => {
         )}
 
         <p className="pt-2 text-center text-[11px] text-muted-foreground">
-          Undo · calm protection for the small things that matter.
+          Undo protects the small things that matter.
         </p>
       </div>
     </MobileShell>

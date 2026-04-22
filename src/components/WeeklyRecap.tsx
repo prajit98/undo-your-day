@@ -32,14 +32,14 @@ export function WeeklyRecap() {
   const title =
     caughtCount > 0
       ? "Undo helped you catch a few things in time."
-      : "Quiet week. A few more things are already in view.";
+      : "Quiet week. A few more items are already in view.";
 
   const summary =
     protectedAmount > 0
-      ? `Money protected, decisions made, and ${comingNext > 0 ? "a few more things already in view." : "nothing urgent building next."}`
+      ? `Money protected, decisions made, and ${comingNext > 0 ? "a few more items already in view." : "nothing urgent building next."}`
       : comingNext > 0
-        ? "Nothing slipped this week, and a few more things are already in view."
-        : "Nothing slipped this week. Undo will keep quiet watch.";
+        ? "Nothing slipped this week, and a few more items are already in view."
+        : "Nothing slipped this week. Undo will keep watch in the background.";
 
   return (
     <section className="relative mx-5 mt-6 overflow-hidden rounded-[30px] border border-border/60 bg-card/95 p-6 shadow-card">
@@ -84,7 +84,7 @@ export function WeeklyRecap() {
         </p>
         <p className="mt-2 text-[13px] leading-relaxed text-foreground/80 text-balance">
           {comingNext > 0
-            ? `${comingNext} thing${comingNext === 1 ? "" : "s"} ${comingNext === 1 ? "is" : "are"} already lined up for next week. Undo will keep an eye on ${comingNext === 1 ? "it" : "them"}.`
+            ? `${comingNext} item${comingNext === 1 ? "" : "s"} ${comingNext === 1 ? "is" : "are"} already in view for next week. Undo will keep an eye on ${comingNext === 1 ? "it" : "them"}.`
             : "Nothing urgent is building next week. Undo will keep watch in the background."}
         </p>
       </div>
@@ -94,7 +94,7 @@ export function WeeklyRecap() {
           onClick={() => showUpgrade("history")}
           className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 transition-colors hover:text-foreground"
         >
-          See the full recap story
+          See full recap
           <ArrowRight className="h-3 w-3" strokeWidth={2} />
         </button>
       )}

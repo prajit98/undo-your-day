@@ -131,12 +131,12 @@ const Landing = () => {
               Starts with Gmail
             </span>
             <h1 className="mt-7 max-w-[11ch] font-display text-[44px] leading-[1] tracking-snug text-balance sm:max-w-[12ch] sm:text-[60px] lg:max-w-[11ch] lg:text-[68px]">
-              Catch the things you meant to fix —{" "}
-              <em className="text-primary not-italic italic">before it’s too late.</em>
+              Catch the things you meant to fix{" "}
+              <em className="text-primary not-italic italic">before it's too late.</em>
             </h1>
             <p className="mt-7 max-w-[34rem] text-[17px] leading-[1.75] text-muted-foreground">
-              Undo is designed to surface likely trials, renewals, returns, and bills, then bring
-              them to review before they become expensive, stressful, or awkward.
+              Undo helps you spot likely trials, renewals, returns, and bills, then brings them to
+              review before they become expensive, stressful, or awkward.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <a
@@ -155,7 +155,7 @@ const Landing = () => {
             </div>
             <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
-              Only the four things that matter. Nothing is kept without your review.
+              Only the four things that matter. You review everything before anything is kept.
             </p>
           </div>
 
@@ -183,12 +183,12 @@ const Landing = () => {
             Small mistakes get expensive.
           </h2>
           <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
-            It usually isn’t one big disaster. It’s the free trial you forgot to cancel. The return
+            It usually isn't one big disaster. It's the free trial you forgot to cancel. The return
             window you meant to use. The renewal that hit before you noticed. The bill that quietly
             became a late fee.
           </p>
           <p className="mt-3 text-[16px] leading-relaxed text-muted-foreground">
-            Undo helps catch those small things while they’re still fixable.
+            Undo helps catch those small things while they're still fixable.
           </p>
         </div>
 
@@ -202,7 +202,7 @@ const Landing = () => {
             {
               icon: RotateCcw,
               title: "Missed a return window",
-              cost: "$84 you can’t get back",
+              cost: "$84 you can't get back",
             },
             {
               icon: CalendarClock,
@@ -212,7 +212,7 @@ const Landing = () => {
             {
               icon: CreditCard,
               title: "Bill slipped into a late fee",
-              cost: "$35 — plus a hit to your credit",
+              cost: "$35, plus a hit to your credit",
             },
           ].map((item) => (
             <div
@@ -246,7 +246,7 @@ const Landing = () => {
               step: "01",
               icon: Mail,
               title: "Start with Gmail",
-              body: "Undo stays focused on likely trials, renewals, returns, and bills — nothing broader.",
+              body: "Undo stays focused on likely trials, renewals, returns, and bills. Nothing broader.",
             },
             {
               step: "02",
@@ -291,7 +291,7 @@ const Landing = () => {
                 Only the four things that matter.
               </h2>
               <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo is designed to look for just:
+                Undo stays focused on:
               </p>
 
               <ul className="mt-6 space-y-4">
@@ -312,8 +312,8 @@ const Landing = () => {
               </ul>
 
               <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
-                Nothing is saved without you. Undo surfaces suggestions for review — keep, edit, or
-                dismiss anything. You stay in control the whole time.
+                Nothing is saved without you. Undo shows suggestions for review. Keep, edit, or
+                dismiss anything. You stay in control.
               </p>
             </div>
 
@@ -337,7 +337,7 @@ const Landing = () => {
                     },
                     {
                       title: "Edit or dismiss freely",
-                      body: "Wrong amount? Not relevant? One tap and it’s gone.",
+                      body: "Wrong amount? Not relevant? One tap and it's gone.",
                     },
                     {
                       title: "Disconnect in one tap",
@@ -400,7 +400,7 @@ const Landing = () => {
         </h2>
         <p className="mx-auto mt-7 max-w-xl text-[16.5px] leading-relaxed text-muted-foreground">
           Undo is not about organizing your life. It is about catching the small things that quietly
-          make life worse — before they turn into stress, wasted money, or awkwardness.
+          make life worse before they turn into stress, wasted money, or awkwardness.
         </p>
       </section>
 
@@ -434,7 +434,7 @@ const Landing = () => {
             </div>
 
             <p className="mx-auto mt-6 max-w-sm text-center text-xs text-muted-foreground">
-              We’ll only email when there’s something worth opening.
+              We'll only email when there's something worth opening.
             </p>
           </div>
         </div>
@@ -446,7 +446,7 @@ const Landing = () => {
           <div className="flex flex-col gap-1">
             <span className="font-display text-xl tracking-snug">Undo</span>
             <span className="text-xs text-muted-foreground">
-              Catch the things you meant to fix — before it’s too late.
+              Catch the things you meant to fix before it's too late.
             </span>
           </div>
           <div className="flex items-center gap-5 text-xs text-muted-foreground">
@@ -492,11 +492,11 @@ const FeedScreen = () => (
   <div className="flex h-full flex-col px-4 pt-9">
     <div className="flex items-center justify-between">
       <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Tuesday · Apr 22
+        Tuesday - Apr 22
       </p>
       <span className="inline-flex items-center gap-1 rounded-full bg-card px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground shadow-soft">
         <span className="h-1 w-1 rounded-full bg-primary" />
-        Review-first
+        Review first
       </span>
     </div>
     <h3 className="mt-2 font-display text-[20px] leading-tight tracking-snug">
@@ -508,10 +508,10 @@ const FeedScreen = () => (
         urgent
         chip="Trial"
         title="Save $19.99 if you cancel today"
-        meta="Notion AI · ends today"
+        meta="Notion AI - ends today"
       />
-      <MiniCard chip="Return" title="Last 2 days to return" meta="Adidas · $84.00" />
-      <MiniCard chip="Bill" title="Avoid the late fee this week" meta="ConEd · $112.40" />
+      <MiniCard chip="Return" title="Last 2 days to return" meta="Adidas - $84.00" />
+      <MiniCard chip="Bill" title="Avoid the late fee this week" meta="ConEd - $112.40" />
       <MiniCard chip="Renewal" title="Spotify renews tomorrow" meta="$11.99 / mo" />
     </div>
   </div>
@@ -527,16 +527,16 @@ const PermissionScreen = () => (
       See how Undo looks for the things that quietly slip through.
     </h3>
     <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-      Likely trials, renewals, returns, and bills — reviewed by you first.
+      Likely trials, renewals, returns, and bills, reviewed by you first.
     </p>
 
       <div className="mt-3 space-y-2.5">
       <div className="rounded-xl border border-border bg-card p-2.5">
         <p className="text-[9px] font-medium">Only the four things that matter</p>
         <ul className="mt-1.5 space-y-1 text-[8.5px] text-muted-foreground">
-          <li>· Trial & renewal dates</li>
-          <li>· Payment due dates</li>
-          <li>· Return deadlines</li>
+          <li>- Trial and renewal dates</li>
+          <li>- Payment due dates</li>
+          <li>- Return deadlines</li>
         </ul>
       </div>
       <div className="rounded-xl border border-border bg-card p-2.5">
@@ -549,7 +549,7 @@ const PermissionScreen = () => (
 
     <div className="mt-auto pb-4">
       <div className="rounded-full bg-foreground py-2 text-center text-[9.5px] font-medium text-background">
-        See Gmail flow
+        See how Gmail works
       </div>
       <p className="mt-2 text-center text-[8.5px] text-muted-foreground">Maybe later</p>
     </div>
@@ -572,7 +572,7 @@ const ScanningScreen = () => (
     <h3 className="mt-6 font-display text-[16px] leading-tight tracking-snug">
       Undo is checking for things still worth catching
     </h3>
-    <p className="mt-2 text-[9.5px] text-muted-foreground">Checking bill deadlines…</p>
+    <p className="mt-2 text-[9.5px] text-muted-foreground">Checking bill deadlines...</p>
   </div>
 );
 
@@ -584,7 +584,7 @@ const ReviewScreen = () => (
     <p className="mt-1 text-[9.5px] text-muted-foreground">Review what to keep.</p>
 
     <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary/85 px-2.5 py-1.5">
-      <span className="text-[9px] font-medium">5 suggestions · $147 at risk</span>
+      <span className="text-[9px] font-medium">5 suggestions - $147 at risk</span>
       <span className="rounded-full bg-foreground px-2 py-0.5 text-[8.5px] font-medium text-background">
         Keep all
       </span>
@@ -598,7 +598,7 @@ const ReviewScreen = () => (
         meta="Notion AI"
         action="Keep"
       />
-      <MiniCard chip="Return" title="Last 2 days to return" meta="Adidas · $84" action="Keep" />
+      <MiniCard chip="Return" title="Last 2 days to return" meta="Adidas - $84" action="Keep" />
       <MiniCard chip="Bill" title="ConEd bill in 3 days" meta="$112.40" action="Keep" />
     </div>
   </div>

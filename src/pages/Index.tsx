@@ -84,7 +84,7 @@ const Index = () => {
         <section className="mt-7 px-5">
           <SectionHeader
             kicker="Coming up"
-            sub="Still plenty of time — Undo keeps a quiet eye on these."
+            sub="Still plenty of time. Undo keeps a quiet eye on these."
           />
           <div className="mt-3 space-y-3">
             {upcoming.map((item) => (
@@ -117,12 +117,12 @@ const Index = () => {
             <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
           </div>
           <p className="mt-4 font-display text-[24px] leading-tight text-foreground">
-            Nothing slipping yet.
+            Nothing to fix right now.
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
             {gmailConnected
-              ? "Undo stays review-first and in your control."
-              : "See how Gmail works in Undo — review still comes first."}
+              ? "Undo keeps review first, and you stay in control."
+              : "See how Gmail works in Undo. You still review everything first."}
           </p>
           {!gmailConnected ? (
             <Link

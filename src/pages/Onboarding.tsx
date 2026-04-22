@@ -89,7 +89,7 @@ const Onboarding = () => {
       await onboarding.complete();
       await onboarding.markFirstCapture();
       toast.success("Only what you kept is on your feed now.", {
-        description: `Undo is keeping an eye on ${items.length} thing${items.length === 1 ? "" : "s"} from here.`,
+        description: `Undo is now watching ${items.length} item${items.length === 1 ? "" : "s"}.`,
         duration: 3200,
       });
       navigate("/");
@@ -171,8 +171,8 @@ const Onboarding = () => {
               }
               toast.success(
                 keptCount > 0
-                  ? "Undo is now protecting what you kept."
-                  : "All clear for now. Undo will stay quietly ready.",
+                  ? "Undo is now protecting the items you kept."
+                  : "All clear for now. Undo will stay ready.",
                 { duration: 3000 },
               );
               navigate("/");
@@ -342,7 +342,7 @@ function PermissionStep({
           onClick={() => void onSkip()}
           className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          Maybe later — I&apos;ll add things myself
+          Maybe later. I&apos;ll add items myself.
         </button>
       </footer>
     </div>
@@ -439,7 +439,7 @@ function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => vo
       </div>
 
       <h1 className="mt-12 max-w-[13ch] font-display text-[30px] leading-[1.08] tracking-snug text-foreground text-balance">
-        See how Undo checks for things still worth catching.
+        Undo is checking for things still worth catching.
       </h1>
       <p className="mt-3 max-w-[18rem] text-[13px] leading-relaxed text-muted-foreground text-balance">
         Only the categories you picked. Review still comes first.
@@ -507,7 +507,7 @@ function ReviewStep({
           Undo surfaced a few things still worth catching.
         </h1>
         <p className="mt-3 max-w-[31rem] text-[13.5px] leading-relaxed text-muted-foreground text-balance">
-          Keep what matters. Nothing is kept unless you keep it.
+          Keep what matters. Nothing is kept automatically.
         </p>
 
         <div className="mt-5 flex items-center justify-between rounded-[22px] bg-card/80 px-4 py-3.5 shadow-soft ring-1 ring-border/60">
@@ -522,7 +522,7 @@ function ReviewStep({
           {totalAtRisk > 0 && (
             <div className="flex items-baseline gap-1.5">
               <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Still protectable
+                Still at risk
               </span>
               <span className="font-display text-[18px] leading-none text-foreground tabular-nums">
                 ${Math.round(totalAtRisk)}
@@ -595,7 +595,7 @@ function ReviewStep({
           {anyKept
             ? `Continue with ${kept.size} item${kept.size === 1 ? "" : "s"}`
             : remaining.length === 0
-              ? "Take me to the feed"
+              ? "Go to the feed"
               : "Skip the rest"}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
@@ -649,7 +649,7 @@ function CandidateCard({
           </span>
           <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {shortDue(candidate.dueAt)}
-            {candidate.source && ` · ${candidate.source}`}
+            {candidate.source && ` - ${candidate.source}`}
           </span>
         </div>
         <button
@@ -725,10 +725,10 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onS
         <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
       </div>
       <h1 className="mt-8 text-center font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
-        Nothing slipping right now.
+        Nothing to fix right now.
       </h1>
       <p className="mt-3 text-center text-[14px] leading-relaxed text-muted-foreground text-balance">
-        No strong matches this time. Manual add is here if you need it.
+        No strong matches this time. You can still add something yourself.
       </p>
 
       <div className="mt-9 space-y-3">
@@ -755,7 +755,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onS
         onClick={() => void onSkip()}
         className="mt-auto pt-8 text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
       >
-        Take me to the feed
+        Go to the feed
       </button>
     </div>
   );
