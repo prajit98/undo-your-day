@@ -59,10 +59,7 @@ const AddItem = () => {
       setText(t);
       runExtract(t, "text");
     } catch {
-      // fallback demo
-      const demo = "Your Spotify Family renews on the 18th — $167.88 will be charged.";
-      setText(demo);
-      runExtract(demo, "text");
+      toast.error("Clipboard access is not available right now.");
     }
   };
 
@@ -377,3 +374,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default AddItem;
+
