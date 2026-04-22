@@ -65,7 +65,7 @@ const Settings = () => {
 
   const disconnectGmail = async () => {
     await onboarding.setGmailConnected(false);
-    toast.success("Gmail flow turned off.", {
+    toast.success("Gmail turned off.", {
       duration: 2400,
     });
   };
@@ -116,18 +116,16 @@ const Settings = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {onboarding.gmailConnected ? "Gmail flow on" : "Gmail flow off"}
-                  </p>
+                  <p className="text-sm font-medium text-foreground">Gmail</p>
                   <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
                     {onboarding.gmailConnected
-                      ? "A narrow, review-first Gmail flow."
-                      : "See how Gmail works in Undo."}
+                      ? "Undo stays focused on the categories you picked and keeps review before anything is kept."
+                      : "See how Gmail fits into Undo before automatic detection goes live."}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
                   <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-                  {onboarding.gmailConnected ? "Review-first" : "Off"}
+                  {onboarding.gmailConnected ? "Review first" : "Off"}
                 </span>
               </div>
 
@@ -142,7 +140,7 @@ const Settings = () => {
 
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                 {onboarding.gmailConnected
-                  ? "Automatic Gmail detection is not live yet. Undo keeps the scope narrow and review-first."
+                  ? "Automatic detection is not live yet. Undo keeps the scope narrow and review-first."
                   : "Undo stays focused on those categories — and still waits for your review before anything is kept."}
               </p>
             </div>
@@ -152,7 +150,7 @@ const Settings = () => {
             onClick={() => (onboarding.gmailConnected ? disconnectGmail() : navigate("/onboarding"))}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
-            {onboarding.gmailConnected ? "Turn off Gmail flow" : "See how Gmail works"}
+            {onboarding.gmailConnected ? "Turn off Gmail" : "See how Gmail works"}
           </button>
         </section>
 
@@ -195,7 +193,7 @@ const Settings = () => {
 
         <section>
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Reminder delivery
+            In-app reminders
           </h2>
           <div className="rounded-[28px] bg-card/95 p-5 shadow-soft ring-1 ring-border/40">
             <div className="flex items-start gap-3">

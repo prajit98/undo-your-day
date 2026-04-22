@@ -31,14 +31,14 @@ export function WeeklyRecap() {
 
   const title =
     caughtCount > 0
-      ? `Undo helped you catch ${caughtCount} thing${caughtCount === 1 ? "" : "s"} in time.`
-      : "Quiet week. Undo is already watching what's next.";
+      ? "Undo helped you catch a few things in time."
+      : "Quiet week. A few more things are already in view.";
 
   const summary =
     protectedAmount > 0
-      ? `${fmt(protectedAmount)} stayed protected this week${comingNext > 0 ? `. Undo is already watching ${comingNext} thing${comingNext === 1 ? "" : "s"} coming up next.` : "."}`
+      ? `Money protected, decisions made, and ${comingNext > 0 ? "a few more things already in view." : "nothing urgent building next."}`
       : comingNext > 0
-        ? `Nothing slipped this week. Undo is already watching ${comingNext} thing${comingNext === 1 ? "" : "s"} coming up next.`
+        ? "Nothing slipped this week, and a few more things are already in view."
         : "Nothing slipped this week. Undo will keep quiet watch.";
 
   return (
@@ -94,7 +94,7 @@ export function WeeklyRecap() {
           onClick={() => showUpgrade("history")}
           className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 transition-colors hover:text-foreground"
         >
-          See the full caught-in-time story
+          See the full recap story
           <ArrowRight className="h-3 w-3" strokeWidth={2} />
         </button>
       )}

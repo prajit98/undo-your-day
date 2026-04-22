@@ -32,7 +32,7 @@ const Index = () => {
   const headline =
     todayCount > 0
       ? `${todayCount} thing${todayCount > 1 ? "s still have" : " still has"} an easy fix today.`
-      : "Nothing urgent. Undo is keeping quiet watch.";
+      : "Nothing urgent. Undo is keeping a quiet eye on things.";
 
   return (
     <MobileShell>
@@ -68,8 +68,8 @@ const Index = () => {
             kicker="Fix today"
             sub={
               critical.length > 0
-                ? "A few windows are getting tight. Handle these today and keep the easy way out."
-                : "Still enough time to fix these today, before they turn expensive or awkward."
+                ? "A few windows are getting tight. Handle these today while there is still an easy fix."
+                : "Still enough time to fix these today before they turn expensive or awkward."
             }
           />
           <div className="mt-3 space-y-3">
@@ -137,7 +137,7 @@ const Index = () => {
               to="/add"
               className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
             >
-              Add something manually
+              Add something yourself
               <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
             </Link>
           )}

@@ -71,10 +71,10 @@ const Auth = () => {
         </div>
 
         <h1 className="mt-7 max-w-[11ch] font-display text-[42px] leading-[1.01] tracking-snug text-foreground text-balance">
-          Keep your protection with you.
+          Keep what Undo is protecting with you.
         </h1>
         <p className="mt-4 max-w-[32rem] text-[14.5px] leading-relaxed text-muted-foreground text-balance">
-          One calm account for the things Undo is watching, what you caught in time, and what still needs a decision.
+          One calm account for your items, reminders, and decisions — so nothing important gets left behind.
         </p>
 
         <div className="mt-9 inline-flex rounded-full bg-surface/90 p-1 shadow-soft ring-1 ring-border/40">
@@ -139,7 +139,7 @@ const Auth = () => {
 
         <div className="mt-5 rounded-[28px] bg-primary-soft/60 p-5 ring-1 ring-primary/10">
           <p className="text-[12.5px] leading-relaxed text-foreground/80 text-balance">
-            Undo keeps this simple. No inbox, no dashboards, no account maze. Just a calm place to keep what matters.
+            Undo keeps this simple. No inbox, no dashboards, no account maze. Just your items, reminders, and decisions in one calm place.
           </p>
         </div>
 

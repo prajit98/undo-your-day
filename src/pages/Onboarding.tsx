@@ -293,38 +293,38 @@ function PermissionStep({
         </button>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
           <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-          Review before feed
+          You review first
         </span>
         <div className="w-10" />
       </header>
 
       <main className="flex-1 px-7 pt-12">
         <h1 className="max-w-[13ch] font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
-          Let Undo catch the small things you meant to fix.
+          Let Undo catch the small things you still have time to fix.
         </h1>
         <p className="mt-4 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
-          Undo stays focused on likely {scopedCategories}. Gmail detection comes later, and review still comes first.
+          Undo is designed to stay focused on likely {scopedCategories}. You review everything before anything is kept.
         </p>
 
         <div className="mt-9 space-y-3">
           <InfoCard
             icon={Eye}
-            title="Only what you asked Undo to catch"
+            title="What Undo looks for"
             tone="neutral"
             bullets={[
               `Likely ${scopedCategories}`,
               "Dates, amounts, and time windows tied to those",
-              "No general inbox browsing",
+              "Nothing broader",
             ]}
           />
           <InfoCard
             icon={ShieldCheck}
-            title="You stay in control"
+            title="What happens next"
             tone="primary"
             bullets={[
-              "Nothing joins your feed until you keep it",
+              "You review everything first",
               "Keep, edit, or dismiss in a tap",
-              "Turn Gmail off anytime in Settings",
+              "Nothing is kept without you",
             ]}
           />
         </div>
@@ -399,7 +399,7 @@ const SCAN_MESSAGES = [
   "Checking trial end dates",
   "Looking for renewal and bill deadlines",
   "Pulling out return windows and amounts",
-  "Keeping review before feed",
+  "Reviewing everything before anything is kept",
 ];
 
 function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => void }) {
@@ -450,7 +450,7 @@ function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => vo
           Only what you picked
         </span>
         <span className="inline-flex rounded-full bg-primary-soft px-3 py-1 text-[10.5px] font-medium text-primary shadow-soft">
-          Review before feed
+          You review first
         </span>
       </div>
 
@@ -501,13 +501,13 @@ function ReviewStep({
     <div className="flex flex-1 flex-col pb-32 animate-fade-in">
       <header className="px-6 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
-          Gmail flow
+          Gmail
         </p>
         <h1 className="mt-3 max-w-[14ch] font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
           Undo surfaced a few things still worth catching.
         </h1>
         <p className="mt-3 max-w-[31rem] text-[13.5px] leading-relaxed text-muted-foreground text-balance">
-          Keep what matters. Nothing here reaches your feed until you say yes.
+          Keep what matters. Nothing is kept unless you keep it.
         </p>
 
         <div className="mt-5 flex items-center justify-between rounded-[22px] bg-card/80 px-4 py-3.5 shadow-soft ring-1 ring-border/60">
