@@ -40,7 +40,7 @@ const Settings = () => {
 
   const disconnectGmail = async () => {
     await onboarding.setGmailConnected(false);
-    toast.success("Gmail preview turned off.", {
+    toast.success("Gmail flow turned off.", {
       duration: 2400,
     });
   };
@@ -92,23 +92,23 @@ const Settings = () => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {onboarding.gmailConnected ? "Gmail preview on" : "Gmail preview off"}
+                    {onboarding.gmailConnected ? "Gmail flow on" : "Gmail flow off"}
                   </p>
                   <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
                     {onboarding.gmailConnected
-                      ? "This shows how Undo will keep Gmail narrow, calm, and review-first."
-                      : "Preview the Gmail flow before automatic detection goes live."}
+                      ? "A narrow, review-first Gmail flow."
+                      : "See how Gmail fits into Undo."}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
                   <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-                  {onboarding.gmailConnected ? "Preview" : "Off"}
+                  {onboarding.gmailConnected ? "Review-first" : "Off"}
                 </span>
               </div>
 
               <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Preview focuses on
+                  Gmail scope
                 </p>
                 <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
                   {formatCategoryList(watchedByGmail)}
@@ -117,8 +117,8 @@ const Settings = () => {
 
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                 {onboarding.gmailConnected
-                  ? "Real Gmail scanning is not live yet. This preview keeps the scope narrow and keeps review before anything reaches your feed."
-                  : "Undo is being built to stay focused on those categories and still wait for your review before anything is kept."}
+                  ? "Automatic Gmail detection is not live yet. Undo keeps the scope narrow and review-first."
+                  : "Undo stays focused on those categories — and still waits for your review before anything is kept."}
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ const Settings = () => {
             onClick={() => (onboarding.gmailConnected ? disconnectGmail() : navigate("/onboarding"))}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
-            {onboarding.gmailConnected ? "Turn off Gmail preview" : "See Gmail preview"}
+            {onboarding.gmailConnected ? "Turn off Gmail flow" : "See Gmail flow"}
           </button>
         </section>
 
@@ -180,7 +180,7 @@ const Settings = () => {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">In-app reminders</p>
                 <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                  Undo already plans calm, category-aware reminders inside the app.
+                  Undo keeps reminder timing calm and category-aware in the app.
                 </p>
 
                 <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
@@ -188,7 +188,7 @@ const Settings = () => {
                     Delivery channels
                   </p>
                   <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
-                    Push and email delivery are not live in this version yet.
+                    Push and email delivery are not live yet.
                   </p>
                 </div>
               </div>
@@ -241,7 +241,7 @@ const Settings = () => {
               What you want to catch
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              The Gmail preview stays focused on Trials, Renewals, Returns, and Bills. Follow-ups stay manual for now.
+              Gmail stays focused on Trials, Renewals, Returns, and Bills. Follow-ups stay manual for now.
             </p>
           </div>
           <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
@@ -264,7 +264,7 @@ const Settings = () => {
             <div>
               <p className="font-display text-base text-foreground">Undo, calmly</p>
               <p className="mt-1 text-xs text-foreground/70">
-                Undo only surfaces reminders when there is still time to fix something. Never just to prove it is there.
+                Undo only surfaces reminders when there is still time to fix something. Never just to prove it’s paying attention.
               </p>
             </div>
           </div>

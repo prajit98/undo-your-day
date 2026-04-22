@@ -128,15 +128,15 @@ const Landing = () => {
                 <span className="absolute inline-flex h-full w-full animate-soft-pulse rounded-full bg-primary" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
               </span>
-              Gmail preview
+              Starts with Gmail
             </span>
             <h1 className="mt-7 font-display text-[44px] leading-[1.02] tracking-snug text-balance sm:text-[60px] lg:text-[68px]">
               Catch the things you meant to fix —{" "}
               <em className="text-primary not-italic italic">before it’s too late.</em>
             </h1>
             <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-              Undo is being built to quietly catch likely trials, renewals, returns, and bills, then
-              turn them into fixable items you review before they become expensive, stressful, or awkward.
+              Undo is designed to surface likely trials, renewals, returns, and bills, then bring
+              them to review before they become expensive, stressful, or awkward.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <a
@@ -245,8 +245,8 @@ const Landing = () => {
             {
               step: "01",
               icon: Mail,
-              title: "See the Gmail preview",
-              body: "Undo starts with a narrow Gmail preview for likely trials, renewals, returns, and bills.",
+              title: "Start with Gmail",
+              body: "Undo stays focused on likely trials, renewals, returns, and bills — nothing broader.",
             },
             {
               step: "02",
@@ -291,7 +291,7 @@ const Landing = () => {
                 Only the four things that matter.
               </h2>
               <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo is being built to look for likely:
+                Undo is designed to look for just:
               </p>
 
               <ul className="mt-6 space-y-4">
@@ -312,7 +312,7 @@ const Landing = () => {
               </ul>
 
               <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
-                Nothing is saved without you. Undo surfaces suggestions for review - keep, edit, or
+                Nothing is saved without you. Undo surfaces suggestions for review — keep, edit, or
                 dismiss anything. You stay in control the whole time.
               </p>
             </div>
@@ -341,7 +341,7 @@ const Landing = () => {
                     },
                     {
                       title: "Disconnect in one tap",
-                      body: "Change your mind? Undo stops the preview immediately.",
+                      body: "Change your mind? Undo steps back immediately.",
                     },
                   ].map((c) => (
                     <div
@@ -372,7 +372,7 @@ const Landing = () => {
 
         <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { variant: "permission", label: "Gmail preview" },
+            { variant: "permission", label: "Gmail trust" },
             { variant: "scanning", label: "Finding what matters" },
             { variant: "review", label: "Review before keeping" },
             { variant: "feed", label: "Fix today" },
@@ -423,7 +423,7 @@ const Landing = () => {
                 Be first to try Undo.
               </h2>
               <p className="mx-auto mt-5 max-w-md text-[16px] leading-relaxed text-muted-foreground">
-                Join the early list and help shape the first version.
+                Join the early list for first access to Undo.
               </p>
             </div>
 
@@ -434,7 +434,7 @@ const Landing = () => {
             </div>
 
             <p className="mx-auto mt-6 max-w-sm text-center text-xs text-muted-foreground">
-              We’ll only email when there’s something worth sending.
+              We’ll only email when there’s something worth opening.
             </p>
           </div>
         </div>
@@ -466,7 +466,7 @@ const Landing = () => {
   );
 };
 
-/* ───────────────────────── Phone mock ───────────────────────── */
+/* Phone mock */
 
 type PhoneVariant = "feed" | "permission" | "scanning" | "review";
 
@@ -496,7 +496,7 @@ const FeedScreen = () => (
       </p>
       <span className="inline-flex items-center gap-1 rounded-full bg-card px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground shadow-soft">
         <span className="h-1 w-1 rounded-full bg-primary" />
-        Preview
+        Review-first
       </span>
     </div>
     <h3 className="mt-2 font-display text-[20px] leading-tight tracking-snug">
@@ -524,10 +524,10 @@ const PermissionScreen = () => (
       Only you see this
     </span>
     <h3 className="mt-3 font-display text-[18px] leading-[1.05] tracking-snug">
-      Preview how Undo will look for the things that quietly slip through.
+      See how Undo looks for the things that quietly slip through.
     </h3>
     <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-      Likely trials, renewals, returns, and bills - reviewed by you first.
+      Likely trials, renewals, returns, and bills — reviewed by you first.
     </p>
 
     <div className="mt-3 space-y-2">
@@ -549,7 +549,7 @@ const PermissionScreen = () => (
 
     <div className="mt-auto pb-4">
       <div className="rounded-full bg-foreground py-2 text-center text-[9.5px] font-medium text-background">
-        See Gmail preview
+        See Gmail flow
       </div>
       <p className="mt-2 text-center text-[8.5px] text-muted-foreground">Maybe later</p>
     </div>
@@ -570,18 +570,18 @@ const ScanningScreen = () => (
       <span className="relative h-6 w-6 rounded-full bg-primary shadow-glow" />
     </div>
     <h3 className="mt-6 font-display text-[16px] leading-tight tracking-snug">
-      Undo is previewing things that still can be fixed
+      Undo is checking for things still worth catching
     </h3>
-    <p className="mt-2 text-[9.5px] text-muted-foreground">Previewing bill deadlines...</p>
+    <p className="mt-2 text-[9.5px] text-muted-foreground">Checking bill deadlines…</p>
   </div>
 );
 
 const ReviewScreen = () => (
   <div className="flex h-full flex-col px-4 pt-9">
     <h3 className="font-display text-[18px] leading-tight tracking-snug">
-      Undo previewed a few things worth catching.
+      Undo found a few things worth catching.
     </h3>
-    <p className="mt-1 text-[9.5px] text-muted-foreground">Review what to keep first.</p>
+    <p className="mt-1 text-[9.5px] text-muted-foreground">Review what to keep.</p>
 
     <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary px-2.5 py-1.5">
       <span className="text-[9px] font-medium">5 suggestions · $147 at risk</span>

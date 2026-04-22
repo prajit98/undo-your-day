@@ -89,7 +89,7 @@ const Onboarding = () => {
       await onboarding.complete();
       await onboarding.markFirstCapture();
       toast.success("Only what you kept is on your feed now.", {
-        description: `Undo will keep ${items.length} thing${items.length === 1 ? "" : "s"} in view from here.`,
+        description: `Undo is keeping an eye on ${items.length} thing${items.length === 1 ? "" : "s"} from here.`,
         duration: 3200,
       });
       navigate("/");
@@ -300,21 +300,21 @@ function PermissionStep({
 
       <main className="flex-1 px-7 pt-12">
         <h1 className="font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
-          Preview how Undo will catch the small things you meant to fix.
+          Let Undo catch the small things you meant to fix.
         </h1>
         <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
-          This preview stays focused on likely {scopedCategories}. When Gmail goes live, Undo will keep that scope narrow and still wait for your review before anything joins your feed.
+          Undo is designed to stay focused on likely {scopedCategories}. Automatic Gmail detection is not live yet. Review still comes first.
         </p>
 
         <div className="mt-9 space-y-3">
           <InfoCard
             icon={Eye}
-            title="Only the first things Undo is being built to catch"
+            title="Only what you asked Undo to catch"
             tone="neutral"
             bullets={[
               `Likely ${scopedCategories}`,
               "Dates, amounts, and time windows tied to those",
-              "No general inbox browsing in the product direction",
+              "No general inbox browsing",
             ]}
           />
           <InfoCard
@@ -324,7 +324,7 @@ function PermissionStep({
             bullets={[
               "Nothing joins your feed until you keep it",
               "Keep, edit, or dismiss in a tap",
-              "Turn this preview off anytime in Settings",
+              "Turn Gmail off anytime in Settings",
             ]}
           />
         </div>
@@ -336,13 +336,13 @@ function PermissionStep({
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           <Mail className="h-4 w-4" strokeWidth={1.9} />
-          See Gmail preview
+          See Gmail flow
         </button>
         <button
           onClick={() => void onSkip()}
           className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          Maybe later - I&apos;ll add things myself
+          Maybe later — I&apos;ll add things myself
         </button>
       </footer>
     </div>
@@ -396,10 +396,10 @@ function InfoCard({
 }
 
 const SCAN_MESSAGES = [
-  "Previewing trial end dates",
-  "Previewing renewal and bill deadlines",
+  "Checking trial end dates",
+  "Looking for renewal and bill deadlines",
   "Pulling out return windows and amounts",
-  "Keeping the preview review-first",
+  "Keeping review before feed",
 ];
 
 function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => void }) {
@@ -439,10 +439,10 @@ function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => vo
       </div>
 
       <h1 className="mt-12 font-display text-[30px] leading-[1.1] tracking-snug text-foreground text-balance">
-        Undo is previewing the kinds of things it will catch first.
+        See how Undo checks for things still worth catching.
       </h1>
       <p className="mt-3 max-w-[17rem] text-[13px] leading-relaxed text-muted-foreground text-balance">
-        Only the categories you picked. You will still review everything first.
+        Only the categories you picked. Review still comes first.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
@@ -455,7 +455,7 @@ function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => vo
       </div>
 
       <p className="mt-4 text-[11.5px] uppercase tracking-[0.16em] text-muted-foreground">
-        Previewing {formatCategoryList(picked).toLowerCase()}
+        Checking {formatCategoryList(picked).toLowerCase()}
       </p>
 
       <div className="mt-8 flex h-6 items-center justify-center">
@@ -501,13 +501,13 @@ function ReviewStep({
     <div className="flex flex-1 flex-col pb-32 animate-fade-in">
       <header className="px-6 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
-          Gmail preview
+          Gmail flow
         </p>
         <h1 className="mt-3 font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
-          Here is how Undo would surface a few things still worth catching.
+          Undo surfaced a few things still worth catching.
         </h1>
         <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground text-balance">
-          Keep what matters. This is a preview, and nothing here reaches your feed until you say yes.
+          Keep what matters. Nothing here reaches your feed until you say yes.
         </p>
 
         <div className="mt-5 flex items-center justify-between rounded-2xl bg-card/70 px-4 py-3 shadow-soft ring-1 ring-border/60">
@@ -581,7 +581,7 @@ function ReviewStep({
               {anyKept ? "All reviewed." : "All clear."}
             </p>
             <p className="mt-1.5 text-[12.5px] text-muted-foreground">
-              {anyKept ? "Undo is now ready to protect what you kept." : "Nothing kept. Undo will stay quiet for now."}
+              {anyKept ? "Undo is ready to protect what you kept." : "Nothing kept. Undo will stay quiet for now."}
             </p>
           </div>
         )}
@@ -728,7 +728,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onS
         Nothing slipping right now.
       </h1>
       <p className="mt-3 text-center text-[14px] leading-relaxed text-muted-foreground text-balance">
-        This preview did not surface strong matches today. Manual add is here if you need it.
+        No strong matches this time. Manual add is here if you need it.
       </p>
 
       <div className="mt-9 space-y-2.5">
