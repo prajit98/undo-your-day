@@ -1,4 +1,4 @@
-import { UndoItem } from "@/lib/undo-data";
+import { UndoItem, isActiveUndoItem } from "@/lib/undo-data";
 
 interface Props {
   items: UndoItem[];
@@ -8,7 +8,7 @@ const HOUR = 36e5;
 
 export function FeedSummary({ items }: Props) {
   const now = Date.now();
-  const active = items.filter((i) => i.status === "active");
+  const active = items.filter(isActiveUndoItem);
 
   const moneyAtRisk = active.reduce((sum, i) => sum + (i.amountValue ?? 0), 0);
 

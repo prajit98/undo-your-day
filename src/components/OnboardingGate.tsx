@@ -1,20 +1,65 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { onboarding } from "@/lib/onboarding";
+import { useAuth } from "@/context/AuthContext";
+import { useUndo } from "@/context/UndoContext";
 
-/**
- * Sends new users to /onboarding on their first visit. Runs once per route change.
- */
+const PUBLIC_PATHS = new Set(["/landing", "/auth"]);
+
 export function OnboardingGate() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { user, ready: authReady } = useAuth();
+  const { ready: appReady, onboarding } = useUndo();
+
+  const isBooting = !authReady || (Boolean(user) && !appReady);
 
   useEffect(() => {
-    if (pathname === "/onboarding" || pathname === "/landing" || pathname === "/showcase") return;
-    if (!onboarding.isComplete()) {
-      navigate("/onboarding", { replace: true });
-    }
-  }, [pathname, navigate]);
+    if (isBooting) return;
 
-  return null;
+    if (!user) {
+      if (!PUBLIC_PATHS.has(pathname)) {
+        navigate("/auth", { replace: true, state: { redirectTo: pathname } });
+      }
+      return;
+    }
+
+    if (pathname === "/auth") {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    if (pathname === "/landing") {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    if (!onboarding.isComplete && pathname !== "/onboarding") {
+      navigate("/onboarding", { replace: true });
+      return;
+    }
+
+    if (onboarding.isComplete && pathname === "/onboarding") {
+      navigate("/", { replace: true });
+    }
+  }, [isBooting, user, pathname, onboarding.isComplete, navigate]);
+
+  if (!isBooting || pathname === "/landing") {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/96 backdrop-blur-sm">
+      <div className="mx-6 max-w-xs text-center">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Undo
+        </p>
+        <h1 className="mt-4 font-display text-[30px] leading-[1.08] tracking-snug text-foreground">
+          Getting your protection ready.
+        </h1>
+        <div className="mx-auto mt-6 h-[2px] w-32 overflow-hidden rounded-full bg-surface">
+          <div className="shimmer h-full w-full rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
 }

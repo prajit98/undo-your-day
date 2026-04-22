@@ -7,18 +7,21 @@ import { MobileShell } from "@/components/MobileShell";
 import { FeedSummary } from "@/components/FeedSummary";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { urgencyFor } from "@/lib/urgency";
-import { onboarding } from "@/lib/onboarding";
 
 const Index = () => {
-  const { items, active } = useUndo();
-  const gmailConnected = onboarding.isGmailConnected();
+  const { items, active, onboarding } = useUndo();
+  const gmailConnected = onboarding.gmailConnected;
 
-  const { critical, upcoming } = useMemo(() => {
+  const { critical, fixToday, upcoming } = useMemo(() => {
     const sorted = [...active].sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
     const critical = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "critical");
-    const upcoming = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level !== "critical");
-    return { critical, upcoming };
+    const fixToday = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "today");
+    const upcoming = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "coming");
+    return { critical, fixToday, upcoming };
   }, [active]);
+
+  const fixTodayItems = [...critical, ...fixToday];
+  const todayCount = fixTodayItems.length;
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -27,9 +30,9 @@ const Index = () => {
   });
 
   const headline =
-    critical.length > 0
-      ? `${critical.length} undo moment${critical.length > 1 ? "s" : ""} need you today.`
-      : "Nothing urgent. The week is yours.";
+    todayCount > 0
+      ? `${todayCount} thing${todayCount > 1 ? "s still have" : " still has"} an easy fix today.`
+      : "Nothing urgent. Undo is keeping quiet watch.";
 
   return (
     <MobileShell>
@@ -45,11 +48,11 @@ const Index = () => {
               )}
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
             </span>
-            {gmailConnected ? "Watching Gmail" : "Undo"}
+            {gmailConnected ? "Gmail preview" : "Undo"}
           </span>
         </div>
         <h1 className="mt-3 whitespace-pre-line font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
-          {critical.length > 0 ? "A few things\nto undo today." : "Quiet today.\nNicely done."}
+          {todayCount > 0 ? "A few things\nto fix today." : "Quiet today.\nNicely done."}
         </h1>
         <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
           {headline}
@@ -57,16 +60,20 @@ const Index = () => {
       </header>
 
       {active.length > 0 && <FeedSummary items={items} />}
-      {active.length > 0 && <WeeklyRecap />}
+      <WeeklyRecap />
 
-      {critical.length > 0 && (
+      {fixTodayItems.length > 0 && (
         <section className="mt-6 px-5">
           <SectionHeader
             kicker="Fix today"
-            sub="Closing windows. Act now and you keep the option."
+            sub={
+              critical.length > 0
+                ? "A few windows are getting tight. Handle these today and you keep the easy way out."
+                : "Still enough time to fix these today, before they turn expensive or awkward."
+            }
           />
           <div className="mt-3 space-y-3">
-            {critical.map((item) => (
+            {fixTodayItems.map((item) => (
               <UndoCard key={item.id} item={item} />
             ))}
           </div>
@@ -77,7 +84,7 @@ const Index = () => {
         <section className="mt-7 px-5">
           <SectionHeader
             kicker="Coming up"
-            sub="Still plenty of time — we'll keep an eye on these."
+            sub="Still plenty of time - Undo will keep a quiet eye on these."
           />
           <div className="mt-3 space-y-3">
             {upcoming.map((item) => (
@@ -87,7 +94,7 @@ const Index = () => {
         </section>
       )}
 
-      {/* Manual backup — secondary to the automatic-first story */}
+      {/* Manual backup - secondary to the automatic-first story */}
       {active.length > 0 && (
         <Link
           to="/add"
@@ -114,8 +121,8 @@ const Index = () => {
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
             {gmailConnected
-              ? "Undo is watching. We'll surface things the moment they need you."
-              : "Connect Gmail to let Undo catch trials, renewals, returns, and bills automatically."}
+              ? "You have already seen the Gmail preview. Anything you keep in Undo still stays review-first and in your control."
+              : "See the Gmail preview to understand how Undo will review trials, renewals, returns, and bills before anything is kept."}
           </p>
           {!gmailConnected ? (
             <Link
@@ -123,7 +130,7 @@ const Index = () => {
               className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
             >
               <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
-              Connect Gmail
+              See Gmail preview
             </Link>
           ) : (
             <Link

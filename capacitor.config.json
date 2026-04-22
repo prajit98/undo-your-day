@@ -1,0 +1,7 @@
+{
+  "appId": "com.undoyourday.app",
+  "appName": "Undo",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#f7f4ee"
+}

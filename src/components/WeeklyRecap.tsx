@@ -1,6 +1,7 @@
-import { ShieldCheck, ArrowRight, Lock } from "lucide-react";
+import { ShieldCheck, ArrowRight } from "lucide-react";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
+import { isActiveUndoItem } from "@/lib/undo-data";
 
 const HOUR = 36e5;
 
@@ -9,30 +10,43 @@ export function WeeklyRecap() {
   const { isPremium, showUpgrade } = usePremium();
   const now = Date.now();
 
-  const caughtThisWeek = items.filter((i) => {
-    if (i.status !== "done") return false;
-    const h = (now - new Date(i.dueAt).getTime()) / HOUR;
-    return h >= 0 && h <= 24 * 7;
+  const caughtThisWeek = items.filter((item) => {
+    if (item.status !== "done") return false;
+    const hoursSinceDue = (now - new Date(item.dueAt).getTime()) / HOUR;
+    return hoursSinceDue >= 0 && hoursSinceDue <= 24 * 7;
   });
 
-  const protectedAmount = caughtThisWeek.reduce((s, i) => s + (i.amountValue ?? 0), 0);
+  const caughtCount = caughtThisWeek.length;
+  const protectedAmount = caughtThisWeek.reduce((sum, item) => sum + (item.amountValue ?? 0), 0);
 
-  const comingNext = items.filter((i) => {
-    if (i.status !== "active") return false;
-    const h = (new Date(i.dueAt).getTime() - now) / HOUR;
-    return h > 24 * 7 && h <= 24 * 14;
+  const comingNext = items.filter((item) => {
+    if (!isActiveUndoItem(item)) return false;
+    const hoursUntilDue = (new Date(item.dueAt).getTime() - now) / HOUR;
+    return hoursUntilDue > 24 * 7 && hoursUntilDue <= 24 * 14;
   }).length;
 
-  // Don't show until there's something gentle to say
-  if (caughtThisWeek.length === 0 && comingNext === 0) return null;
+  if (caughtCount === 0 && comingNext === 0) return null;
 
-  const fmt = (n: number) =>
-    n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(0)}`;
+  const fmt = (n: number) => (n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(0)}`);
 
-  const onMore = () => showUpgrade(isPremium ? "history" : "recap");
+  const title =
+    caughtCount > 0
+      ? `Undo helped you catch ${caughtCount} thing${caughtCount === 1 ? "" : "s"} in time.`
+      : "Quiet week. Undo is already watching what's next.";
+
+  const summary =
+    protectedAmount > 0
+      ? `${fmt(protectedAmount)} stayed protected this week${comingNext > 0 ? `. Undo is already watching ${comingNext} thing${comingNext === 1 ? "" : "s"} coming up next.` : "."}`
+      : comingNext > 0
+        ? `Nothing slipped this week. Undo is already watching ${comingNext} thing${comingNext === 1 ? "" : "s"} coming up next.`
+        : "Nothing slipped this week. Undo will keep quiet watch.";
 
   return (
-    <section className="mx-5 mt-6 overflow-hidden rounded-[28px] border border-border/60 bg-card p-5 shadow-soft">
+    <section className="relative mx-5 mt-6 overflow-hidden rounded-[28px] border border-border/60 bg-card p-5 shadow-card">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/7 to-transparent"
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-primary">
@@ -42,50 +56,55 @@ export function WeeklyRecap() {
             This week
           </p>
         </div>
-        {!isPremium && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-            <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-            Free recap
-          </span>
-        )}
+        <span className="inline-flex rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+          Weekly recap
+        </span>
       </div>
 
       <h3 className="mt-3 font-display text-[22px] leading-tight text-foreground text-balance">
-        Caught in time this week.
+        {title}
       </h3>
 
+      <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+        {summary}
+      </p>
+
       <div className="mt-4 grid grid-cols-2 gap-3">
+        <Stat value={String(caughtCount)} label="caught in time" />
         <Stat
-          value={String(caughtThisWeek.length)}
-          label={caughtThisWeek.length === 1 ? "item fixed" : "items fixed"}
-        />
-        <Stat
-          value={protectedAmount > 0 ? fmt(protectedAmount) : "—"}
-          label="protected"
+          value={protectedAmount > 0 ? fmt(protectedAmount) : "--"}
+          label="money protected"
           accent
         />
       </div>
 
-      <p className="mt-4 text-[12.5px] leading-relaxed text-muted-foreground">
-        {comingNext > 0
-          ? `${comingNext} thing${comingNext === 1 ? "" : "s"} coming up next week — we'll watch them for you.`
-          : "Quiet week ahead. We'll keep watching."}
-      </p>
+      <div className="mt-3 rounded-2xl bg-surface/70 p-4 ring-1 ring-border/50">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Coming next
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-foreground/80">
+          {comingNext > 0
+            ? `${comingNext} thing${comingNext === 1 ? "" : "s"} ${comingNext === 1 ? "is" : "are"} already lined up for next week. Undo will keep an eye on ${comingNext === 1 ? "it" : "them"}.`
+            : "Nothing urgent is building next week. Undo will keep watch in the background."}
+        </p>
+      </div>
 
-      <button
-        onClick={onMore}
-        className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 hover:text-foreground"
-      >
-        {isPremium ? "See protection history" : "See everything Undo caught"}
-        <ArrowRight className="h-3 w-3" strokeWidth={2} />
-      </button>
+      {!isPremium && (
+        <button
+          onClick={() => showUpgrade("history")}
+          className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 hover:text-foreground"
+        >
+          See the full caught-in-time story
+          <ArrowRight className="h-3 w-3" strokeWidth={2} />
+        </button>
+      )}
     </section>
   );
 }
 
 function Stat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
-    <div className="rounded-2xl bg-surface/60 p-3.5">
+    <div className="rounded-2xl bg-surface/70 p-3.5 ring-1 ring-border/40">
       <p
         className={`font-display text-[26px] leading-none tabular-nums ${
           accent ? "text-primary" : "text-foreground"

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -15,6 +15,7 @@ import {
 
 const TALLY_SRC =
   "https://tally.so/embed/q4EMaO?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1";
+const TALLY_WIDGET_SRC = "https://tally.so/widgets/embed.js";
 
 declare global {
   interface Window {
@@ -23,48 +24,64 @@ declare global {
 }
 
 const TallyForm = () => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
   useEffect(() => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[src="https://tally.so/widgets/embed.js"]',
-    );
-    const load = () => {
-      if (window.Tally) {
+    const iframe = iframeRef.current;
+    if (iframe && !iframe.src) {
+      iframe.src = iframe.dataset.tallySrc ?? TALLY_SRC;
+    }
+
+    const loadEmbed = () => {
+      if (typeof window.Tally !== "undefined") {
         window.Tally.loadEmbeds();
-      } else {
-        document
-          .querySelectorAll<HTMLIFrameElement>("iframe[data-tally-src]:not([src])")
-          .forEach((el) => {
-            if (el.dataset.tallySrc) el.src = el.dataset.tallySrc;
-          });
       }
     };
-    if (window.Tally) {
-      load();
+
+    if (typeof window.Tally !== "undefined") {
+      loadEmbed();
       return;
     }
-    if (existing) {
-      existing.addEventListener("load", load);
-      return () => existing.removeEventListener("load", load);
+
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${TALLY_WIDGET_SRC}"]`,
+    );
+
+    if (existing == null) {
+      const script = document.createElement("script");
+      script.src = TALLY_WIDGET_SRC;
+      script.async = true;
+      script.onload = loadEmbed;
+      script.onerror = loadEmbed;
+      document.body.appendChild(script);
+      return () => {
+        script.onload = null;
+        script.onerror = null;
+      };
     }
-    const s = document.createElement("script");
-    s.src = "https://tally.so/widgets/embed.js";
-    s.async = true;
-    s.onload = load;
-    s.onerror = load;
-    document.body.appendChild(s);
+
+    existing.addEventListener("load", loadEmbed, { once: true });
+    existing.addEventListener("error", loadEmbed, { once: true });
+
+    return () => {
+      existing.removeEventListener("load", loadEmbed);
+      existing.removeEventListener("error", loadEmbed);
+    };
   }, []);
 
   return (
     <iframe
+      ref={iframeRef}
+      src={TALLY_SRC}
       data-tally-src={TALLY_SRC}
       loading="lazy"
       width="100%"
-      height={251}
+      height={320}
       frameBorder={0}
       marginHeight={0}
       marginWidth={0}
       title="Be first to try Undo"
-      className="w-full bg-transparent"
+      className="block min-h-[320px] w-full bg-transparent"
     />
   );
 };
@@ -111,15 +128,15 @@ const Landing = () => {
                 <span className="absolute inline-flex h-full w-full animate-soft-pulse rounded-full bg-primary" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
               </span>
-              Now with Gmail
+              Gmail preview
             </span>
             <h1 className="mt-7 font-display text-[44px] leading-[1.02] tracking-snug text-balance sm:text-[60px] lg:text-[68px]">
               Catch the things you meant to fix —{" "}
               <em className="text-primary not-italic italic">before it’s too late.</em>
             </h1>
             <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-              Undo quietly looks for likely trials, renewals, returns, and bills, then turns them into
-              fixable items you can review before they become expensive, stressful, or awkward.
+              Undo is being built to quietly catch likely trials, renewals, returns, and bills, then
+              turn them into fixable items you review before they become expensive, stressful, or awkward.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <a
@@ -228,8 +245,8 @@ const Landing = () => {
             {
               step: "01",
               icon: Mail,
-              title: "Connect Gmail safely",
-              body: "Undo looks only for likely trials, renewals, returns, and bills.",
+              title: "See the Gmail preview",
+              body: "Undo starts with a narrow Gmail preview for likely trials, renewals, returns, and bills.",
             },
             {
               step: "02",
@@ -274,7 +291,7 @@ const Landing = () => {
                 Only the four things that matter.
               </h2>
               <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo looks for likely:
+                Undo is being built to look for likely:
               </p>
 
               <ul className="mt-6 space-y-4">
@@ -295,7 +312,7 @@ const Landing = () => {
               </ul>
 
               <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
-                Nothing is saved without you. Undo surfaces suggestions for review — keep, edit, or
+                Nothing is saved without you. Undo surfaces suggestions for review - keep, edit, or
                 dismiss anything. You stay in control the whole time.
               </p>
             </div>
@@ -324,7 +341,7 @@ const Landing = () => {
                     },
                     {
                       title: "Disconnect in one tap",
-                      body: "Change your mind? Undo stops looking. Immediately.",
+                      body: "Change your mind? Undo stops the preview immediately.",
                     },
                   ].map((c) => (
                     <div
@@ -355,7 +372,7 @@ const Landing = () => {
 
         <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { variant: "permission", label: "Connect safely" },
+            { variant: "permission", label: "Gmail preview" },
             { variant: "scanning", label: "Finding what matters" },
             { variant: "review", label: "Review before keeping" },
             { variant: "feed", label: "Fix today" },
@@ -411,7 +428,9 @@ const Landing = () => {
             </div>
 
             <div className="mx-auto mt-10 w-full max-w-lg rounded-3xl border border-border/70 bg-background/70 p-4 shadow-soft backdrop-blur-sm sm:p-6">
-              <TallyForm />
+              <div className="overflow-hidden rounded-[26px] bg-transparent">
+                <TallyForm />
+              </div>
             </div>
 
             <p className="mx-auto mt-6 max-w-sm text-center text-xs text-muted-foreground">
@@ -477,7 +496,7 @@ const FeedScreen = () => (
       </p>
       <span className="inline-flex items-center gap-1 rounded-full bg-card px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground shadow-soft">
         <span className="h-1 w-1 rounded-full bg-primary" />
-        Watching
+        Preview
       </span>
     </div>
     <h3 className="mt-2 font-display text-[20px] leading-tight tracking-snug">
@@ -505,10 +524,10 @@ const PermissionScreen = () => (
       Only you see this
     </span>
     <h3 className="mt-3 font-display text-[18px] leading-[1.05] tracking-snug">
-      Let Undo look for the things that quietly slip through.
+      Preview how Undo will look for the things that quietly slip through.
     </h3>
     <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-      Likely trials, renewals, returns, and bills — reviewed by you first.
+      Likely trials, renewals, returns, and bills - reviewed by you first.
     </p>
 
     <div className="mt-3 space-y-2">
@@ -530,7 +549,7 @@ const PermissionScreen = () => (
 
     <div className="mt-auto pb-4">
       <div className="rounded-full bg-foreground py-2 text-center text-[9.5px] font-medium text-background">
-        Connect Gmail safely
+        See Gmail preview
       </div>
       <p className="mt-2 text-center text-[8.5px] text-muted-foreground">Maybe later</p>
     </div>
@@ -551,18 +570,18 @@ const ScanningScreen = () => (
       <span className="relative h-6 w-6 rounded-full bg-primary shadow-glow" />
     </div>
     <h3 className="mt-6 font-display text-[16px] leading-tight tracking-snug">
-      Undo is finding things that still can be fixed
+      Undo is previewing things that still can be fixed
     </h3>
-    <p className="mt-2 text-[9.5px] text-muted-foreground">Checking for bill deadlines…</p>
+    <p className="mt-2 text-[9.5px] text-muted-foreground">Previewing bill deadlines...</p>
   </div>
 );
 
 const ReviewScreen = () => (
   <div className="flex h-full flex-col px-4 pt-9">
     <h3 className="font-display text-[18px] leading-tight tracking-snug">
-      Undo found a few things worth catching.
+      Undo previewed a few things worth catching.
     </h3>
-    <p className="mt-1 text-[9.5px] text-muted-foreground">Review what to keep.</p>
+    <p className="mt-1 text-[9.5px] text-muted-foreground">Review what to keep first.</p>
 
     <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary px-2.5 py-1.5">
       <span className="text-[9px] font-medium">5 suggestions · $147 at risk</span>

@@ -6,9 +6,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category, categoryMeta } from "@/lib/undo-data";
-import { onboarding, autoCategories } from "@/lib/onboarding";
+import { autoCategories } from "@/lib/onboarding";
 import { Candidate, candidateToItem, generateCandidates } from "@/lib/candidates";
 import { useUndo } from "@/context/UndoContext";
+import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { shortDue } from "@/lib/urgency";
 import { toast } from "sonner";
@@ -31,24 +32,85 @@ const catTagline: Record<Category, string> = {
   followup: "",
 };
 
+const categoryPlural: Record<Category, string> = {
+  trial: "Trials",
+  renewal: "Renewals",
+  return: "Returns",
+  bill: "Bills",
+  followup: "Follow-ups",
+};
+
+function formatCategoryList(categories: Category[]) {
+  const labels = categories.map((category) => categoryPlural[category]);
+  if (labels.length <= 1) return labels[0] ?? "";
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
+
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { addItem } = useUndo();
+  const { addItem, onboarding } = useUndo();
+  const { isPremium, availableActiveSlots, canCreateActiveItems, showUpgrade } = usePremium();
   const [step, setStep] = useState<Step>("categories");
-  const [picked, setPicked] = useState<Category[]>(autoCategories);
+  const [picked, setPicked] = useState<Category[]>(onboarding.pickedCategories);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const skipGmail = () => {
-    onboarding.savePrefs(picked);
-    onboarding.setGmailConnected(false);
-    onboarding.complete();
+  useEffect(() => {
+    setPicked(onboarding.pickedCategories);
+  }, [onboarding.pickedCategories]);
+
+  const skipGmail = async () => {
+    await onboarding.savePrefs(picked);
+    await onboarding.setGmailConnected(false);
+    await onboarding.complete();
     navigate("/");
+  };
+
+  const keepCandidate = async (candidate: Candidate) => {
+    if (!canCreateActiveItems()) {
+      return false;
+    }
+
+    await addItem(candidateToItem(candidate));
+    return true;
+  };
+
+  const keepAllCandidates = async (items: Candidate[]) => {
+    if (items.length === 0) {
+      return { keptCount: 0, completed: false };
+    }
+
+    if (isPremium || items.length <= availableActiveSlots) {
+      for (const candidate of items) {
+        await addItem(candidateToItem(candidate));
+      }
+      await onboarding.savePrefs(picked);
+      await onboarding.complete();
+      await onboarding.markFirstCapture();
+      toast.success("Only what you kept is on your feed now.", {
+        description: `Undo will keep ${items.length} thing${items.length === 1 ? "" : "s"} in view from here.`,
+        duration: 3200,
+      });
+      navigate("/");
+      return { keptCount: items.length, completed: true };
+    }
+
+    if (availableActiveSlots <= 0) {
+      showUpgrade("limit");
+      return { keptCount: 0, completed: false };
+    }
+
+    for (const candidate of items.slice(0, availableActiveSlots)) {
+      await addItem(candidateToItem(candidate));
+    }
+    showUpgrade("limit");
+
+    return { keptCount: availableActiveSlots, completed: false };
   };
 
   return (
     <div className="min-h-screen w-full bg-background">
-      {/* Subtle ambient gradient for cohesion across screens */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-x-0 top-0 h-[55vh] opacity-60"
@@ -62,8 +124,12 @@ const Onboarding = () => {
         {step === "categories" && (
           <CategoryStep
             picked={picked}
-            onToggle={(c) =>
-              setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]))
+            onToggle={(category) =>
+              setPicked((current) => (
+                current.includes(category)
+                  ? current.filter((entry) => entry !== category)
+                  : [...current, category]
+              ))
             }
             onContinue={() => setStep("permission")}
           />
@@ -71,17 +137,19 @@ const Onboarding = () => {
 
         {step === "permission" && (
           <PermissionStep
-            onConnect={() => {
-              onboarding.setGmailConnected(true);
+            picked={picked}
+            onConnect={async () => {
+              await onboarding.setGmailConnected(true);
               setStep("scanning");
             }}
-            onSkip={skipGmail}
+            onSkip={() => void skipGmail()}
             onBack={() => setStep("categories")}
           />
         )}
 
         {step === "scanning" && (
           <ScanningStep
+            picked={picked}
             onDone={() => {
               setCandidates(generateCandidates(picked));
               setStep("review");
@@ -91,38 +159,27 @@ const Onboarding = () => {
 
         {step === "review" && (
           <ReviewStep
-            candidates={candidates.filter((c) => !dismissed.has(c.id))}
-            onDismiss={(id) => setDismissed((s) => new Set(s).add(id))}
-            onKeepAll={(items) => {
-              items.forEach((c) => addItem(candidateToItem(c)));
-              onboarding.savePrefs(picked);
-              onboarding.complete();
-              onboarding.markFirstCapture();
-              toast.success("Undo is watching a few things for you now", {
-                description: `${items.length} item${items.length === 1 ? "" : "s"} on your feed`,
-                duration: 3200,
-              });
-              navigate("/");
-            }}
-            onKeep={(c) => {
-              addItem(candidateToItem(c));
-              setDismissed((s) => new Set(s).add(c.id));
-            }}
-            onFinish={(keptCount) => {
-              onboarding.savePrefs(picked);
-              onboarding.complete();
-              if (keptCount > 0) onboarding.markFirstCapture();
+            candidates={candidates.filter((candidate) => !dismissed.has(candidate.id))}
+            onDismiss={(id) => setDismissed((current) => new Set(current).add(id))}
+            onKeepAll={keepAllCandidates}
+            onKeep={keepCandidate}
+            onFinish={async (keptCount) => {
+              await onboarding.savePrefs(picked);
+              await onboarding.complete();
+              if (keptCount > 0) {
+                await onboarding.markFirstCapture();
+              }
               toast.success(
                 keptCount > 0
-                  ? "You're protected against a few easy-to-miss things"
-                  : "All clear for now — Undo will keep watch",
+                  ? "Undo is now protecting what you kept."
+                  : "All clear for now. Undo will stay quietly ready.",
                 { duration: 3000 },
               );
               navigate("/");
             }}
-            onEmptyManual={() => {
-              onboarding.savePrefs(picked);
-              onboarding.complete();
+            onEmptyManual={async () => {
+              await onboarding.savePrefs(picked);
+              await onboarding.complete();
               navigate("/add");
             }}
           />
@@ -132,13 +189,11 @@ const Onboarding = () => {
   );
 };
 
-/* ---------------------------- 1. Categories ---------------------------- */
-
 function CategoryStep({
   picked, onToggle, onContinue,
 }: {
   picked: Category[];
-  onToggle: (c: Category) => void;
+  onToggle: (category: Category) => void;
   onContinue: () => void;
 }) {
   return (
@@ -157,21 +212,21 @@ function CategoryStep({
 
       <main className="flex-1 px-6 pt-9">
         <div className="space-y-2.5">
-          {autoCategories.map((c, i) => {
-            const Icon = catIcon[c];
-            const meta = categoryMeta[c];
-            const active = picked.includes(c);
+          {autoCategories.map((category, index) => {
+            const Icon = catIcon[category];
+            const meta = categoryMeta[category];
+            const active = picked.includes(category);
             return (
               <button
-                key={c}
-                onClick={() => onToggle(c)}
+                key={category}
+                onClick={() => onToggle(category)}
                 className={cn(
                   "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] animate-fade-up-soft",
                   active
                     ? "border-primary/30 bg-card shadow-card"
                     : "border-border bg-card/40 hover:bg-card/70",
                 )}
-                style={{ animationDelay: `${i * 60}ms`, animationFillMode: "both" }}
+                style={{ animationDelay: `${index * 60}ms`, animationFillMode: "both" }}
               >
                 <span
                   className={cn(
@@ -186,7 +241,7 @@ function CategoryStep({
                     {meta.label}s
                   </p>
                   <p className="mt-0.5 text-[12px] text-muted-foreground">
-                    {catTagline[c]}
+                    {catTagline[category]}
                   </p>
                 </div>
                 <span
@@ -217,15 +272,15 @@ function CategoryStep({
   );
 }
 
-/* ---------------------------- 2. Permission ---------------------------- */
-
 function PermissionStep({
-  onConnect, onSkip, onBack,
+  picked, onConnect, onSkip, onBack,
 }: {
-  onConnect: () => void;
-  onSkip: () => void;
+  picked: Category[];
+  onConnect: () => void | Promise<void>;
+  onSkip: () => void | Promise<void>;
   onBack: () => void;
 }) {
+  const scopedCategories = formatCategoryList(picked).toLowerCase();
   return (
     <div className="flex flex-1 flex-col animate-fade-in">
       <header className="flex items-center justify-between px-5 pt-10">
@@ -238,39 +293,38 @@ function PermissionStep({
         </button>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
           <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-          Only you see this
+          Review before feed
         </span>
         <div className="w-10" />
       </header>
 
       <main className="flex-1 px-7 pt-12">
         <h1 className="font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
-          Let Undo quietly catch the things that slip by.
+          Preview how Undo will catch the small things you meant to fix.
         </h1>
         <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
-          Undo only looks for likely trials, renewals, returns, and bills — nothing else. You see every suggestion before it joins your feed.
+          This preview stays focused on likely {scopedCategories}. When Gmail goes live, Undo will keep that scope narrow and still wait for your review before anything joins your feed.
         </p>
 
         <div className="mt-9 space-y-3">
           <InfoCard
             icon={Eye}
-            title="Only the four things that matter"
+            title="Only the first things Undo is being built to catch"
             tone="neutral"
             bullets={[
-              "Trial end and renewal dates",
-              "Bill due dates and amounts",
-              "Return windows closing soon",
-              "Merchant names tied to the above",
+              `Likely ${scopedCategories}`,
+              "Dates, amounts, and time windows tied to those",
+              "No general inbox browsing in the product direction",
             ]}
           />
           <InfoCard
             icon={ShieldCheck}
-            title="Nothing is saved without you"
+            title="You stay in control"
             tone="primary"
             bullets={[
-              "Suggestions wait for you to review",
-              "Keep, edit, or dismiss — one tap each",
-              "Disconnect anytime in Settings",
+              "Nothing joins your feed until you keep it",
+              "Keep, edit, or dismiss in a tap",
+              "Turn this preview off anytime in Settings",
             ]}
           />
         </div>
@@ -278,17 +332,17 @@ function PermissionStep({
 
       <footer className="px-7 pb-10 pt-8">
         <button
-          onClick={onConnect}
+          onClick={() => void onConnect()}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           <Mail className="h-4 w-4" strokeWidth={1.9} />
-          Connect Gmail safely
+          See Gmail preview
         </button>
         <button
-          onClick={onSkip}
+          onClick={() => void onSkip()}
           className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
         >
-          Maybe later — I’ll add things myself
+          Maybe later - I&apos;ll add things myself
         </button>
       </footer>
     </div>
@@ -308,7 +362,9 @@ function InfoCard({
     <div
       className={cn(
         "rounded-3xl p-5 shadow-card transition-colors",
-        isPrimary ? "bg-primary-soft/60 ring-1 ring-primary/15" : "bg-card",
+        isPrimary
+          ? "bg-primary-soft/70 ring-1 ring-primary/15"
+          : "bg-card/95 ring-1 ring-border/50",
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -323,15 +379,15 @@ function InfoCard({
         <p className="text-[13px] font-semibold tracking-tight text-foreground">{title}</p>
       </div>
       <ul className="mt-3.5 space-y-2.5">
-        {bullets.map((b) => (
-          <li key={b} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-foreground/75">
+        {bullets.map((bullet) => (
+          <li key={bullet} className="flex items-start gap-2.5 text-[13px] leading-relaxed text-foreground/75">
             <span
               className={cn(
                 "mt-[7px] h-1 w-1 shrink-0 rounded-full",
                 isPrimary ? "bg-primary/70" : "bg-muted-foreground/60",
               )}
             />
-            {b}
+            {bullet}
           </li>
         ))}
       </ul>
@@ -339,21 +395,19 @@ function InfoCard({
   );
 }
 
-/* ----------------------------- 3. Scanning ----------------------------- */
-
 const SCAN_MESSAGES = [
-  "Looking for trials and renewals",
-  "Checking for bill deadlines",
-  "Pulling out dates and amounts",
-  "Writing what's at stake",
+  "Previewing trial end dates",
+  "Previewing renewal and bill deadlines",
+  "Pulling out return windows and amounts",
+  "Keeping the preview review-first",
 ];
 
-function ScanningStep({ onDone }: { onDone: () => void }) {
-  const [msgIdx, setMsgIdx] = useState(0);
+function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => void }) {
+  const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
     const cycle = setInterval(() => {
-      setMsgIdx((i) => (i + 1) % SCAN_MESSAGES.length);
+      setMessageIndex((current) => (current + 1) % SCAN_MESSAGES.length);
     }, 1700);
     const finish = setTimeout(onDone, 6200);
     return () => {
@@ -364,7 +418,6 @@ function ScanningStep({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 text-center animate-fade-in">
-      {/* Calm, layered orb — slower, more premium */}
       <div className="relative flex h-36 w-36 items-center justify-center">
         <span
           className="absolute inline-flex h-full w-full rounded-full bg-primary/8 animate-soft-pulse"
@@ -386,49 +439,57 @@ function ScanningStep({ onDone }: { onDone: () => void }) {
       </div>
 
       <h1 className="mt-12 font-display text-[30px] leading-[1.1] tracking-snug text-foreground text-balance">
-        Undo is finding things that still can be fixed.
+        Undo is previewing the kinds of things it will catch first.
       </h1>
-      <p className="mt-3 text-[13px] text-muted-foreground">
-        This usually takes a moment.
+      <p className="mt-3 max-w-[17rem] text-[13px] leading-relaxed text-muted-foreground text-balance">
+        Only the categories you picked. You will still review everything first.
       </p>
 
-      {/* Rotating micro-messages — more elegant timing, fixed slot */}
-      <div className="mt-10 flex h-6 items-center justify-center">
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+        <span className="inline-flex rounded-full bg-card px-3 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
+          Only what you picked
+        </span>
+        <span className="inline-flex rounded-full bg-primary-soft px-3 py-1 text-[10.5px] font-medium text-primary shadow-soft">
+          Review before feed
+        </span>
+      </div>
+
+      <p className="mt-4 text-[11.5px] uppercase tracking-[0.16em] text-muted-foreground">
+        Previewing {formatCategoryList(picked).toLowerCase()}
+      </p>
+
+      <div className="mt-8 flex h-6 items-center justify-center">
         <p
-          key={msgIdx}
+          key={messageIndex}
           className="text-[12.5px] font-medium tracking-[0.01em] text-foreground/70 animate-fade-up-soft"
         >
-          {SCAN_MESSAGES[msgIdx]}
+          {SCAN_MESSAGES[messageIndex]}
         </p>
       </div>
 
-      {/* Subtle progress whisper */}
-      <div className="mt-7 h-[2px] w-32 overflow-hidden rounded-full bg-surface">
+      <div className="mt-7 h-[2px] w-36 overflow-hidden rounded-full bg-surface">
         <div className="shimmer h-full w-full rounded-full" />
       </div>
     </div>
   );
 }
 
-/* ------------------------------ 4. Review ------------------------------ */
-
 function ReviewStep({
   candidates, onDismiss, onKeep, onKeepAll, onFinish, onEmptyManual,
 }: {
   candidates: Candidate[];
   onDismiss: (id: string) => void;
-  onKeep: (c: Candidate) => void;
-  onKeepAll: (items: Candidate[]) => void;
-  onFinish: (keptCount: number) => void;
-  onEmptyManual: () => void;
+  onKeep: (candidate: Candidate) => Promise<boolean>;
+  onKeepAll: (items: Candidate[]) => Promise<{ keptCount: number; completed: boolean }>;
+  onFinish: (keptCount: number) => Promise<void>;
+  onEmptyManual: () => Promise<void>;
 }) {
   const [kept, setKept] = useState<Set<string>>(new Set());
 
-  const remaining = useMemo(() => candidates.filter((c) => !kept.has(c.id)), [candidates, kept]);
+  const remaining = useMemo(() => candidates.filter((candidate) => !kept.has(candidate.id)), [candidates, kept]);
   const anyKept = kept.size > 0;
   const totalAtRisk = useMemo(
-    () =>
-      remaining.reduce((sum, c) => sum + (c.amountValue ?? 0), 0),
+    () => remaining.reduce((sum, candidate) => sum + (candidate.amountValue ?? 0), 0),
     [remaining],
   );
 
@@ -440,17 +501,16 @@ function ReviewStep({
     <div className="flex flex-1 flex-col pb-32 animate-fade-in">
       <header className="px-6 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
-          From your Gmail
+          Gmail preview
         </p>
         <h1 className="mt-3 font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
-          Undo found a few things worth catching.
+          Here is how Undo would surface a few things still worth catching.
         </h1>
         <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground text-balance">
-          Review what to keep. You can edit or dismiss anything.
+          Keep what matters. This is a preview, and nothing here reaches your feed until you say yes.
         </p>
 
-        {/* Summary strip — establishes value at a glance */}
-        <div className="mt-5 flex items-center justify-between rounded-2xl bg-card/60 px-4 py-3 shadow-soft ring-1 ring-border/60">
+        <div className="mt-5 flex items-center justify-between rounded-2xl bg-card/70 px-4 py-3 shadow-soft ring-1 ring-border/60">
           <div className="flex items-baseline gap-1.5">
             <span className="font-display text-[22px] leading-none text-foreground tabular-nums">
               {remaining.length}
@@ -462,7 +522,7 @@ function ReviewStep({
           {totalAtRisk > 0 && (
             <div className="flex items-baseline gap-1.5">
               <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                At risk
+                Still protectable
               </span>
               <span className="font-display text-[18px] leading-none text-foreground tabular-nums">
                 ${Math.round(totalAtRisk)}
@@ -474,7 +534,19 @@ function ReviewStep({
         {remaining.length > 1 && (
           <div className="mt-4 flex justify-end">
             <button
-              onClick={() => onKeepAll(remaining)}
+              onClick={async () => {
+                const result = await onKeepAll(remaining);
+                if (result.completed || result.keptCount === 0) {
+                  return;
+                }
+
+                const nextIds = remaining.slice(0, result.keptCount).map((candidate) => candidate.id);
+                setKept((current) => {
+                  const next = new Set(current);
+                  nextIds.forEach((id) => next.add(id));
+                  return next;
+                });
+              }}
               className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3.5 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-soft/80"
             >
               <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -485,16 +557,18 @@ function ReviewStep({
       </header>
 
       <main className="mt-5 flex-1 space-y-3 px-5">
-        {remaining.map((c, i) => (
+        {remaining.map((candidate, index) => (
           <CandidateCard
-            key={c.id}
-            candidate={c}
-            index={i}
-            onKeep={() => {
-              setKept((s) => new Set(s).add(c.id));
-              onKeep(c);
+            key={candidate.id}
+            candidate={candidate}
+            index={index}
+            onKeep={async () => {
+              if (!await onKeep(candidate)) {
+                return;
+              }
+              setKept((current) => new Set(current).add(candidate.id));
             }}
-            onDismiss={() => onDismiss(c.id)}
+            onDismiss={() => onDismiss(candidate.id)}
           />
         ))}
 
@@ -507,16 +581,15 @@ function ReviewStep({
               {anyKept ? "All reviewed." : "All clear."}
             </p>
             <p className="mt-1.5 text-[12.5px] text-muted-foreground">
-              {anyKept ? "Undo will keep watch on what you kept." : "Nothing kept — that's okay."}
+              {anyKept ? "Undo is now ready to protect what you kept." : "Nothing kept. Undo will stay quiet for now."}
             </p>
           </div>
         )}
       </main>
 
-      {/* Sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background to-transparent px-6 pb-8 pt-8">
         <button
-          onClick={() => onFinish(kept.size)}
+          onClick={() => void onFinish(kept.size)}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           {anyKept
@@ -536,10 +609,10 @@ function CandidateCard({
 }: {
   candidate: Candidate;
   index: number;
-  onKeep: () => void;
+  onKeep: () => Promise<void>;
   onDismiss: () => void;
 }) {
-  const isUrgent = !!candidate.urgent;
+  const isUrgent = Boolean(candidate.urgent);
 
   return (
     <article
@@ -549,22 +622,34 @@ function CandidateCard({
       )}
       style={{ animationDelay: `${index * 70}ms`, animationFillMode: "both" }}
     >
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
+          isUrgent ? "from-critical/8" : "from-primary/6",
+        )}
+      />
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {isUrgent && (
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-critical/60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-critical" />
-            </span>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
-              "text-[10.5px] font-semibold uppercase tracking-[0.16em]",
-              isUrgent ? "text-critical" : "text-muted-foreground",
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+              isUrgent ? "bg-critical-soft text-critical" : "bg-surface text-foreground/60",
             )}
           >
+            {isUrgent ? (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-critical/60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-critical" />
+              </span>
+            ) : (
+              <Sparkles className="h-2.5 w-2.5" strokeWidth={2.2} />
+            )}
+            {isUrgent ? "Urgent" : "Detected"}
+          </span>
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {shortDue(candidate.dueAt)}
-            {candidate.source && ` · ${candidate.source}`}
+            {candidate.source && ` - ${candidate.source}`}
           </span>
         </div>
         <button
@@ -596,27 +681,28 @@ function CandidateCard({
         {candidate.amount && (
           <span
             className={cn(
-              "text-[11px] font-semibold uppercase tracking-wider tabular-nums",
-              isUrgent ? "text-critical" : "text-foreground/55",
+              "inline-flex rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] tabular-nums",
+              isUrgent ? "bg-critical-soft text-critical" : "bg-surface text-foreground/60",
             )}
           >
-            {isUrgent ? "Save " : ""}{candidate.amount}
+            {isUrgent ? "Save " : ""}
+            {candidate.amount}
           </span>
         )}
       </div>
 
       <div className="mt-5 flex items-center gap-2">
         <button
-          onClick={onKeep}
+          onClick={() => void onKeep()}
           className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[13px] font-medium text-background transition-transform active:scale-[0.98]"
         >
           <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
-          Keep
+          Keep this
         </button>
         <button
           aria-label="Edit"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
-          onClick={() => toast("You'll be able to edit on the feed.", { duration: 1600 })}
+          onClick={() => toast("You'll be able to fine-tune this from the feed.", { duration: 1600 })}
         >
           <Pencil className="h-4 w-4" strokeWidth={1.7} />
         </button>
@@ -632,7 +718,7 @@ function CandidateCard({
   );
 }
 
-function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () => void }) {
+function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onSkip: () => Promise<void> }) {
   return (
     <div className="flex flex-1 flex-col px-7 pb-10 pt-16 animate-fade-in">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-soft text-primary">
@@ -642,7 +728,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () =
         Nothing slipping right now.
       </h1>
       <p className="mt-3 text-center text-[14px] leading-relaxed text-muted-foreground text-balance">
-        Undo didn't find strong matches today. We'll keep watching — and you can add anything yourself.
+        This preview did not surface strong matches today. Manual add is here if you need it.
       </p>
 
       <div className="mt-9 space-y-2.5">
@@ -650,15 +736,15 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () =
           { label: "Add manually", desc: "Type the details yourself" },
           { label: "Upload screenshot", desc: "Drop in a receipt or order confirmation" },
           { label: "Paste text", desc: "From an email, chat, or message" },
-        ].map((o) => (
+        ].map((option) => (
           <button
-            key={o.label}
-            onClick={onManual}
+            key={option.label}
+            onClick={() => void onManual()}
             className="flex w-full items-center justify-between rounded-2xl bg-card p-4 text-left shadow-soft transition-transform active:scale-[0.99]"
           >
             <div>
-              <p className="text-[14px] font-medium text-foreground">{o.label}</p>
-              <p className="mt-0.5 text-[11.5px] text-muted-foreground">{o.desc}</p>
+              <p className="text-[14px] font-medium text-foreground">{option.label}</p>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">{option.desc}</p>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
           </button>
@@ -666,7 +752,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => void; onSkip: () =
       </div>
 
       <button
-        onClick={onSkip}
+        onClick={() => void onSkip()}
         className="mt-auto pt-8 text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
       >
         Take me to the feed

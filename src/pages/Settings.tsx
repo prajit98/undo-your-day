@@ -1,32 +1,49 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound,
+} from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Moon, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock } from "lucide-react";
-import { categoryMeta, Category } from "@/lib/undo-data";
 import { CategoryIconCircle } from "@/components/CategoryBadge";
-import { onboarding } from "@/lib/onboarding";
+import { useAuth } from "@/context/AuthContext";
 import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
+import { autoCategories } from "@/lib/onboarding";
 import { reminderPolicy } from "@/lib/reminders";
+import { categoryMeta, Category } from "@/lib/undo-data";
+import { toast } from "sonner";
 
 const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { isPremium, showUpgrade } = usePremium();
-  const { active } = useUndo();
-  const [push, setPush] = useState(true);
-  const [email, setEmail] = useState(false);
-  const [quiet, setQuiet] = useState(true);
-  const [enabledCats, setEnabledCats] = useState<Record<Category, boolean>>({
-    trial: true,
-    renewal: true,
-    return: true,
-    bill: true,
-    followup: true,
-  });
-  const [timing, setTiming] = useState<"morning" | "afternoon" | "evening">("morning");
+  const { user, signOut } = useAuth();
+  const { isPremium } = usePremium();
+  const { active, preferences, onboarding, updatePreferences } = useUndo();
+
+  if (!preferences) {
+    return null;
+  }
+
+  const accountName = user?.name?.trim() || user?.email?.trim() || "Signed in";
+  const accountMeta = user?.name?.trim() ? user?.email?.trim() ?? null : null;
+  const watchedByGmail = onboarding.pickedCategories.length > 0 ? onboarding.pickedCategories : autoCategories;
+  const enabledCats = preferences.enabledCategories;
+
+  const toggleCategory = async (category: Category, enabled: boolean) => {
+    const next = enabled
+      ? Array.from(new Set([...enabledCats, category]))
+      : enabledCats.filter((entry) => entry !== category);
+
+    await updatePreferences({ enabledCategories: next });
+  };
+
+  const disconnectGmail = async () => {
+    await onboarding.setGmailConnected(false);
+    toast.success("Gmail preview turned off.", {
+      duration: 2400,
+    });
+  };
 
   return (
     <MobileShell>
@@ -38,21 +55,82 @@ const Settings = () => {
       </header>
 
       <div className="mt-6 space-y-6 px-5">
-        {/* Account */}
         <section className="rounded-3xl bg-card p-4 shadow-soft">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft font-display text-lg text-primary">
-              A
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface text-foreground/70">
+              <UserRound className="h-4 w-4" strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">{accountName}</p>
+              {accountMeta && (
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                  {accountMeta}
+                </p>
+              )}
             </div>
-            <div className="flex-1">
-              <p className="font-medium">Alex Morgan</p>
-              <p className="text-xs text-muted-foreground">alex@undoapp.com</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
+
+          <button
+            onClick={async () => {
+              await signOut();
+              toast.success("Signed out.");
+              navigate("/auth", { replace: true });
+            }}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
+          >
+            <LogOut className="h-3.5 w-3.5" strokeWidth={1.9} />
+            Log out
+          </button>
         </section>
 
-        {/* Premium status */}
+        <section className="rounded-3xl bg-card p-4 shadow-soft">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <Mail className="h-4 w-4" strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {onboarding.gmailConnected ? "Gmail preview on" : "Gmail preview off"}
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                    {onboarding.gmailConnected
+                      ? "This shows how Undo will keep Gmail narrow, calm, and review-first."
+                      : "Preview the Gmail flow before automatic detection goes live."}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                  <Lock className="h-2.5 w-2.5" strokeWidth={2} />
+                  {onboarding.gmailConnected ? "Preview" : "Off"}
+                </span>
+              </div>
+
+              <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Preview focuses on
+                </p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
+                  {formatCategoryList(watchedByGmail)}
+                </p>
+              </div>
+
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                {onboarding.gmailConnected
+                  ? "Real Gmail scanning is not live yet. This preview keeps the scope narrow and keeps review before anything reaches your feed."
+                  : "Undo is being built to stay focused on those categories and still wait for your review before anything is kept."}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => (onboarding.gmailConnected ? disconnectGmail() : navigate("/onboarding"))}
+            className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
+          >
+            {onboarding.gmailConnected ? "Turn off Gmail preview" : "See Gmail preview"}
+          </button>
+        </section>
+
         {isPremium ? (
           <section className="rounded-3xl border border-primary/20 bg-primary-soft/60 p-4 shadow-soft">
             <div className="flex items-center gap-3">
@@ -69,21 +147,17 @@ const Settings = () => {
             </div>
           </section>
         ) : (
-          <button
-            onClick={() => showUpgrade(active.length >= FREE_ITEM_LIMIT ? "limit" : "recap")}
-            className="w-full rounded-3xl bg-card p-4 text-left shadow-soft transition-all active:scale-[0.99]"
-          >
+          <section className="w-full rounded-3xl bg-card p-4 text-left shadow-soft">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary">
                 <ShieldCheck className="h-4 w-4" strokeWidth={1.9} />
               </span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Upgrade to Premium</p>
+                <p className="text-sm font-medium text-foreground">Free protection</p>
                 <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                  Unlimited items, stronger reminders, richer recap.
+                  Up to 5 active items, with one calm reminder per item.
                 </p>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="mt-3 flex items-center justify-between rounded-2xl bg-surface/70 px-3 py-2 text-[11px]">
               <span className="text-muted-foreground">Active items</span>
@@ -91,41 +165,37 @@ const Settings = () => {
                 {active.length} / {FREE_ITEM_LIMIT}
               </span>
             </div>
-          </button>
+          </section>
         )}
 
         <section>
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Reminders
+            Reminder delivery
           </h2>
-          <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
-            <Row icon={<Bell className="h-4 w-4" />} label="Push notifications" right={<Switch checked={push} onCheckedChange={setPush} />} />
-            <Row icon={<Mail className="h-4 w-4" />} label="Email digest" right={<Switch checked={email} onCheckedChange={setEmail} />} />
-            <Row icon={<Moon className="h-4 w-4" />} label="Quiet hours (9pm – 8am)" right={<Switch checked={quiet} onCheckedChange={setQuiet} />} />
+          <div className="rounded-3xl bg-card p-4 shadow-soft">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface text-foreground/70">
+                <Bell className="h-4 w-4" strokeWidth={1.9} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">In-app reminders</p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                  Undo already plans calm, category-aware reminders inside the app.
+                </p>
+
+                <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
+                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Delivery channels
+                  </p>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
+                    Push and email delivery are not live in this version yet.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Timing */}
-        <section>
-          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            When to nudge
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {(["morning", "afternoon", "evening"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTiming(t)}
-                className={`rounded-2xl bg-card py-3 text-sm font-medium capitalize shadow-soft transition-all ${
-                  timing === t ? "ring-2 ring-primary/30 text-primary" : "text-muted-foreground"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Reminder rhythm — category-aware preview */}
         <section>
           <div className="mb-2 flex items-end justify-between px-1">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -136,60 +206,52 @@ const Settings = () => {
             </span>
           </div>
           <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
-            {cats.map((c) => {
-              const p = reminderPolicy[c];
-              const schedule = isPremium ? p.premium : p.free;
+            {cats.map((category) => {
+              const policy = reminderPolicy[category];
+              const schedule = isPremium ? policy.premium : policy.free;
+
               return (
-                <div key={c} className="flex items-start gap-3 p-3.5">
-                  <CategoryIconCircle category={c} />
+                <div key={category} className="flex items-start gap-3 p-3.5">
+                  <CategoryIconCircle category={category} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13.5px] font-medium leading-tight text-foreground">
-                      {categoryMeta[c].label}
+                      {categoryMeta[category].label}
                     </p>
                     <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">
+                      {policy.principle}
+                    </p>
+                    <p className="mt-1 text-[10.5px] text-muted-foreground/80">
                       {schedule.cadence}
                     </p>
-                    {!isPremium && (
-                      <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-muted-foreground/80">
-                        <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-                        Last-chance with Premium
-                      </p>
-                    )}
                   </div>
                 </div>
               );
             })}
           </div>
-          {!isPremium && (
-            <button
-              onClick={() => showUpgrade("reminders")}
-              className="mt-3 flex w-full items-center justify-between rounded-2xl bg-primary-soft/70 px-4 py-3 text-left transition-colors hover:bg-primary-soft"
-            >
-              <div className="min-w-0">
-                <p className="text-[12.5px] font-medium text-foreground">
-                  Stronger reminders for things you really don't want to miss
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Multi-step cadence + last-chance nudge per category.
-                </p>
-              </div>
-              <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-primary" />
-            </button>
-          )}
+          <p className="mt-3 px-1 text-[11px] leading-relaxed text-muted-foreground">
+            {isPremium
+              ? "Undo times reminders by category and keeps a last-chance in-app nudge for tighter deadlines."
+              : "Undo picks one calm in-app reminder by category. Premium adds earlier nudges and a last-chance reminder when timing gets tight."}
+          </p>
         </section>
 
         <section>
-          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            What you want to catch
-          </h2>
+          <div className="mb-2 px-1">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              What you want to catch
+            </h2>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              The Gmail preview stays focused on Trials, Renewals, Returns, and Bills. Follow-ups stay manual for now.
+            </p>
+          </div>
           <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
-            {cats.map((c) => (
-              <div key={c} className="flex items-center gap-3 p-3">
-                <CategoryIconCircle category={c} />
-                <span className="flex-1 text-sm font-medium">{categoryMeta[c].label}</span>
+            {cats.map((category) => (
+              <div key={category} className="flex items-center gap-3 p-3">
+                <CategoryIconCircle category={category} />
+                <span className="flex-1 text-sm font-medium">{categoryMeta[category].label}</span>
                 <Switch
-                  checked={enabledCats[c]}
-                  onCheckedChange={(v) => setEnabledCats((p) => ({ ...p, [c]: v }))}
+                  checked={enabledCats.includes(category)}
+                  onCheckedChange={(value) => void toggleCategory(category, value)}
                 />
               </div>
             ))}
@@ -202,15 +264,15 @@ const Settings = () => {
             <div>
               <p className="font-display text-base text-foreground">Undo, calmly</p>
               <p className="mt-1 text-xs text-foreground/70">
-                We'll only nudge you when there's still time to fix something. Never just to remind you that you exist.
+                Undo only surfaces reminders when there is still time to fix something. Never just to prove it is there.
               </p>
             </div>
           </div>
         </section>
 
         <button
-          onClick={() => {
-            onboarding.reset();
+          onClick={async () => {
+            await onboarding.reset();
             navigate("/onboarding");
           }}
           className="flex w-full items-center gap-3 rounded-3xl bg-card p-4 text-left shadow-soft transition-all active:scale-[0.99]"
@@ -225,22 +287,17 @@ const Settings = () => {
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
 
-        <p className="pt-2 text-center text-[11px] text-muted-foreground">Undo · v1.0</p>
+        <p className="pt-2 text-center text-[11px] text-muted-foreground">Undo / v1.0</p>
       </div>
     </MobileShell>
   );
 };
 
-function Row({ icon, label, right }: { icon: React.ReactNode; label: string; right: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 p-4">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground/70">
-        {icon}
-      </span>
-      <span className="flex-1 text-sm">{label}</span>
-      {right}
-    </div>
-  );
+function formatCategoryList(categories: Category[]) {
+  const labels = categories.map((category) => `${categoryMeta[category].label}s`);
+  if (labels.length <= 1) return labels[0] ?? "";
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
 }
 
 export default Settings;

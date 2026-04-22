@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/context/AuthContext";
 import { UndoProvider } from "@/context/UndoContext";
 import { PremiumProvider } from "@/context/PremiumContext";
 import { UpgradeSheet } from "@/components/UpgradeSheet";
@@ -13,8 +14,8 @@ import Timeline from "./pages/Timeline.tsx";
 import Settings from "./pages/Settings.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Landing from "./pages/Landing.tsx";
+import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import Showcase from "./pages/Showcase.tsx";
 import { OnboardingGate } from "./components/OnboardingGate";
 
 const queryClient = new QueryClient();
@@ -24,25 +25,27 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner position="top-center" />
-      <UndoProvider>
-        <PremiumProvider>
-          <BrowserRouter>
-            <OnboardingGate />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/landing" element={<Landing />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/add" element={<AddItem />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/timeline" element={<Timeline />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/showcase" element={<Showcase />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <UpgradeSheet />
-          </BrowserRouter>
-        </PremiumProvider>
-      </UndoProvider>
+      <AuthProvider>
+        <UndoProvider>
+          <PremiumProvider>
+            <BrowserRouter>
+              <OnboardingGate />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/landing" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/add" element={<AddItem />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/timeline" element={<Timeline />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <UpgradeSheet />
+            </BrowserRouter>
+          </PremiumProvider>
+        </UndoProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

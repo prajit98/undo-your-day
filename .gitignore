@@ -11,6 +11,19 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+
+# Native build output
+android/.gradle
+android/local.properties
+android/app/build
+android/app/src/main/assets/public
+android/captures
+ios/App/App/public
+ios/App/build
+ios/App/Pods
 
 # Editor directories and files
 .vscode/*
