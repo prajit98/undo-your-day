@@ -48,7 +48,7 @@ const Index = () => {
               )}
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
             </span>
-            {gmailConnected ? "Review-first" : "Undo"}
+            {gmailConnected ? "Starts with Gmail" : "Undo"}
           </span>
         </div>
         <h1 className="mt-3 whitespace-pre-line font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
@@ -122,7 +122,7 @@ const Index = () => {
           <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
             {gmailConnected
               ? "Undo stays review-first and in your control."
-              : "See how Undo handles Gmail — review still comes first."}
+              : "See how Gmail works in Undo — review still comes first."}
           </p>
           {!gmailConnected ? (
             <Link
@@ -130,7 +130,7 @@ const Index = () => {
               className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
             >
               <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
-              See Gmail flow
+              See how Gmail works
             </Link>
           ) : (
             <Link

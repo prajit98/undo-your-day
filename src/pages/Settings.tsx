@@ -14,6 +14,13 @@ import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
 
 const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
+const categoryPlural: Record<Category, string> = {
+  trial: "Trials",
+  renewal: "Renewals",
+  return: "Returns",
+  bill: "Bills",
+  followup: "Follow-ups",
+};
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -97,7 +104,7 @@ const Settings = () => {
                   <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
                     {onboarding.gmailConnected
                       ? "A narrow, review-first Gmail flow."
-                      : "See how Gmail fits into Undo."}
+                      : "See how Gmail works in Undo."}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
@@ -127,7 +134,7 @@ const Settings = () => {
             onClick={() => (onboarding.gmailConnected ? disconnectGmail() : navigate("/onboarding"))}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
-            {onboarding.gmailConnected ? "Turn off Gmail flow" : "See Gmail flow"}
+            {onboarding.gmailConnected ? "Turn off Gmail flow" : "See how Gmail works"}
           </button>
         </section>
 
@@ -153,7 +160,7 @@ const Settings = () => {
                 <ShieldCheck className="h-4 w-4" strokeWidth={1.9} />
               </span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Free protection</p>
+                <p className="text-sm font-medium text-foreground">Undo Free</p>
                 <p className="mt-0.5 text-[11.5px] text-muted-foreground">
                   Up to 5 active items, with one calm reminder per item.
                 </p>
@@ -287,14 +294,16 @@ const Settings = () => {
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
 
-        <p className="pt-2 text-center text-[11px] text-muted-foreground">Undo / v1.0</p>
+        <p className="pt-2 text-center text-[11px] text-muted-foreground">
+          Undo · calm protection for the small things that matter.
+        </p>
       </div>
     </MobileShell>
   );
 };
 
 function formatCategoryList(categories: Category[]) {
-  const labels = categories.map((category) => `${categoryMeta[category].label}s`);
+  const labels = categories.map((category) => categoryPlural[category]);
   if (labels.length <= 1) return labels[0] ?? "";
   if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;

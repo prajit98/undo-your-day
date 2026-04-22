@@ -238,7 +238,7 @@ function CategoryStep({
                 </span>
                 <div className="flex-1">
                   <p className={cn("text-[15px] font-medium", active ? "text-foreground" : "text-foreground/80")}>
-                    {meta.label}s
+                    {categoryPlural[category]}
                   </p>
                   <p className="mt-0.5 text-[12px] text-muted-foreground">
                     {catTagline[category]}
@@ -303,7 +303,7 @@ function PermissionStep({
           Let Undo catch the small things you meant to fix.
         </h1>
         <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
-          Undo is designed to stay focused on likely {scopedCategories}. Automatic Gmail detection is not live yet. Review still comes first.
+          Undo stays focused on likely {scopedCategories}. Gmail detection comes later, and review still comes first.
         </p>
 
         <div className="mt-9 space-y-3">
@@ -336,7 +336,7 @@ function PermissionStep({
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           <Mail className="h-4 w-4" strokeWidth={1.9} />
-          See Gmail flow
+          See how Gmail works
         </button>
         <button
           onClick={() => void onSkip()}
@@ -581,7 +581,7 @@ function ReviewStep({
               {anyKept ? "All reviewed." : "All clear."}
             </p>
             <p className="mt-1.5 text-[12.5px] text-muted-foreground">
-              {anyKept ? "Undo is ready to protect what you kept." : "Nothing kept. Undo will stay quiet for now."}
+              {anyKept ? "Undo is ready to keep watch over what you kept." : "Nothing kept. Undo will stay quiet for now."}
             </p>
           </div>
         )}
@@ -649,7 +649,7 @@ function CandidateCard({
           </span>
           <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {shortDue(candidate.dueAt)}
-            {candidate.source && ` - ${candidate.source}`}
+            {candidate.source && ` · ${candidate.source}`}
           </span>
         </div>
         <button
