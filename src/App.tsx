@@ -14,6 +14,7 @@ import Settings from "./pages/Settings.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Landing from "./pages/Landing.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Showcase from "./pages/Showcase.tsx";
 import { OnboardingGate } from "./components/OnboardingGate";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/categories" element={<Categories />} />
               <Route path="/timeline" element={<Timeline />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/showcase" element={<Showcase />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <UpgradeSheet />
