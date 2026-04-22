@@ -444,17 +444,6 @@ function toSupabaseUpload(record: Record<string, unknown>): UndoUpload {
 async function ensureSupabaseProfile(user: UndoProfile) {
   if (!supabase) return;
 
-  const { error } = await supabase.from("users").upsert({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    created_at: user.createdAt,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
   const { data: existingPreferences, error: preferenceError } = await supabase
     .from("preferences")
     .select("*")
@@ -529,7 +518,9 @@ function buildSupabaseRepository(): AppRepository {
         }
 
         const user = normalizeSupabaseUser(data.user);
-        await ensureSupabaseProfile(user);
+        if (data.session) {
+          await ensureSupabaseProfile(user);
+        }
         return { user, requiresEmailConfirmation: !data.session };
       },
       async signIn({ email, password }) {
