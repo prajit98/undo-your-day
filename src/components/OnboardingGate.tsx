@@ -10,7 +10,7 @@ export function OnboardingGate() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    if (pathname === "/onboarding" || pathname === "/landing") return;
+    if (pathname === "/onboarding" || pathname === "/landing" || pathname === "/showcase") return;
     if (!onboarding.isComplete()) {
       navigate("/onboarding", { replace: true });
     }
