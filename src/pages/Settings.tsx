@@ -72,15 +72,15 @@ const Settings = () => {
 
   return (
     <MobileShell>
-      <header className="px-5 pb-2 pt-12">
+      <header className="px-5 pb-2 pt-14">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Preferences
         </p>
-        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">Tune Undo.</h1>
+        <h1 className="mt-3 font-display text-[38px] leading-[1.04] tracking-snug">Tune Undo.</h1>
       </header>
 
-      <div className="mt-6 space-y-6 px-5">
-        <section className="rounded-3xl bg-card p-4 shadow-soft">
+      <div className="mt-6 space-y-5 px-5">
+        <section className="rounded-[28px] bg-card/95 p-5 shadow-soft ring-1 ring-border/40">
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface text-foreground/70">
               <UserRound className="h-4 w-4" strokeWidth={1.9} />
@@ -108,7 +108,7 @@ const Settings = () => {
           </button>
         </section>
 
-        <section className="rounded-3xl bg-card p-4 shadow-soft">
+        <section className="rounded-[28px] bg-card/95 p-5 shadow-soft ring-1 ring-border/40">
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
               <Mail className="h-4 w-4" strokeWidth={1.9} />
@@ -157,7 +157,7 @@ const Settings = () => {
         </section>
 
         {isPremium ? (
-          <section className="rounded-3xl border border-primary/20 bg-primary-soft/60 p-4 shadow-soft">
+          <section className="rounded-[28px] border border-primary/20 bg-primary-soft/60 p-5 shadow-soft">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
                 <ShieldCheck className="h-4 w-4" strokeWidth={1.9} />
@@ -172,7 +172,7 @@ const Settings = () => {
             </div>
           </section>
         ) : (
-          <section className="w-full rounded-3xl bg-card p-4 text-left shadow-soft">
+          <section className="w-full rounded-[28px] bg-card/95 p-5 text-left shadow-soft ring-1 ring-border/40">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary">
                 <ShieldCheck className="h-4 w-4" strokeWidth={1.9} />
@@ -197,7 +197,7 @@ const Settings = () => {
           <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Reminder delivery
           </h2>
-          <div className="rounded-3xl bg-card p-4 shadow-soft">
+          <div className="rounded-[28px] bg-card/95 p-5 shadow-soft ring-1 ring-border/40">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface text-foreground/70">
                 <Bell className="h-4 w-4" strokeWidth={1.9} />
@@ -230,7 +230,7 @@ const Settings = () => {
               {isPremium ? "Premium" : "Free"}
             </span>
           </div>
-          <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+          <div className="divide-y divide-border/60 rounded-[28px] bg-card/95 shadow-soft ring-1 ring-border/40">
             {cats.map((category) => {
               const policy = reminderPolicy[category];
               const schedule = isPremium ? policy.premium : policy.free;
@@ -269,7 +269,7 @@ const Settings = () => {
               Gmail stays focused on Trials, Renewals, Returns, and Bills. Follow-ups stay manual for now.
             </p>
           </div>
-          <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+          <div className="divide-y divide-border/60 rounded-[28px] bg-card/95 shadow-soft ring-1 ring-border/40">
             {cats.map((category) => (
               <div key={category} className="flex items-center gap-3 p-3">
                 <CategoryIconCircle category={category} />
@@ -283,7 +283,7 @@ const Settings = () => {
           </div>
         </section>
 
-        <section className="rounded-3xl bg-primary-soft p-5">
+        <section className="rounded-[28px] bg-primary-soft p-5 ring-1 ring-primary/10">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
             <div>
@@ -300,7 +300,7 @@ const Settings = () => {
             await onboarding.reset();
             navigate("/onboarding");
           }}
-          className="flex w-full items-center gap-3 rounded-3xl bg-card p-4 text-left shadow-soft transition-all active:scale-[0.99]"
+          className="flex w-full items-center gap-3 rounded-[28px] bg-card/95 p-4 text-left shadow-soft ring-1 ring-border/40 transition-all active:scale-[0.99]"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground/70">
             <PlayCircle className="h-4 w-4" />
@@ -319,7 +319,7 @@ const Settings = () => {
                 Help & privacy
               </h2>
             </div>
-            <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+            <div className="divide-y divide-border/60 rounded-[28px] bg-card/95 shadow-soft ring-1 ring-border/40">
               {resourceLinks.map((link) => (
                 <a
                   key={link.label}

@@ -36,12 +36,12 @@ const Index = () => {
 
   return (
     <MobileShell>
-      <header className="px-5 pb-1 pt-12">
+      <header className="px-5 pb-2 pt-12">
         <div className="flex items-center justify-between">
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             {today}
           </p>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground shadow-soft ring-1 ring-border/40">
             <span className="relative flex h-1.5 w-1.5">
               {gmailConnected && (
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
@@ -51,10 +51,10 @@ const Index = () => {
             {gmailConnected ? "Starts with Gmail" : "Undo"}
           </span>
         </div>
-        <h1 className="mt-3 whitespace-pre-line font-display text-[40px] leading-[1.05] tracking-snug text-foreground">
+        <h1 className="mt-4 max-w-[11ch] whitespace-pre-line font-display text-[40px] leading-[1.03] tracking-snug text-foreground">
           {todayCount > 0 ? "A few things\nto fix today." : "Quiet today.\nNicely done."}
         </h1>
-        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+        <p className="mt-3 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           {headline}
         </p>
       </header>
@@ -98,7 +98,7 @@ const Index = () => {
       {active.length > 0 && (
         <Link
           to="/add"
-          className="group mx-5 mt-7 flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3.5 transition-colors hover:bg-card active:scale-[0.99]"
+          className="group mx-5 mt-7 flex items-center gap-3 rounded-[24px] border border-border/70 bg-card/55 p-4 shadow-soft transition-colors hover:bg-card active:scale-[0.99]"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-foreground/65">
             <Plus className="h-4 w-4" strokeWidth={1.8} />
@@ -112,7 +112,7 @@ const Index = () => {
       )}
 
       {active.length === 0 && (
-        <div className="mx-5 mt-10 rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center animate-fade-up">
+        <div className="mx-5 mt-10 rounded-[30px] border border-dashed border-border bg-card/70 p-9 text-center shadow-soft animate-fade-up">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
             <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
           </div>
@@ -150,8 +150,8 @@ const Index = () => {
 function SectionHeader({ kicker, sub }: { kicker: string; sub: string }) {
   return (
     <div className="px-1">
-      <h2 className="font-display text-[22px] leading-tight text-foreground">{kicker}</h2>
-      <p className="mt-1 text-[12px] text-muted-foreground">{sub}</p>
+      <h2 className="font-display text-[23px] leading-tight text-foreground">{kicker}</h2>
+      <p className="mt-1.5 max-w-[28rem] text-[12.5px] leading-relaxed text-muted-foreground">{sub}</p>
     </div>
   );
 }

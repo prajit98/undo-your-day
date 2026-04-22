@@ -42,34 +42,34 @@ export function WeeklyRecap() {
         : "Nothing slipped this week. Undo will keep quiet watch.";
 
   return (
-    <section className="relative mx-5 mt-6 overflow-hidden rounded-[28px] border border-border/60 bg-card p-5 shadow-card">
+    <section className="relative mx-5 mt-6 overflow-hidden rounded-[30px] border border-border/60 bg-card/95 p-6 shadow-card">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/7 to-transparent"
       />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-primary shadow-soft">
             <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
           </span>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             This week
           </p>
         </div>
-        <span className="inline-flex rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+        <span className="inline-flex rounded-full bg-surface/85 px-2.5 py-1 text-[10px] font-medium text-muted-foreground ring-1 ring-border/40">
           Weekly recap
         </span>
       </div>
 
-      <h3 className="mt-3 font-display text-[22px] leading-tight text-foreground text-balance">
+      <h3 className="mt-4 font-display text-[24px] leading-[1.08] text-foreground text-balance">
         {title}
       </h3>
 
-      <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
         {summary}
       </p>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3">
         <Stat value={String(caughtCount)} label="caught in time" />
         <Stat
           value={protectedAmount > 0 ? fmt(protectedAmount) : "--"}
@@ -78,11 +78,11 @@ export function WeeklyRecap() {
         />
       </div>
 
-      <div className="mt-3 rounded-2xl bg-surface/70 p-4 ring-1 ring-border/50">
+      <div className="mt-4 rounded-[22px] bg-surface/70 p-4 ring-1 ring-border/50">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           Coming next
         </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-foreground/80">
+        <p className="mt-2 text-[13px] leading-relaxed text-foreground/80 text-balance">
           {comingNext > 0
             ? `${comingNext} thing${comingNext === 1 ? "" : "s"} ${comingNext === 1 ? "is" : "are"} already lined up for next week. Undo will keep an eye on ${comingNext === 1 ? "it" : "them"}.`
             : "Nothing urgent is building next week. Undo will keep watch in the background."}
@@ -92,7 +92,7 @@ export function WeeklyRecap() {
       {!isPremium && (
         <button
           onClick={() => showUpgrade("history")}
-          className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 hover:text-foreground"
+          className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 transition-colors hover:text-foreground"
         >
           See the full caught-in-time story
           <ArrowRight className="h-3 w-3" strokeWidth={2} />
@@ -104,7 +104,7 @@ export function WeeklyRecap() {
 
 function Stat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
-    <div className="rounded-2xl bg-surface/70 p-3.5 ring-1 ring-border/40">
+    <div className="rounded-[20px] bg-surface/70 p-4 ring-1 ring-border/40">
       <p
         className={`font-display text-[26px] leading-none tabular-nums ${
           accent ? "text-primary" : "text-foreground"

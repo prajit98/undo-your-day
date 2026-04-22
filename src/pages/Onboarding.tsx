@@ -198,20 +198,20 @@ function CategoryStep({
 }) {
   return (
     <div className="flex flex-1 flex-col animate-fade-in">
-      <header className="px-6 pt-14">
+      <header className="px-6 pt-16">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
           Welcome to Undo
         </p>
-        <h1 className="mt-5 font-display text-[40px] leading-[1.04] tracking-snug text-foreground text-balance">
+        <h1 className="mt-5 max-w-[12ch] font-display text-[40px] leading-[1.03] tracking-snug text-foreground text-balance">
           What should Undo help you catch?
         </h1>
-        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
+        <p className="mt-3 max-w-[30rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           Pick the kinds of things that are easiest to miss.
         </p>
       </header>
 
-      <main className="flex-1 px-6 pt-9">
-        <div className="space-y-2.5">
+      <main className="flex-1 px-6 pt-8">
+        <div className="space-y-3">
           {autoCategories.map((category, index) => {
             const Icon = catIcon[category];
             const meta = categoryMeta[category];
@@ -224,7 +224,7 @@ function CategoryStep({
                   "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] animate-fade-up-soft",
                   active
                     ? "border-primary/30 bg-card shadow-card"
-                    : "border-border bg-card/40 hover:bg-card/70",
+                    : "border-border bg-card/55 hover:bg-card/75",
                 )}
                 style={{ animationDelay: `${index * 60}ms`, animationFillMode: "both" }}
               >
@@ -299,10 +299,10 @@ function PermissionStep({
       </header>
 
       <main className="flex-1 px-7 pt-12">
-        <h1 className="font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
+        <h1 className="max-w-[13ch] font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
           Let Undo catch the small things you meant to fix.
         </h1>
-        <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground text-balance">
+        <p className="mt-4 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           Undo stays focused on likely {scopedCategories}. Gmail detection comes later, and review still comes first.
         </p>
 
@@ -361,7 +361,7 @@ function InfoCard({
   return (
     <div
       className={cn(
-        "rounded-3xl p-5 shadow-card transition-colors",
+        "rounded-[28px] p-5 shadow-card transition-colors",
         isPrimary
           ? "bg-primary-soft/70 ring-1 ring-primary/15"
           : "bg-card/95 ring-1 ring-border/50",
@@ -438,10 +438,10 @@ function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => vo
         </span>
       </div>
 
-      <h1 className="mt-12 font-display text-[30px] leading-[1.1] tracking-snug text-foreground text-balance">
+      <h1 className="mt-12 max-w-[13ch] font-display text-[30px] leading-[1.08] tracking-snug text-foreground text-balance">
         See how Undo checks for things still worth catching.
       </h1>
-      <p className="mt-3 max-w-[17rem] text-[13px] leading-relaxed text-muted-foreground text-balance">
+      <p className="mt-3 max-w-[18rem] text-[13px] leading-relaxed text-muted-foreground text-balance">
         Only the categories you picked. Review still comes first.
       </p>
 
@@ -503,14 +503,14 @@ function ReviewStep({
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
           Gmail flow
         </p>
-        <h1 className="mt-3 font-display text-[34px] leading-[1.06] tracking-snug text-foreground text-balance">
+        <h1 className="mt-3 max-w-[14ch] font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
           Undo surfaced a few things still worth catching.
         </h1>
-        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground text-balance">
+        <p className="mt-3 max-w-[31rem] text-[13.5px] leading-relaxed text-muted-foreground text-balance">
           Keep what matters. Nothing here reaches your feed until you say yes.
         </p>
 
-        <div className="mt-5 flex items-center justify-between rounded-2xl bg-card/70 px-4 py-3 shadow-soft ring-1 ring-border/60">
+        <div className="mt-5 flex items-center justify-between rounded-[22px] bg-card/80 px-4 py-3.5 shadow-soft ring-1 ring-border/60">
           <div className="flex items-baseline gap-1.5">
             <span className="font-display text-[22px] leading-none text-foreground tabular-nums">
               {remaining.length}
@@ -556,7 +556,7 @@ function ReviewStep({
         )}
       </header>
 
-      <main className="mt-5 flex-1 space-y-3 px-5">
+      <main className="mt-5 flex-1 space-y-3.5 px-5">
         {remaining.map((candidate, index) => (
           <CandidateCard
             key={candidate.id}
@@ -587,7 +587,7 @@ function ReviewStep({
         )}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background to-transparent px-6 pb-8 pt-8">
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background/95 to-transparent px-6 pb-8 pt-8">
         <button
           onClick={() => void onFinish(kept.size)}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
@@ -617,7 +617,7 @@ function CandidateCard({
   return (
     <article
       className={cn(
-        "relative overflow-hidden rounded-3xl bg-card p-5 shadow-card animate-fade-up",
+        "relative overflow-hidden rounded-[28px] bg-card/95 p-[22px] shadow-card animate-fade-up",
         isUrgent && "ring-1 ring-critical/20",
       )}
       style={{ animationDelay: `${index * 70}ms`, animationFillMode: "both" }}
@@ -663,7 +663,7 @@ function CandidateCard({
 
       <h3
         className={cn(
-          "mt-3 font-display leading-[1.13] text-foreground text-balance",
+          "mt-3 font-display leading-[1.1] text-foreground text-balance",
           isUrgent ? "text-[23px]" : "text-[20.5px]",
         )}
       >
@@ -731,7 +731,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onS
         No strong matches this time. Manual add is here if you need it.
       </p>
 
-      <div className="mt-9 space-y-2.5">
+      <div className="mt-9 space-y-3">
         {[
           { label: "Add manually", desc: "Type the details yourself" },
           { label: "Upload screenshot", desc: "Drop in a receipt or order confirmation" },
@@ -740,7 +740,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onS
           <button
             key={option.label}
             onClick={() => void onManual()}
-            className="flex w-full items-center justify-between rounded-2xl bg-card p-4 text-left shadow-soft transition-transform active:scale-[0.99]"
+            className="flex w-full items-center justify-between rounded-[24px] bg-card/95 p-4 text-left shadow-soft ring-1 ring-border/40 transition-transform active:scale-[0.99]"
           >
             <div>
               <p className="text-[14px] font-medium text-foreground">{option.label}</p>

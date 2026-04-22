@@ -120,25 +120,25 @@ const Landing = () => {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pt-20 sm:pt-28">
-        <div className="grid items-center gap-16 lg:grid-cols-[1.1fr_1fr] lg:gap-24">
+      <section className="mx-auto max-w-6xl px-6 pt-[72px] sm:pt-[104px]">
+        <div className="grid items-center gap-14 lg:grid-cols-[1.08fr_1fr] lg:gap-20">
           <div className="animate-fade-up-soft">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft backdrop-blur-sm">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-soft-pulse rounded-full bg-primary" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
               </span>
               Starts with Gmail
             </span>
-            <h1 className="mt-7 font-display text-[44px] leading-[1.02] tracking-snug text-balance sm:text-[60px] lg:text-[68px]">
+            <h1 className="mt-7 max-w-[11ch] font-display text-[44px] leading-[1] tracking-snug text-balance sm:max-w-[12ch] sm:text-[60px] lg:max-w-[11ch] lg:text-[68px]">
               Catch the things you meant to fix —{" "}
               <em className="text-primary not-italic italic">before it’s too late.</em>
             </h1>
-            <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
+            <p className="mt-7 max-w-[34rem] text-[17px] leading-[1.75] text-muted-foreground">
               Undo is designed to surface likely trials, renewals, returns, and bills, then bring
               them to review before they become expensive, stressful, or awkward.
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-3">
+            <div className="mt-10 flex flex-wrap items-center gap-3">
               <a
                 href="#waitlist"
                 className="inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-4 text-[15px] font-medium text-background shadow-soft transition-transform hover:-translate-y-px"
@@ -160,7 +160,7 @@ const Landing = () => {
           </div>
 
           {/* Phone mock */}
-          <div className="relative mx-auto w-full max-w-[340px] animate-fade-up-soft">
+          <div className="relative mx-auto w-full max-w-[344px] animate-fade-up-soft">
             <div
               className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
               style={{
@@ -217,7 +217,7 @@ const Landing = () => {
           ].map((item) => (
             <div
               key={item.title}
-              className="group rounded-3xl border border-border bg-card p-6 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-card"
+              className="group min-h-[212px] rounded-[28px] border border-border/70 bg-card/95 p-7 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-card"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-foreground/70">
                 <item.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
@@ -263,7 +263,7 @@ const Landing = () => {
           ].map((s) => (
             <div
               key={s.step}
-              className="relative overflow-hidden rounded-[28px] border border-border bg-card p-8 shadow-soft"
+              className="relative overflow-hidden rounded-[30px] border border-border/70 bg-card/95 p-8 shadow-soft"
             >
               <div className="flex items-start justify-between">
                 <span className="font-display text-[28px] text-muted-foreground/60">{s.step}</span>
@@ -280,7 +280,7 @@ const Landing = () => {
 
       {/* Trust section */}
       <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
-        <div className="overflow-hidden rounded-[36px] border border-border bg-card shadow-card">
+        <div className="overflow-hidden rounded-[36px] border border-border/70 bg-card/95 shadow-card">
           <div className="grid gap-0 lg:grid-cols-[1fr_1.1fr]">
             <div className="p-10 sm:p-16">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
@@ -406,7 +406,7 @@ const Landing = () => {
 
       {/* Waitlist */}
       <section id="waitlist" className="mx-auto mt-36 max-w-3xl px-6 pb-28 sm:mt-44">
-        <div className="relative overflow-hidden rounded-[40px] border border-border bg-card p-8 shadow-card sm:p-14">
+            <div className="relative overflow-hidden rounded-[40px] border border-border/70 bg-card/95 p-8 shadow-card sm:p-14">
           <div
             className="pointer-events-none absolute inset-0 opacity-70"
             style={{
@@ -427,8 +427,8 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="mx-auto mt-10 w-full max-w-lg rounded-3xl border border-border/70 bg-background/70 p-4 shadow-soft backdrop-blur-sm sm:p-6">
-              <div className="overflow-hidden rounded-[26px] bg-transparent">
+            <div className="mx-auto mt-10 w-full max-w-lg rounded-[30px] border border-border/70 bg-background/75 p-4 shadow-soft backdrop-blur-sm sm:p-6">
+              <div className="overflow-hidden rounded-[28px] bg-transparent ring-1 ring-border/40">
                 <TallyForm />
               </div>
             </div>
@@ -474,8 +474,8 @@ const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: 
   const aspect = small ? "aspect-[9/18]" : "aspect-[9/19]";
   return (
     <div
-      className={`relative ${aspect} w-full rounded-[40px] border border-border bg-foreground/90 p-2 shadow-card`}
-      style={{ boxShadow: "0 30px 80px -30px hsl(200 25% 12% / 0.35), 0 8px 24px -12px hsl(200 25% 12% / 0.18)" }}
+      className={`relative ${aspect} w-full rounded-[42px] border border-border/70 bg-foreground/95 p-2.5 shadow-card`}
+      style={{ boxShadow: "0 34px 90px -34px hsl(200 25% 12% / 0.38), 0 10px 28px -14px hsl(200 25% 12% / 0.2)" }}
     >
       <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-b-2xl bg-foreground/90" />
       <div className="relative h-full w-full overflow-hidden rounded-[32px] bg-background">
@@ -519,7 +519,7 @@ const FeedScreen = () => (
 
 const PermissionScreen = () => (
   <div className="flex h-full flex-col px-4 pt-10">
-    <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-[8px] font-medium text-primary">
+      <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-[8px] font-medium text-primary shadow-soft">
       <Lock className="h-2 w-2" />
       Only you see this
     </span>
@@ -530,7 +530,7 @@ const PermissionScreen = () => (
       Likely trials, renewals, returns, and bills — reviewed by you first.
     </p>
 
-    <div className="mt-3 space-y-2">
+      <div className="mt-3 space-y-2.5">
       <div className="rounded-xl border border-border bg-card p-2.5">
         <p className="text-[9px] font-medium">Only the four things that matter</p>
         <ul className="mt-1.5 space-y-1 text-[8.5px] text-muted-foreground">
@@ -583,7 +583,7 @@ const ReviewScreen = () => (
     </h3>
     <p className="mt-1 text-[9.5px] text-muted-foreground">Review what to keep.</p>
 
-    <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary px-2.5 py-1.5">
+    <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary/85 px-2.5 py-1.5">
       <span className="text-[9px] font-medium">5 suggestions · $147 at risk</span>
       <span className="rounded-full bg-foreground px-2 py-0.5 text-[8.5px] font-medium text-background">
         Keep all
@@ -618,7 +618,7 @@ const MiniCard = ({
   action?: string;
 }) => (
   <div
-    className={`rounded-xl border ${urgent ? "border-critical/30 bg-critical-soft/40" : "border-border bg-card"} p-2.5 shadow-soft`}
+    className={`rounded-xl border ${urgent ? "border-critical/30 bg-critical-soft/40" : "border-border bg-card"} p-3 shadow-soft`}
   >
     <div className="flex items-center justify-between">
       <span

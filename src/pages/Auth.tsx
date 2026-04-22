@@ -64,20 +64,20 @@ const Auth = () => {
         }}
       />
 
-      <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 pb-10 pt-14">
-        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-card px-3 py-1 text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft">
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 pb-12 pt-16">
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3.5 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft backdrop-blur-sm">
           <Sparkles className="h-3 w-3 text-primary" strokeWidth={2} />
           Undo account
         </div>
 
-        <h1 className="mt-6 font-display text-[40px] leading-[1.02] tracking-snug text-foreground text-balance">
+        <h1 className="mt-7 max-w-[11ch] font-display text-[42px] leading-[1.01] tracking-snug text-foreground text-balance">
           Keep your protection with you.
         </h1>
-        <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-balance">
+        <p className="mt-4 max-w-[32rem] text-[14.5px] leading-relaxed text-muted-foreground text-balance">
           One calm account for the things Undo is watching, what you caught in time, and what still needs a decision.
         </p>
 
-        <div className="mt-8 inline-flex rounded-full bg-surface p-1 shadow-soft">
+        <div className="mt-9 inline-flex rounded-full bg-surface/90 p-1 shadow-soft ring-1 ring-border/40">
           {[
             { value: "signup" as const, label: "Create account" },
             { value: "login" as const, label: "Log in" },
@@ -97,7 +97,7 @@ const Auth = () => {
           ))}
         </div>
 
-        <div className="mt-8 space-y-3 rounded-[28px] bg-card p-5 shadow-card">
+        <div className="mt-9 space-y-3 rounded-[30px] bg-card/95 p-6 shadow-card ring-1 ring-border/50">
           {mode === "signup" && (
             <Field
               icon={UserRound}
@@ -130,20 +130,20 @@ const Auth = () => {
           <button
             onClick={submit}
             disabled={submitting}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-transform active:scale-[0.99] disabled:opacity-50"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-transform active:scale-[0.99] disabled:opacity-50"
           >
             {mode === "signup" ? "Start quietly protected" : "Open Undo"}
             <ArrowRight className="h-4 w-4" strokeWidth={2} />
           </button>
         </div>
 
-        <div className="mt-4 rounded-3xl bg-primary-soft/60 p-4 ring-1 ring-primary/10">
-          <p className="text-[12.5px] leading-relaxed text-foreground/80">
+        <div className="mt-5 rounded-[28px] bg-primary-soft/60 p-5 ring-1 ring-primary/10">
+          <p className="text-[12.5px] leading-relaxed text-foreground/80 text-balance">
             Undo keeps this simple. No inbox, no dashboards, no account maze. Just a calm place to keep what matters.
           </p>
         </div>
 
-        <p className="mt-auto pt-6 text-center text-[11px] text-muted-foreground">
+        <p className="mt-auto pt-7 text-center text-[11px] text-muted-foreground">
           {backendSetupMessage(backend)}
         </p>
       </div>
@@ -173,7 +173,7 @@ function Field({
       <span className="mb-2 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </span>
-      <div className="flex items-center gap-3 rounded-2xl bg-surface/80 px-4 py-3 ring-1 ring-border/50">
+      <div className="flex items-center gap-3 rounded-2xl bg-surface/85 px-4 py-3.5 ring-1 ring-border/50">
         <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
         <input
           value={value}
