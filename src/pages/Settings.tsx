@@ -8,6 +8,7 @@ import { CategoryIconCircle } from "@/components/CategoryBadge";
 import { useAuth } from "@/context/AuthContext";
 import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
+import { appConfig } from "@/lib/app-config";
 import { autoCategories } from "@/lib/onboarding";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
@@ -36,6 +37,23 @@ const Settings = () => {
   const accountMeta = user?.name?.trim() ? user?.email?.trim() ?? null : null;
   const watchedByGmail = onboarding.pickedCategories.length > 0 ? onboarding.pickedCategories : autoCategories;
   const enabledCats = preferences.enabledCategories;
+  const resourceLinks = [
+    appConfig.hasSupportEmail ? {
+      href: `mailto:${appConfig.supportEmail}`,
+      label: "Contact support",
+      detail: appConfig.supportEmail,
+    } : null,
+    appConfig.hasPrivacyPolicyUrl ? {
+      href: appConfig.privacyPolicyUrl,
+      label: "Privacy policy",
+      detail: "See how Undo handles your data.",
+    } : null,
+    appConfig.hasAccountDeletionUrl ? {
+      href: appConfig.accountDeletionUrl,
+      label: "Delete account",
+      detail: "Open the secure account deletion page.",
+    } : null,
+  ].filter((link): link is { href: string; label: string; detail: string } => Boolean(link));
 
   const toggleCategory = async (category: Category, enabled: boolean) => {
     const next = enabled
@@ -293,6 +311,35 @@ const Settings = () => {
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
+
+        {resourceLinks.length > 0 && (
+          <section>
+            <div className="mb-2 px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Help & privacy
+              </h2>
+            </div>
+            <div className="divide-y divide-border/60 rounded-3xl bg-card shadow-soft">
+              {resourceLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target={link.href.startsWith("mailto:") ? undefined : "_blank"}
+                  rel={link.href.startsWith("mailto:") ? undefined : "noreferrer"}
+                  className="flex items-center gap-3 p-4 text-left transition-colors hover:bg-surface/40"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{link.label}</p>
+                    <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">
+                      {link.detail}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         <p className="pt-2 text-center text-[11px] text-muted-foreground">
           Undo · calm protection for the small things that matter.

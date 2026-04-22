@@ -8,14 +8,20 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 const allowLocalAdapter = import.meta.env.DEV || readFlag(import.meta.env.VITE_USE_LOCAL_ADAPTER);
+const configuredSupportEmail = import.meta.env.VITE_SUPPORT_EMAIL?.trim() || "";
+const privacyPolicyUrl = import.meta.env.VITE_PRIVACY_POLICY_URL?.trim() || "";
+const accountDeletionUrl = import.meta.env.VITE_ACCOUNT_DELETION_URL?.trim() || "";
 
 export const appConfig = {
   appName: "Undo",
   bundleId: "com.undoyourday.app",
-  supportEmail: import.meta.env.VITE_SUPPORT_EMAIL?.trim() || "support@undo.app",
+  supportEmail: configuredSupportEmail || "support@undo.app",
+  hasSupportEmail: Boolean(configuredSupportEmail),
   publicAppUrl: import.meta.env.VITE_PUBLIC_APP_URL?.trim() || "",
-  privacyPolicyUrl: import.meta.env.VITE_PRIVACY_POLICY_URL?.trim() || "",
-  accountDeletionUrl: import.meta.env.VITE_ACCOUNT_DELETION_URL?.trim() || "",
+  privacyPolicyUrl,
+  hasPrivacyPolicyUrl: Boolean(privacyPolicyUrl),
+  accountDeletionUrl,
+  hasAccountDeletionUrl: Boolean(accountDeletionUrl),
   supabaseUrl,
   supabaseAnonKey,
   hasSupabaseConfig,
