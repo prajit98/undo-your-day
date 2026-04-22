@@ -6,11 +6,10 @@ import {
 } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
 import { useUndo } from "@/context/UndoContext";
-import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
+import { usePremium } from "@/context/PremiumContext";
 import { Category, categoryMeta } from "@/lib/undo-data";
 import { CategoryIconRound } from "@/components/CategoryBadge";
 import { extractFromText, extractFromScreenshot, ExtractionResult } from "@/lib/extract";
-import { onboarding } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -24,23 +23,26 @@ const PLACEHOLDERS = [
 ];
 
 type Stage = "input" | "extracting" | "review";
+type CaptureSource = "text" | "screenshot";
 
 const AddItem = () => {
   const navigate = useNavigate();
-  const { addItem, active } = useUndo();
-  const { isPremium, showUpgrade } = usePremium();
+  const { addItem, onboarding } = useUndo();
+  const { canCreateActiveItems } = usePremium();
 
   const [stage, setStage] = useState<Stage>("input");
   const [text, setText] = useState("");
   const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)]);
   const [draft, setDraft] = useState<ExtractionResult | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [captureSource, setCaptureSource] = useState<CaptureSource>("text");
 
   const runExtract = (input: string, source: "text" | "screenshot") => {
     if (source === "text" && !input.trim()) {
       toast.error("Paste or type something first");
       return;
     }
+    setCaptureSource(source);
     setStage("extracting");
     setTimeout(() => {
       const result = source === "text" ? extractFromText(input) : extractFromScreenshot();
@@ -64,13 +66,12 @@ const AddItem = () => {
     }
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!draft) return;
-    if (!isPremium && active.length >= FREE_ITEM_LIMIT) {
-      showUpgrade("limit");
+    if (!canCreateActiveItems()) {
       return;
     }
-    addItem({
+    await addItem({
       title: draft.title,
       detail: draft.detail,
       category: draft.category,
@@ -78,9 +79,14 @@ const AddItem = () => {
       amount: draft.amount,
       amountValue: draft.amountValue,
       source: draft.source,
+      sourceType: captureSource === "screenshot" ? "screenshot" : "text",
+      upload: {
+        fileType: captureSource === "screenshot" ? "screenshot" : "text",
+        extractedText: text || draft.title,
+      },
     });
-    const firstEver = !onboarding.hasFirstCapture();
-    onboarding.markFirstCapture();
+    const firstEver = !onboarding.hasFirstCapture;
+    await onboarding.markFirstCapture();
     toast.success(
       firstEver ? "First undo saved. We've got it from here." : "Added — we'll catch it in time.",
       { duration: firstEver ? 2600 : 1800 }

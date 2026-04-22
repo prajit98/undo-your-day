@@ -97,9 +97,11 @@ export function candidateToItem(c: Candidate): Omit<UndoItem, "id" | "status"> {
     title: c.title,
     detail: c.detail,
     category: c.category,
+    sourceType: "auto",
     dueAt: c.dueAt,
     amountValue: c.amountValue,
     amount: c.amount,
+    merchantName: c.source,
     source: c.source,
   };
 }

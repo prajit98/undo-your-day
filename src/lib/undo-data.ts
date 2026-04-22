@@ -1,17 +1,129 @@
 export type Category = "trial" | "renewal" | "return" | "bill" | "followup";
 export type ItemStatus = "active" | "snoozed" | "done" | "archived";
+export type SourceType = "manual" | "text" | "screenshot" | "auto";
+export type PlanTier = "free" | "premium";
+export type ReminderType = "default" | "premium" | "manual" | "snooze";
+export type ReminderStatus = "scheduled" | "sent" | "cancelled";
+export type ReminderChannel = "in_app";
+export type UploadFileType = "text" | "screenshot";
+
+export interface UndoProfile {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+}
 
 export interface UndoItem {
   id: string;
-  title: string;          // What might go wrong (consequence-led)
-  detail?: string;        // What can still be saved
+  userId?: string;
+  title: string;
+  detail?: string;
   category: Category;
-  dueAt: string;          // ISO
-  amountValue?: number;   // numeric for "money at risk"
-  amount?: string;        // display
+  sourceType: SourceType;
+  dueAt: string;
+  urgency?: string;
+  remindAt?: string;
+  amountValue?: number;
+  amount?: string;
+  merchantName?: string;
   source?: string;
   note?: string;
   status: ItemStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UndoReminder {
+  id: string;
+  undoItemId: string;
+  remindAt: string;
+  reminderType: ReminderType;
+  status: ReminderStatus;
+  channel: ReminderChannel;
+  createdAt: string;
+}
+
+export interface UndoUpload {
+  id: string;
+  userId: string;
+  fileType: UploadFileType;
+  extractedText?: string;
+  createdAt: string;
+}
+
+export interface UndoPreferences {
+  id: string;
+  userId: string;
+  notificationTime: string;
+  enabledCategories: Category[];
+  onboardingCompleted: boolean;
+  gmailConnected: boolean;
+  planTier: PlanTier;
+  pushEnabled: boolean;
+  emailDigestEnabled: boolean;
+  quietHoursEnabled: boolean;
+  firstCaptureCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUndoItemInput {
+  title: string;
+  detail?: string;
+  category: Category;
+  dueAt: string;
+  amountValue?: number;
+  amount?: string;
+  source?: string;
+  sourceType?: SourceType;
+  merchantName?: string;
+  note?: string;
+  remindAt?: string;
+  upload?: {
+    fileType: UploadFileType;
+    extractedText?: string;
+  };
+}
+
+export interface CreateReminderInput {
+  remindAt: string;
+  reminderType: ReminderType;
+  status?: ReminderStatus;
+  channel?: ReminderChannel;
+}
+
+export interface AppSnapshot {
+  profile: UndoProfile;
+  preferences: UndoPreferences;
+  items: UndoItem[];
+  reminders: UndoReminder[];
+  uploads: UndoUpload[];
+}
+
+export const DEFAULT_NOTIFICATION_TIME = "09:00";
+
+export function createDefaultPreferences(userId: string): UndoPreferences {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    userId,
+    notificationTime: DEFAULT_NOTIFICATION_TIME,
+    enabledCategories: ["trial", "renewal", "return", "bill", "followup"],
+    onboardingCompleted: false,
+    gmailConnected: false,
+    planTier: "free",
+    pushEnabled: true,
+    emailDigestEnabled: false,
+    quietHoursEnabled: true,
+    firstCaptureCompleted: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function isActiveUndoItem(item: Pick<UndoItem, "status">) {
+  return item.status !== "done" && item.status !== "archived";
 }
 
 export const categoryMeta: Record<Category, { label: string; icon: string; description: string }> = {
@@ -22,5 +134,4 @@ export const categoryMeta: Record<Category, { label: string; icon: string; descr
   followup: { label: "Follow-up", icon: "MessageCircle", description: "People you said you'd get back to" },
 };
 
-// Feed starts empty — items are populated by Gmail onboarding (or manual add).
 export const seedItems: UndoItem[] = [];
