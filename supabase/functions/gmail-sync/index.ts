@@ -8,8 +8,10 @@ import { createAdminClient, requireUser } from "../_shared/supabase.ts";
 const GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const AUTO_CATEGORIES = new Set(["trial", "renewal", "return", "bill"]);
 const GMAIL_FETCH_TIMEOUT_MS = 10_000;
-const MAX_MESSAGE_IDS_TO_SCAN = 18;
-const MAX_CANDIDATES_TO_RETURN = 6;
+const MAX_LIST_QUERIES_PER_RUN = 4;
+const MAX_RESULTS_PER_QUERY = 2;
+const MAX_MESSAGE_IDS_TO_SCAN = 6;
+const MAX_CANDIDATES_TO_RETURN = 4;
 const DEFAULT_ENABLED_CATEGORIES = ["trial", "renewal", "return", "bill", "followup"] as const;
 
 type StoredTokenRow = {
@@ -139,6 +141,38 @@ async function gmailFetchJson<T>(accessToken: string, url: string) {
 
   const text = await response.text();
   if (!response.ok) {
+    let parsedBody: Record<string, unknown> | null = null;
+    try {
+      parsedBody = text ? JSON.parse(text) as Record<string, unknown> : null;
+    } catch {
+      parsedBody = null;
+    }
+
+    const gmailReason = Array.isArray(parsedBody?.error && typeof parsedBody.error === "object"
+      ? (parsedBody.error as { errors?: Array<{ reason?: string }> }).errors
+      : undefined)
+      ? ((parsedBody?.error as { errors?: Array<{ reason?: string }> }).errors ?? [])
+          .find((entry) => typeof entry?.reason === "string")?.reason
+      : undefined;
+
+    if (
+      response.status === 403
+      && (gmailReason === "rateLimitExceeded" || gmailReason === "userRateLimitExceeded" || text.includes("rateLimitExceeded"))
+    ) {
+      throw new SyncError({
+        message: "Gmail is busy right now. Please wait a minute and try again.",
+        stage: "gmail_api",
+        code: "gmail_rate_limited",
+        status: 429,
+        details: {
+          url,
+          responseStatus: response.status,
+          gmailReason,
+          responseBody: text.slice(0, 500),
+        },
+      });
+    }
+
     throw new SyncError({
       message: "Gmail request failed.",
       stage: "gmail_api",
@@ -168,7 +202,7 @@ async function gmailFetchJson<T>(accessToken: string, url: string) {
   }
 }
 
-async function listMessageIds(accessToken: string, q: string, maxResults = 8) {
+async function listMessageIds(accessToken: string, q: string, maxResults = MAX_RESULTS_PER_QUERY) {
   const url = new URL(GMAIL_API_BASE_URL);
   url.searchParams.set("q", q);
   url.searchParams.set("maxResults", String(maxResults));
@@ -358,7 +392,7 @@ Deno.serve(async (req) => {
       .filter((category): category is GmailCategory => AUTO_CATEGORIES.has(String(category)));
     const categories = allowedCategories.length > 0 ? allowedCategories : ["trial", "renewal", "return", "bill"];
     const accessToken = await ensureAccessToken(user.id, tokenRow as StoredTokenRow, admin);
-    const searchQueries = buildSearchQueries(categories);
+    const searchQueries = buildSearchQueries(categories).slice(0, MAX_LIST_QUERIES_PER_RUN);
 
     logSyncEvent("log", "starting_sync", {
       requestId,
@@ -368,20 +402,30 @@ Deno.serve(async (req) => {
       searchQueryCount: searchQueries.length,
     });
 
-    const listedMessages = await Promise.allSettled(
-      searchQueries.map(async ({ category, q }) => ({
-        category,
-        q,
-        ids: await listMessageIds(accessToken, q),
-      })),
-    );
-
     const messageIdsByHint = new Map<string, GmailCategory>();
     const listFailures: Array<Record<string, unknown>> = [];
 
-    for (const result of listedMessages) {
-      if (result.status === "rejected") {
-        const failure = normalizeError(result.reason);
+    for (const { category, q } of searchQueries) {
+      try {
+        const ids = await listMessageIds(accessToken, q);
+        logSyncEvent("log", "list_query_succeeded", {
+          requestId,
+          category,
+          query: q,
+          count: ids.length,
+        });
+
+        ids.forEach((id) => {
+          if (!messageIdsByHint.has(id) && messageIdsByHint.size < MAX_MESSAGE_IDS_TO_SCAN) {
+            messageIdsByHint.set(id, category);
+          }
+        });
+
+        if (messageIdsByHint.size >= MAX_MESSAGE_IDS_TO_SCAN) {
+          break;
+        }
+      } catch (error) {
+        const failure = normalizeError(error);
         const details = {
           requestId,
           stage: failure.stage,
@@ -391,28 +435,23 @@ Deno.serve(async (req) => {
         };
         listFailures.push(details);
         logSyncEvent("warn", "list_query_failed", details);
-        continue;
-      }
-
-      const { category, q, ids } = result.value;
-      logSyncEvent("log", "list_query_succeeded", {
-        requestId,
-        category,
-        query: q,
-        count: ids.length,
-      });
-      ids.forEach((id) => {
-        if (!messageIdsByHint.has(id) && messageIdsByHint.size < MAX_MESSAGE_IDS_TO_SCAN) {
-          messageIdsByHint.set(id, category);
-        }
-      });
-
-      if (messageIdsByHint.size >= MAX_MESSAGE_IDS_TO_SCAN) {
-        break;
       }
     }
 
-    if (messageIdsByHint.size === 0 && listFailures.length === listedMessages.length && listedMessages.length > 0) {
+    if (messageIdsByHint.size === 0 && listFailures.some((failure) => failure.code === "gmail_rate_limited")) {
+      throw new SyncError({
+        message: "Gmail is busy right now. Please wait a minute and try again.",
+        stage: "gmail_api",
+        code: "gmail_rate_limited",
+        status: 429,
+        details: {
+          userId: user.id,
+          failedQueries: listFailures.length,
+        },
+      });
+    }
+
+    if (messageIdsByHint.size === 0 && listFailures.length === searchQueries.length && searchQueries.length > 0) {
       throw new SyncError({
         message: "Undo could not scan Gmail right now.",
         stage: "gmail_list",
@@ -425,23 +464,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const candidateSettled = await Promise.allSettled(
-      Array.from(messageIdsByHint.entries()).map(async ([messageId, hint]) => {
-        const message = await getMessage(accessToken, messageId);
-        return {
-          messageId,
-          hint,
-          candidate: messageToCandidate(message, hint, categories),
-        };
-      }),
-    );
-
     const messageFailures: Array<Record<string, unknown>> = [];
     const candidateResults: Candidate[] = [];
 
-    for (const result of candidateSettled) {
-      if (result.status === "rejected") {
-        const failure = normalizeError(result.reason);
+    for (const [messageId, hint] of messageIdsByHint.entries()) {
+      try {
+        const message = await getMessage(accessToken, messageId);
+        const candidate = messageToCandidate(message, hint, categories);
+        if (candidate) {
+          candidateResults.push(candidate);
+        }
+
+        if (candidateResults.length >= MAX_CANDIDATES_TO_RETURN) {
+          break;
+        }
+      } catch (error) {
+        const failure = normalizeError(error);
         const details = {
           requestId,
           stage: failure.stage,
@@ -451,15 +489,23 @@ Deno.serve(async (req) => {
         };
         messageFailures.push(details);
         logSyncEvent("warn", "message_processing_failed", details);
-        continue;
-      }
-
-      if (result.value.candidate) {
-        candidateResults.push(result.value.candidate);
       }
     }
 
-    if (candidateResults.length === 0 && messageFailures.length === candidateSettled.length && candidateSettled.length > 0) {
+    if (candidateResults.length === 0 && messageFailures.some((failure) => failure.code === "gmail_rate_limited")) {
+      throw new SyncError({
+        message: "Gmail is busy right now. Please wait a minute and try again.",
+        stage: "gmail_api",
+        code: "gmail_rate_limited",
+        status: 429,
+        details: {
+          userId: user.id,
+          failedMessages: messageFailures.length,
+        },
+      });
+    }
+
+    if (candidateResults.length === 0 && messageFailures.length === messageIdsByHint.size && messageIdsByHint.size > 0) {
       throw new SyncError({
         message: "Undo could not finish reading Gmail right now.",
         stage: "candidate_processing",

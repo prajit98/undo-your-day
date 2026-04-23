@@ -425,12 +425,13 @@ export function buildSearchQueries(categories: GmailCategory[]) {
   const queries: { category: GmailCategory; q: string }[] = [];
 
   for (const category of allowed) {
-    for (const rule of SEARCH_TERMS[category]) {
-      queries.push({
-        category,
-        q: `${rule.query} newer_than:${rule.newerThanDays}d`,
-      });
-    }
+    const primaryRule = SEARCH_TERMS[category][0];
+    if (!primaryRule) continue;
+
+    queries.push({
+      category,
+      q: `${primaryRule.query} newer_than:${primaryRule.newerThanDays}d`,
+    });
   }
 
   return queries;

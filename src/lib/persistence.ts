@@ -64,6 +64,30 @@ export interface AppRepository {
   };
 }
 
+export class AppFunctionError extends Error {
+  code?: string;
+  stage?: string;
+  status?: number;
+  details?: Record<string, unknown>;
+
+  constructor(
+    message: string,
+    options?: {
+      code?: string;
+      stage?: string;
+      status?: number;
+      details?: Record<string, unknown>;
+    },
+  ) {
+    super(message);
+    this.name = "AppFunctionError";
+    this.code = options?.code;
+    this.stage = options?.stage;
+    this.status = options?.status;
+    this.details = options?.details;
+  }
+}
+
 const subscribers = new Set<(user: UndoProfile | null) => void>();
 
 function emptyLocalDb(): LocalDb {
@@ -467,7 +491,14 @@ async function invokeSupabaseFunction<TResponse>(
     const message = typeof payload.error === "string"
       ? payload.error
       : `Undo could not complete ${name}.`;
-    throw new Error(message);
+    throw new AppFunctionError(message, {
+      code: typeof payload.code === "string" ? payload.code : undefined,
+      stage: typeof payload.stage === "string" ? payload.stage : undefined,
+      status: typeof payload.status === "number" ? payload.status : response.status,
+      details: typeof payload.details === "object" && payload.details
+        ? payload.details as Record<string, unknown>
+        : undefined,
+    });
   }
 
   return payload as TResponse;
