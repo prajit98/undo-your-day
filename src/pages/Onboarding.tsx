@@ -41,6 +41,8 @@ const categoryPlural: Record<Category, string> = {
   followup: "Follow-ups",
 };
 
+const GMAIL_RESUME_KEY = "undo.gmail.resume-sync";
+
 function formatCategoryList(categories: Category[]) {
   const labels = categories.map((category) => categoryPlural[category]);
   if (labels.length <= 1) return labels[0] ?? "";
@@ -58,6 +60,7 @@ const Onboarding = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [connecting, setConnecting] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     setPicked(onboarding.pickedCategories);
@@ -67,9 +70,16 @@ const Onboarding = () => {
     let cancelled = false;
     const gmailStatus = searchParams.get("gmail");
     const reason = searchParams.get("reason");
+    const shouldResumeFromSession = typeof window !== "undefined"
+      && window.sessionStorage.getItem(GMAIL_RESUME_KEY) === "onboarding"
+      && Boolean(gmailConnection);
 
     const syncRealCandidates = async () => {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(GMAIL_RESUME_KEY);
+      }
       setStep("scanning");
+      setSyncError(null);
       try {
         await refresh();
         const nextCandidates = await appRepository.gmail.syncCandidates();
@@ -81,13 +91,15 @@ const Onboarding = () => {
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : "Undo could not scan Gmail right now.";
+        console.error("[Undo Gmail] sync failed after connect", error);
+        setSyncError(message);
         toast.error(message);
         setStep("permission");
         navigate("/onboarding", { replace: true });
       }
     };
 
-    if (gmailStatus === "connected") {
+    if (gmailStatus === "connected" || shouldResumeFromSession) {
       void syncRealCandidates();
       return () => {
         cancelled = true;
@@ -95,9 +107,13 @@ const Onboarding = () => {
     }
 
     if (gmailStatus === "error") {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(GMAIL_RESUME_KEY);
+      }
       const message = reason
         ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
         : "Undo could not finish the Gmail connection.";
+      setSyncError(message);
       toast.error(message);
       navigate("/onboarding", { replace: true });
     }
@@ -105,7 +121,7 @@ const Onboarding = () => {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, refresh, navigate]);
+  }, [searchParams, refresh, navigate, gmailConnection]);
 
   const skipGmail = async () => {
     await onboarding.savePrefs(picked);
@@ -115,13 +131,18 @@ const Onboarding = () => {
 
   const connectGmail = async () => {
     setConnecting(true);
+    setSyncError(null);
     try {
       await onboarding.savePrefs(picked);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(GMAIL_RESUME_KEY, "onboarding");
+      }
       const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/onboarding" });
       window.location.assign(url);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Undo could not start the Gmail connection.";
       toast.error(message);
+      setSyncError(message);
       setConnecting(false);
     }
   };
@@ -199,6 +220,7 @@ const Onboarding = () => {
             picked={picked}
             isConnected={Boolean(gmailConnection)}
             isConnecting={connecting}
+            syncError={syncError}
             onConnect={() => void connectGmail()}
             onSkip={() => void skipGmail()}
             onBack={() => setStep("categories")}
@@ -326,11 +348,12 @@ function CategoryStep({
 }
 
 function PermissionStep({
-  picked, isConnected, isConnecting, onConnect, onSkip, onBack,
+  picked, isConnected, isConnecting, syncError, onConnect, onSkip, onBack,
 }: {
   picked: Category[];
   isConnected: boolean;
   isConnecting: boolean;
+  syncError: string | null;
   onConnect: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
   onBack: () => void;
@@ -383,6 +406,12 @@ function PermissionStep({
             ]}
           />
         </div>
+
+        {syncError && (
+          <p className="mt-5 rounded-2xl bg-critical-soft/70 px-4 py-3 text-[12px] leading-relaxed text-critical">
+            {syncError}
+          </p>
+        )}
       </main>
 
       <footer className="px-7 pb-10 pt-8">

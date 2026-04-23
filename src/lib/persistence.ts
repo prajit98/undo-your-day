@@ -398,7 +398,15 @@ async function invokeSupabaseFunction<TResponse>(
     throw new Error(sessionError.message);
   }
 
-  const accessToken = sessionData.session?.access_token;
+  let accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    const { data: refreshedData, error: refreshedError } = await supabase.auth.refreshSession();
+    if (refreshedError) {
+      throw new Error(refreshedError.message);
+    }
+    accessToken = refreshedData.session?.access_token;
+  }
+
   if (!accessToken) {
     throw new Error("Please sign in again to continue.");
   }
