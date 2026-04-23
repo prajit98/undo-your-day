@@ -40,6 +40,19 @@ class SyncError extends Error {
   }
 }
 
+type FailurePayload = {
+  requestId: string;
+  stage: string;
+  code: string;
+  message: string;
+  status: number;
+  stack?: string;
+  details?: Record<string, unknown>;
+  userId?: string;
+  gmailEmail?: string;
+  timestamp: string;
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, {
     status,
@@ -53,7 +66,7 @@ function logSyncEvent(level: "log" | "warn" | "error", event: string, details?: 
   console[level](`[Undo Gmail Sync] ${event}`, details ?? {});
 }
 
-function normalizeError(error: unknown) {
+function normalizeError(error: unknown): SyncError {
   if (error instanceof SyncError) {
     return error;
   }
@@ -65,6 +78,33 @@ function normalizeError(error: unknown) {
     code: "unexpected_error",
     status: message === "Unauthorized" ? 401 : 500,
   });
+}
+
+function buildFailurePayload(
+  error: unknown,
+  context: {
+    requestId: string;
+    userId?: string;
+    gmailEmail?: string;
+    details?: Record<string, unknown>;
+  },
+): FailurePayload {
+  const failure = normalizeError(error);
+  return {
+    requestId: context.requestId,
+    stage: failure.stage,
+    code: failure.code,
+    message: failure.message,
+    status: failure.status,
+    stack: failure.stack,
+    details: {
+      ...(context.details ?? {}),
+      ...(failure.details ?? {}),
+    },
+    userId: context.userId,
+    gmailEmail: context.gmailEmail,
+    timestamp: new Date().toISOString(),
+  };
 }
 
 async function gmailFetchJson<T>(accessToken: string, url: string) {
@@ -83,7 +123,13 @@ async function gmailFetchJson<T>(accessToken: string, url: string) {
     clearTimeout(timeoutId);
 
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Gmail took too long to respond.");
+      throw new SyncError({
+        message: "Gmail took too long to respond.",
+        stage: "gmail_api",
+        code: "gmail_request_timeout",
+        status: 504,
+        details: { url },
+      });
     }
 
     throw error;
@@ -255,12 +301,17 @@ async function ensurePreferencesRow(userId: string, admin = createAdminClient())
 }
 
 Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  let userId: string | undefined;
+  let gmailEmail: string | undefined;
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const user = await requireUser(req);
+    userId = user.id;
     const admin = createAdminClient();
 
     const [{ data: connection, error: connectionError }, { data: tokenRow, error: tokenError }] = await Promise.all([
@@ -301,6 +352,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    gmailEmail = typeof connection.gmail_email === "string" ? connection.gmail_email : undefined;
     const preferences = await ensurePreferencesRow(user.id, admin);
     const allowedCategories = (Array.isArray(preferences.enabled_categories) ? preferences.enabled_categories : [])
       .filter((category): category is GmailCategory => AUTO_CATEGORIES.has(String(category)));
@@ -309,8 +361,9 @@ Deno.serve(async (req) => {
     const searchQueries = buildSearchQueries(categories);
 
     logSyncEvent("log", "starting_sync", {
+      requestId,
       userId: user.id,
-      gmailEmail: connection.gmail_email,
+      gmailEmail,
       categories,
       searchQueryCount: searchQueries.length,
     });
@@ -330,6 +383,7 @@ Deno.serve(async (req) => {
       if (result.status === "rejected") {
         const failure = normalizeError(result.reason);
         const details = {
+          requestId,
           stage: failure.stage,
           code: failure.code,
           message: failure.message,
@@ -341,7 +395,12 @@ Deno.serve(async (req) => {
       }
 
       const { category, q, ids } = result.value;
-      logSyncEvent("log", "list_query_succeeded", { category, query: q, count: ids.length });
+      logSyncEvent("log", "list_query_succeeded", {
+        requestId,
+        category,
+        query: q,
+        count: ids.length,
+      });
       ids.forEach((id) => {
         if (!messageIdsByHint.has(id) && messageIdsByHint.size < MAX_MESSAGE_IDS_TO_SCAN) {
           messageIdsByHint.set(id, category);
@@ -384,6 +443,7 @@ Deno.serve(async (req) => {
       if (result.status === "rejected") {
         const failure = normalizeError(result.reason);
         const details = {
+          requestId,
           stage: failure.stage,
           code: failure.code,
           message: failure.message,
@@ -426,12 +486,14 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       logSyncEvent("error", "connection_sync_state_update_failed", {
+        requestId,
         userId: user.id,
         message: updateError.message,
       });
     }
 
     logSyncEvent("log", "sync_completed", {
+      requestId,
       userId: user.id,
       fetchedMessageCount: messageIdsByHint.size,
       candidateCount: deduped.length,
@@ -441,29 +503,25 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ candidates: deduped });
   } catch (error) {
-    const failure = normalizeError(error);
-    logSyncEvent("error", "sync_failed", {
-      stage: failure.stage,
-      code: failure.code,
-      status: failure.status,
-      message: failure.message,
-      ...(failure.details ?? {}),
-    });
+    const failure = buildFailurePayload(error, { requestId, userId, gmailEmail });
+    logSyncEvent("error", "sync_failed", failure);
 
     try {
-      const user = await requireUser(req);
-      const admin = createAdminClient();
-      const { error: updateError } = await admin.from("gmail_connections").update({
-        last_sync_status: "error",
-        last_sync_error: failure.message,
-        updated_at: new Date().toISOString(),
-      }).eq("user_id", user.id);
+      if (userId) {
+        const admin = createAdminClient();
+        const { error: updateError } = await admin.from("gmail_connections").update({
+          last_sync_status: "error",
+          last_sync_error: failure.message,
+          updated_at: new Date().toISOString(),
+        }).eq("user_id", userId);
 
-      if (updateError) {
-        logSyncEvent("error", "connection_error_state_update_failed", {
-          userId: user.id,
-          message: updateError.message,
-        });
+        if (updateError) {
+          logSyncEvent("error", "connection_error_state_update_failed", {
+            requestId,
+            userId,
+            message: updateError.message,
+          });
+        }
       }
     } catch {
       // Keep the original sync error as the primary response.
@@ -473,7 +531,13 @@ Deno.serve(async (req) => {
       error: failure.message,
       code: failure.code,
       stage: failure.stage,
+      status: failure.status,
+      stack: failure.stack,
       details: failure.details,
+      requestId: failure.requestId,
+      userId: failure.userId,
+      gmailEmail: failure.gmailEmail,
+      timestamp: failure.timestamp,
     }, failure.status);
   }
 });
