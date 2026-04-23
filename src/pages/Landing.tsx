@@ -103,13 +103,13 @@ const Landing = () => {
         <Link to="/" className="flex items-center gap-2">
           <span className="font-display text-2xl tracking-snug">Undo</span>
         </Link>
-        <div className="flex items-center gap-2">
-          <a
-            href="#how"
-            className="hidden rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
+        <div className="flex items-center gap-3">
+          <Link
+            to="/auth"
+            className="inline-flex rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            How it works
-          </a>
+            Sign in
+          </Link>
           <a
             href="#waitlist"
             className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
@@ -153,6 +153,10 @@ const Landing = () => {
                 See how it works
               </a>
             </div>
+            <p className="mt-5 inline-flex items-center gap-2 text-[12.5px] text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
+              Coming soon on iOS and Android
+            </p>
             <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
               Only the four things that matter. You review everything before anything is kept.
