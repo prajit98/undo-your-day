@@ -170,36 +170,35 @@ function extractBodyText(part?: GmailMessagePart): string {
     return "";
   }
 
-  const bodyParts = [
-    part,
-    ...(part.parts ?? []),
-  ];
+  const mimeType = part.mimeType?.toLowerCase() ?? "";
+  const data = part.body?.data;
 
-  for (const candidate of bodyParts) {
-    const mimeType = candidate.mimeType?.toLowerCase() ?? "";
-    const data = candidate.body?.data;
+  if (data && (mimeType === "text/plain" || mimeType === "text/html")) {
+    try {
+      const decoded = decodeBase64Url(data);
 
-    if (!data) {
-      if (candidate.parts?.length) {
-        const nested = extractBodyText(candidate);
-        if (nested) return nested;
+      if (mimeType === "text/plain") {
+        const normalized = normalizeWhitespace(decoded);
+        if (normalized) {
+          return normalized;
+        }
       }
-      continue;
+
+      if (mimeType === "text/html") {
+        const normalized = normalizeWhitespace(stripHtml(decoded));
+        if (normalized) {
+          return normalized;
+        }
+      }
+    } catch {
+      return "";
     }
+  }
 
-    const decoded = decodeBase64Url(data);
-    if (mimeType === "text/plain") {
-      const normalized = normalizeWhitespace(decoded);
-      if (normalized) {
-        return normalized;
-      }
-    }
-
-    if (mimeType === "text/html") {
-      const normalized = normalizeWhitespace(stripHtml(decoded));
-      if (normalized) {
-        return normalized;
-      }
+  for (const nestedPart of part.parts ?? []) {
+    const nested = extractBodyText(nestedPart);
+    if (nested) {
+      return nested;
     }
   }
 
