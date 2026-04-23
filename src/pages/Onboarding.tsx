@@ -64,7 +64,7 @@ const Onboarding = () => {
     await onboarding.savePrefs(picked);
     await onboarding.setGmailConnected(false);
     await onboarding.complete();
-    navigate("/");
+    navigate("/app");
   };
 
   const keepCandidate = async (candidate: Candidate) => {
@@ -92,7 +92,7 @@ const Onboarding = () => {
         description: `Undo is now watching ${items.length} item${items.length === 1 ? "" : "s"}.`,
         duration: 3200,
       });
-      navigate("/");
+      navigate("/app");
       return { keptCount: items.length, completed: true };
     }
 
@@ -175,7 +175,7 @@ const Onboarding = () => {
                   : "All clear for now. Undo will stay ready.",
                 { duration: 3000 },
               );
-              navigate("/");
+              navigate("/app");
             }}
             onEmptyManual={async () => {
               await onboarding.savePrefs(picked);

@@ -100,7 +100,7 @@ const Landing = () => {
 
       {/* Nav */}
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-8">
-        <Link to="/landing" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <span className="font-display text-2xl tracking-snug">Undo</span>
         </Link>
         <div className="flex items-center gap-2">
@@ -456,7 +456,7 @@ const Landing = () => {
             <a href="#waitlist" className="hover:text-foreground">
               Early access
             </a>
-            <Link to="/" className="hover:text-foreground">
+            <Link to="/auth" className="hover:text-foreground">
               Open app
             </Link>
           </div>

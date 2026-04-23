@@ -19,7 +19,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const redirectTo = (location.state as { redirectTo?: string } | null)?.redirectTo ?? "/";
+  const redirectTo = (location.state as { redirectTo?: string } | null)?.redirectTo ?? "/app";
 
   const submit = async () => {
     if (!email.trim() || !password.trim() || (mode === "signup" && !name.trim())) {

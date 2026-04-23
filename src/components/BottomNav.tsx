@@ -3,7 +3,7 @@ import { Home, Layers, CalendarDays, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { to: "/", label: "Feed", icon: Home, end: true },
+  { to: "/app", label: "Feed", icon: Home, end: true },
   { to: "/categories", label: "Groups", icon: Layers },
   { to: "/add", label: "", icon: Sparkles, primary: true },
   { to: "/timeline", label: "Timeline", icon: CalendarDays },

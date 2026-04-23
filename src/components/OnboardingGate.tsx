@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUndo } from "@/context/UndoContext";
 
-const PUBLIC_PATHS = new Set(["/landing", "/auth"]);
+const PUBLIC_PATHS = new Set(["/", "/landing", "/auth"]);
 
 export function OnboardingGate() {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export function OnboardingGate() {
     }
 
     if (pathname === "/auth") {
-      navigate("/", { replace: true });
+      navigate("/app", { replace: true });
       return;
     }
 
@@ -39,11 +39,11 @@ export function OnboardingGate() {
     }
 
     if (onboarding.isComplete && pathname === "/onboarding") {
-      navigate("/", { replace: true });
+      navigate("/app", { replace: true });
     }
   }, [isBooting, user, pathname, onboarding.isComplete, navigate]);
 
-  if (!isBooting || pathname === "/landing") {
+  if (!isBooting || PUBLIC_PATHS.has(pathname)) {
     return null;
   }
 

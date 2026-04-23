@@ -88,7 +88,7 @@ const AddItem = () => {
       firstEver ? "First undo saved. We've got it from here." : "Added — we'll catch it in time.",
       { duration: firstEver ? 2600 : 1800 }
     );
-    navigate("/");
+    navigate("/app");
   };
 
   return (
