@@ -158,8 +158,8 @@ const Landing = () => {
               <em className="text-primary not-italic italic">before it's too late.</em>
             </h1>
             <p className="mt-7 max-w-[34rem] text-[17px] leading-[1.75] text-muted-foreground">
-              Undo helps you spot likely trials, renewals, returns, and bills, then brings them to
-              review before they become expensive, stressful, or awkward.
+              Undo finds likely trials, renewals, returns, and bills in Gmail, then brings them to
+              review before they turn into charges, late fees, or missed return windows.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <a
@@ -182,7 +182,7 @@ const Landing = () => {
             </p>
             <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
-              Only the four things that matter. You review everything before anything is kept.
+              You review everything before anything is kept.
             </p>
           </div>
 
@@ -196,6 +196,9 @@ const Landing = () => {
               }}
             />
             <PhoneMock variant="feed" />
+            <p className="mt-4 text-center text-[12.5px] leading-relaxed text-muted-foreground text-balance">
+              Review likely trials, renewals, returns, and bills, then fix what still matters.
+            </p>
           </div>
         </div>
       </section>
@@ -204,18 +207,14 @@ const Landing = () => {
       <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-            The quiet cost
+            What Undo catches
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            Small mistakes get expensive.
+            Trials, renewals, returns, and bills.
           </h2>
           <p className="mt-5 text-[16px] leading-relaxed text-muted-foreground">
-            It usually isn't one big disaster. It's the free trial you forgot to cancel. The return
-            window you meant to use. The renewal that hit before you noticed. The bill that quietly
-            became a late fee.
-          </p>
-          <p className="mt-3 text-[16px] leading-relaxed text-muted-foreground">
-            Undo helps catch those small things while they're still fixable.
+            These are the small things most likely to turn into charges, late fees, or missed
+            windows. Undo helps catch them while there is still time to fix them.
           </p>
         </div>
 
@@ -263,7 +262,7 @@ const Landing = () => {
             How Undo works
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            Three calm steps.
+            From Gmail to review to fix.
           </h2>
         </div>
 
@@ -273,19 +272,19 @@ const Landing = () => {
               step: "01",
               icon: Mail,
               title: "Start with Gmail",
-              body: "Undo stays focused on likely trials, renewals, returns, and bills. Nothing broader.",
+              body: "Undo checks Gmail for likely trials, renewals, returns, and bills. Nothing broader.",
             },
             {
               step: "02",
               icon: Eye,
               title: "Review what Undo found",
-              body: "Nothing goes into your feed until you keep it.",
+              body: "Keep, edit, or dismiss before anything reaches your feed.",
             },
             {
               step: "03",
               icon: ShieldCheck,
               title: "Fix what still can be saved",
-              body: "See what matters now, act quickly, and move on.",
+              body: "See what still matters, act quickly, and move on.",
             },
           ].map((s) => (
             <div
@@ -339,8 +338,8 @@ const Landing = () => {
               </ul>
 
               <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
-                Nothing is saved without you. Undo shows suggestions for review. Keep, edit, or
-                dismiss anything. You stay in control.
+                Undo only saves what you keep. Every suggestion starts in review, where you can
+                keep, edit, or dismiss it.
               </p>
             </div>
 
@@ -393,16 +392,20 @@ const Landing = () => {
             Inside Undo
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            See what Undo catches.
+            See how Undo works on screen.
           </h2>
+          <p className="mt-4 max-w-[30rem] text-[14px] leading-relaxed text-muted-foreground">
+            These screens show the full path: Gmail scope, review first, and what still needs
+            action.
+          </p>
         </div>
 
         <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { variant: "permission", label: "Gmail trust" },
-            { variant: "scanning", label: "Finding what matters" },
-            { variant: "review", label: "Review before keeping" },
-            { variant: "feed", label: "Fix today" },
+            { variant: "permission", label: "What Undo looks for" },
+            { variant: "scanning", label: "Finding likely matches" },
+            { variant: "review", label: "You review first" },
+            { variant: "feed", label: "What to fix today" },
           ].map((p) => (
             <div key={p.variant} className="flex flex-col items-center gap-4">
               <div className="w-full max-w-[260px]">
@@ -426,8 +429,8 @@ const Landing = () => {
           <em className="text-primary not-italic italic">A protection layer.</em>
         </h2>
         <p className="mx-auto mt-7 max-w-xl text-[16.5px] leading-relaxed text-muted-foreground">
-          Undo is not about organizing your life. It is about catching the small things that quietly
-          make life worse before they turn into stress, wasted money, or awkwardness.
+          Undo is for the small things that turn into charges, late fees, and missed windows, not
+          for managing your whole life.
         </p>
       </section>
 
@@ -450,7 +453,7 @@ const Landing = () => {
                 Be first to try Undo.
               </h2>
               <p className="mx-auto mt-5 max-w-md text-[16px] leading-relaxed text-muted-foreground">
-                Join the early list for first access to Undo.
+                Join the early list and we&apos;ll email you when Undo opens up.
               </p>
             </div>
 
@@ -484,7 +487,7 @@ const Landing = () => {
               Early access
             </a>
             <Link to="/auth" className="hover:text-foreground">
-              Open app
+              Sign in
             </Link>
           </div>
         </div>
