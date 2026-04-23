@@ -20,13 +20,13 @@ const EarlyAccessConfirmed = () => {
           </span>
 
           <p className="mt-6 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Early access
+            UNDO
           </p>
           <h1 className="mt-3 font-display text-[40px] leading-[1.02] tracking-snug text-balance">
             You&apos;re on the list.
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
-            We&apos;ll email you when Undo opens up.
+            We&apos;ll let you know when Undo opens up.
           </p>
           <p className="mt-3 text-[12.5px] text-muted-foreground">
             Coming soon on iOS and Android.
@@ -40,12 +40,12 @@ const EarlyAccessConfirmed = () => {
               <ArrowLeft className="h-4 w-4" strokeWidth={2} />
               Back to Undo
             </Link>
-            <Link
-              to="/auth"
-              className="text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Sign in
-            </Link>
+            <p className="text-center text-[12.5px] text-muted-foreground">
+              Already have access?{" "}
+              <Link to="/auth" className="transition-colors hover:text-foreground">
+                Sign in
+              </Link>
+            </p>
           </div>
         </div>
       </div>
