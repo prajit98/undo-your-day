@@ -14,6 +14,7 @@ import Timeline from "./pages/Timeline.tsx";
 import Settings from "./pages/Settings.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Landing from "./pages/Landing.tsx";
+import EarlyAccessConfirmed from "./pages/EarlyAccessConfirmed.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { OnboardingGate } from "./components/OnboardingGate";
@@ -33,6 +34,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/landing" element={<Navigate to="/" replace />} />
+                <Route path="/early-access-confirmed" element={<EarlyAccessConfirmed />} />
                 <Route path="/app" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/onboarding" element={<Onboarding />} />

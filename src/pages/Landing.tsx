@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Mail,
@@ -16,6 +16,7 @@ import {
 const TALLY_SRC =
   "https://tally.so/embed/q4EMaO?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1";
 const TALLY_WIDGET_SRC = "https://tally.so/widgets/embed.js";
+const TALLY_FORM_ID = "q4EMaO";
 
 declare global {
   interface Window {
@@ -23,7 +24,7 @@ declare global {
   }
 }
 
-const TallyForm = () => {
+const TallyForm = ({ onSubmitted }: { onSubmitted: () => void }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -69,6 +70,26 @@ const TallyForm = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (typeof event.data !== "string" || !event.data.includes("Tally.FormSubmitted")) {
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(event.data)?.payload;
+        if (payload?.formId === TALLY_FORM_ID) {
+          onSubmitted();
+        }
+      } catch {
+        // Ignore unrelated postMessage events that are not valid Tally payloads.
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [onSubmitted]);
+
   return (
     <iframe
       ref={iframeRef}
@@ -87,6 +108,8 @@ const TallyForm = () => {
 };
 
 const Landing = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Ambient background */}
@@ -433,7 +456,7 @@ const Landing = () => {
 
             <div className="mx-auto mt-10 w-full max-w-lg rounded-[30px] border border-border/70 bg-background/75 p-4 shadow-soft backdrop-blur-sm sm:p-6">
               <div className="overflow-hidden rounded-[28px] bg-transparent ring-1 ring-border/40">
-                <TallyForm />
+                <TallyForm onSubmitted={() => navigate("/early-access-confirmed", { replace: true })} />
               </div>
             </div>
 
