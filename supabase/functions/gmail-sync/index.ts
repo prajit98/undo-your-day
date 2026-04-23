@@ -10,6 +10,7 @@ const AUTO_CATEGORIES = new Set(["trial", "renewal", "return", "bill"]);
 const GMAIL_FETCH_TIMEOUT_MS = 10_000;
 const MAX_MESSAGE_IDS_TO_SCAN = 18;
 const MAX_CANDIDATES_TO_RETURN = 6;
+const DEFAULT_ENABLED_CATEGORIES = ["trial", "renewal", "return", "bill", "followup"] as const;
 
 type StoredTokenRow = {
   access_token?: string | null;
@@ -205,6 +206,54 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
   return refreshed.access_token;
 }
 
+async function ensurePreferencesRow(userId: string, admin = createAdminClient()) {
+  const { data: preferences, error } = await admin
+    .from("preferences")
+    .select("enabled_categories")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new SyncError({
+      message: error.message,
+      stage: "preferences_lookup",
+      code: "gmail_preferences_lookup_failed",
+      status: 500,
+      details: { userId },
+    });
+  }
+
+  if (preferences) {
+    return preferences;
+  }
+
+  logSyncEvent("warn", "preferences_missing_backfill", { userId });
+
+  const { data: insertedPreferences, error: insertError } = await admin
+    .from("preferences")
+    .upsert({
+      user_id: userId,
+      enabled_categories: [...DEFAULT_ENABLED_CATEGORIES],
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: "user_id",
+    })
+    .select("enabled_categories")
+    .single();
+
+  if (insertError) {
+    throw new SyncError({
+      message: insertError.message,
+      stage: "preferences_lookup",
+      code: "gmail_preferences_backfill_failed",
+      status: 500,
+      details: { userId },
+    });
+  }
+
+  return insertedPreferences;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -214,10 +263,9 @@ Deno.serve(async (req) => {
     const user = await requireUser(req);
     const admin = createAdminClient();
 
-    const [{ data: connection, error: connectionError }, { data: tokenRow, error: tokenError }, { data: preferences, error: preferenceError }] = await Promise.all([
+    const [{ data: connection, error: connectionError }, { data: tokenRow, error: tokenError }] = await Promise.all([
       admin.from("gmail_connections").select("*").eq("user_id", user.id).maybeSingle(),
       admin.from("gmail_tokens").select("access_token, refresh_token, expires_at").eq("user_id", user.id).maybeSingle(),
-      admin.from("preferences").select("enabled_categories").eq("user_id", user.id).single(),
     ]);
 
     if (connectionError) {
@@ -238,15 +286,6 @@ Deno.serve(async (req) => {
         details: { userId: user.id },
       });
     }
-    if (preferenceError) {
-      throw new SyncError({
-        message: preferenceError.message,
-        stage: "preferences_lookup",
-        code: "gmail_preferences_lookup_failed",
-        status: 500,
-        details: { userId: user.id },
-      });
-    }
 
     if (!connection || !tokenRow) {
       throw new SyncError({
@@ -262,6 +301,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    const preferences = await ensurePreferencesRow(user.id, admin);
     const allowedCategories = (Array.isArray(preferences.enabled_categories) ? preferences.enabled_categories : [])
       .filter((category): category is GmailCategory => AUTO_CATEGORIES.has(String(category)));
     const categories = allowedCategories.length > 0 ? allowedCategories : ["trial", "renewal", "return", "bill"];
