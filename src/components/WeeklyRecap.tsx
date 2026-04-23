@@ -29,11 +29,6 @@ export function WeeklyRecap() {
 
   const fmt = (n: number) => (n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(0)}`);
 
-  const title =
-    caughtCount > 0
-      ? "Undo helped you catch a few things in time."
-      : "Quiet week. A few more items are already in view.";
-
   const summary =
     protectedAmount > 0
       ? `Money protected, decisions made, and ${comingNext > 0 ? "a few more items already in view." : "nothing urgent building next."}`
@@ -62,7 +57,17 @@ export function WeeklyRecap() {
       </div>
 
       <h3 className="mt-4 font-display text-[24px] leading-[1.08] text-foreground text-balance">
-        {title}
+        {caughtCount > 0 ? (
+          <>
+            Undo helped you catch{" "}
+            <em className="text-primary not-italic italic">a few things in time.</em>
+          </>
+        ) : (
+          <>
+            Quiet week. A few more items are{" "}
+            <em className="text-primary not-italic italic">already in view.</em>
+          </>
+        )}
       </h3>
 
       <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">

@@ -71,7 +71,8 @@ const Auth = () => {
         </div>
 
         <h1 className="mt-7 max-w-[11ch] font-display text-[42px] leading-[1.01] tracking-snug text-foreground text-balance">
-          Keep what Undo is protecting with you.
+          Keep what Undo is protecting{" "}
+          <em className="text-primary not-italic italic">with you.</em>
         </h1>
         <p className="mt-4 max-w-[32rem] text-[14.5px] leading-relaxed text-muted-foreground text-balance">
           One calm account for your items, reminders, and decisions, so nothing important gets left behind.

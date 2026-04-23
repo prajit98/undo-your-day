@@ -203,7 +203,8 @@ function CategoryStep({
           Welcome to Undo
         </p>
         <h1 className="mt-5 max-w-[12ch] font-display text-[40px] leading-[1.03] tracking-snug text-foreground text-balance">
-          What should Undo help you catch?
+          What should Undo help you{" "}
+          <em className="text-primary not-italic italic">catch?</em>
         </h1>
         <p className="mt-3 max-w-[30rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           Pick the kinds of things that are easiest to miss.
