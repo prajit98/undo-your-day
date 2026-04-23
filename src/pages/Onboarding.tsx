@@ -15,7 +15,7 @@ import { shortDue } from "@/lib/urgency";
 import { AppFunctionError, appRepository } from "@/lib/persistence";
 import { toast } from "sonner";
 
-type Step = "categories" | "permission" | "scanning" | "review";
+type Step = "categories" | "permission" | "connected" | "scanning" | "review";
 
 const catIcon: Record<Category, typeof Sparkles> = {
   trial: Sparkles,
@@ -41,8 +41,6 @@ const categoryPlural: Record<Category, string> = {
   followup: "Follow-ups",
 };
 
-const GMAIL_RESUME_KEY = "undo.gmail.resume-sync";
-const GMAIL_SYNC_ACTIVE_KEY = "undo.gmail.sync-active-at";
 const GMAIL_SYNC_RETRY_AFTER_KEY = "undo.gmail.sync-retry-after";
 const GMAIL_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
@@ -70,95 +68,30 @@ const Onboarding = () => {
   }, [onboarding.pickedCategories]);
 
   useEffect(() => {
-    let cancelled = false;
     const gmailStatus = searchParams.get("gmail");
     const reason = searchParams.get("reason");
-    const shouldResumeFromSession = typeof window !== "undefined"
-      && window.sessionStorage.getItem(GMAIL_RESUME_KEY) === "onboarding"
-      && Boolean(gmailConnection);
-    const retryAfterMs = typeof window !== "undefined"
-      ? Number(window.sessionStorage.getItem(GMAIL_SYNC_RETRY_AFTER_KEY) ?? "0")
-      : 0;
-    const rateLimitCoolingDown = retryAfterMs > Date.now();
-
-    const syncRealCandidates = async () => {
-      if (typeof window !== "undefined") {
-        const activeAt = Number(window.sessionStorage.getItem(GMAIL_SYNC_ACTIVE_KEY) ?? "0");
-        if (activeAt && Date.now() - activeAt < 45_000) {
-          setStep("scanning");
-          return;
-        }
-
-        window.sessionStorage.removeItem(GMAIL_RESUME_KEY);
-        window.sessionStorage.setItem(GMAIL_SYNC_ACTIVE_KEY, String(Date.now()));
-      }
-      setStep("scanning");
+    if (gmailStatus === "connected") {
+      setConnecting(false);
       setSyncError(null);
-      try {
-        await refresh();
-        const nextCandidates = await appRepository.gmail.syncCandidates();
-        if (cancelled) return;
-        setCandidates(nextCandidates);
-        setDismissed(new Set());
-        setStep("review");
-        navigate("/onboarding", { replace: true });
-      } catch (error) {
-        if (cancelled) return;
-        const isRateLimited = error instanceof AppFunctionError && error.code === "gmail_rate_limited";
-        const message = error instanceof Error ? error.message : "Undo could not scan Gmail right now.";
-        console.error("[Undo Gmail] sync failed after connect", error);
-        if (typeof window !== "undefined" && isRateLimited) {
-          window.sessionStorage.setItem(
-            GMAIL_SYNC_RETRY_AFTER_KEY,
-            String(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS),
-          );
-        }
-        setSyncError(message);
-        toast.error(message);
-        setStep("permission");
-        navigate("/onboarding", { replace: true });
-      } finally {
-        if (typeof window !== "undefined") {
-          window.sessionStorage.removeItem(GMAIL_SYNC_ACTIVE_KEY);
-        }
-      }
-    };
-
-    if ((gmailStatus === "connected" || shouldResumeFromSession) && rateLimitCoolingDown) {
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(GMAIL_RESUME_KEY);
-      }
-      setSyncError("Gmail is busy right now. Please wait a minute and try again.");
-      setStep("permission");
+      setStep("connected");
       navigate("/onboarding", { replace: true });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (gmailStatus === "connected" || shouldResumeFromSession) {
-      void syncRealCandidates();
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
     if (gmailStatus === "error") {
       if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(GMAIL_RESUME_KEY);
+        window.sessionStorage.removeItem(GMAIL_SYNC_RETRY_AFTER_KEY);
       }
       const message = reason
         ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
         : "Undo could not finish the Gmail connection.";
+      setConnecting(false);
       setSyncError(message);
       toast.error(message);
+      setStep("permission");
       navigate("/onboarding", { replace: true });
     }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams, refresh, navigate, gmailConnection]);
+  }, [searchParams, navigate]);
 
   const skipGmail = async () => {
     await onboarding.savePrefs(picked);
@@ -172,7 +105,6 @@ const Onboarding = () => {
     try {
       await onboarding.savePrefs(picked);
       if (typeof window !== "undefined") {
-        window.sessionStorage.setItem(GMAIL_RESUME_KEY, "onboarding");
         window.sessionStorage.removeItem(GMAIL_SYNC_RETRY_AFTER_KEY);
       }
       const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/onboarding" });
@@ -182,6 +114,46 @@ const Onboarding = () => {
       toast.error(message);
       setSyncError(message);
       setConnecting(false);
+    }
+  };
+
+  const startFirstScan = async () => {
+    const retryAfterMs = typeof window !== "undefined"
+      ? Number(window.sessionStorage.getItem(GMAIL_SYNC_RETRY_AFTER_KEY) ?? "0")
+      : 0;
+
+    if (retryAfterMs > Date.now()) {
+      const message = "Gmail is busy right now. Please wait a minute and try again.";
+      setSyncError(message);
+      toast.error(message);
+      return;
+    }
+
+    setStep("scanning");
+    setSyncError(null);
+    try {
+      await refresh();
+      const nextCandidates = await appRepository.gmail.syncCandidates();
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(GMAIL_SYNC_RETRY_AFTER_KEY);
+      }
+      setCandidates(nextCandidates);
+      setDismissed(new Set());
+      setStep("review");
+      navigate("/onboarding", { replace: true });
+    } catch (error) {
+      const isRateLimited = error instanceof AppFunctionError && error.code === "gmail_rate_limited";
+      const message = error instanceof Error ? error.message : "Undo could not scan Gmail right now.";
+      console.error("[Undo Gmail] first scan failed", error);
+      if (typeof window !== "undefined" && isRateLimited) {
+        window.sessionStorage.setItem(
+          GMAIL_SYNC_RETRY_AFTER_KEY,
+          String(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS),
+        );
+      }
+      setSyncError(message);
+      toast.error(message);
+      setStep("connected");
     }
   };
 
@@ -249,7 +221,7 @@ const Onboarding = () => {
                   : [...current, category]
               ))
             }
-            onContinue={() => setStep("permission")}
+            onContinue={() => setStep(gmailConnection ? "connected" : "permission")}
           />
         )}
 
@@ -267,6 +239,16 @@ const Onboarding = () => {
 
         {step === "scanning" && (
           <ScanningStep picked={picked} />
+        )}
+
+        {step === "connected" && (
+          <ConnectedStep
+            picked={picked}
+            syncError={syncError}
+            onStartScan={() => void startFirstScan()}
+            onSkip={() => void skipGmail()}
+            onBack={() => setStep("permission")}
+          />
         )}
 
         {step === "review" && (
@@ -466,6 +448,91 @@ function PermissionStep({
           className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
         >
           Maybe later. I&apos;ll add items myself.
+        </button>
+      </footer>
+    </div>
+  );
+}
+
+function ConnectedStep({
+  picked, syncError, onStartScan, onSkip, onBack,
+}: {
+  picked: Category[];
+  syncError: string | null;
+  onStartScan: () => void | Promise<void>;
+  onSkip: () => void | Promise<void>;
+  onBack: () => void;
+}) {
+  const scopedCategories = formatCategoryList(picked).toLowerCase();
+
+  return (
+    <div className="flex flex-1 flex-col animate-fade-in">
+      <header className="flex items-center justify-between px-5 pt-10">
+        <button
+          onClick={onBack}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-foreground/70 shadow-soft transition-colors hover:text-foreground"
+          aria-label="Back"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
+        </button>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-[10.5px] font-medium text-primary shadow-soft">
+          <Check className="h-3 w-3" strokeWidth={2.3} />
+          Gmail connected
+        </span>
+        <div className="w-10" />
+      </header>
+
+      <main className="flex-1 px-7 pt-12">
+        <h1 className="max-w-[12ch] font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
+          Gmail connected.
+        </h1>
+        <p className="mt-4 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
+          Undo can now do a first pass for likely {scopedCategories}. You review everything before anything is kept.
+        </p>
+
+        <div className="mt-9 space-y-3">
+          <InfoCard
+            icon={Mail}
+            title="What the first scan does"
+            tone="neutral"
+            bullets={[
+              `Checks Gmail for likely ${scopedCategories}`,
+              "Pulls out dates, amounts, and time windows",
+              "Brings everything into review first",
+            ]}
+          />
+          <InfoCard
+            icon={ShieldCheck}
+            title="What happens after that"
+            tone="primary"
+            bullets={[
+              "Keep what matters",
+              "Dismiss anything that does not belong",
+              "Nothing goes straight to the feed",
+            ]}
+          />
+        </div>
+
+        {syncError && (
+          <p className="mt-5 rounded-2xl bg-critical-soft/70 px-4 py-3 text-[12px] leading-relaxed text-critical">
+            {syncError}
+          </p>
+        )}
+      </main>
+
+      <footer className="px-7 pb-10 pt-8">
+        <button
+          onClick={() => void onStartScan()}
+          className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
+        >
+          <Sparkles className="h-4 w-4" strokeWidth={1.9} />
+          Start first scan
+        </button>
+        <button
+          onClick={() => void onSkip()}
+          className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Do this later
         </button>
       </footer>
     </div>
