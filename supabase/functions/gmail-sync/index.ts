@@ -17,12 +17,52 @@ type StoredTokenRow = {
   expires_at?: string | null;
 };
 
+class SyncError extends Error {
+  stage: string;
+  code: string;
+  status: number;
+  details?: Record<string, unknown>;
+
+  constructor(input: {
+    message: string;
+    stage: string;
+    code: string;
+    status?: number;
+    details?: Record<string, unknown>;
+  }) {
+    super(input.message);
+    this.name = "SyncError";
+    this.stage = input.stage;
+    this.code = input.code;
+    this.status = input.status ?? 500;
+    this.details = input.details;
+  }
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, {
     status,
     headers: withCorsHeaders({
       "Content-Type": "application/json",
     }),
+  });
+}
+
+function logSyncEvent(level: "log" | "warn" | "error", event: string, details?: Record<string, unknown>) {
+  console[level](`[Undo Gmail Sync] ${event}`, details ?? {});
+}
+
+function normalizeError(error: unknown) {
+  if (error instanceof SyncError) {
+    return error;
+  }
+
+  const message = error instanceof Error ? error.message : "Could not scan Gmail right now.";
+  return new SyncError({
+    message,
+    stage: "unexpected",
+    code: "unexpected_error",
+    status: message === "Unauthorized" ? 401 : 500,
   });
 }
 
@@ -52,10 +92,33 @@ async function gmailFetchJson<T>(accessToken: string, url: string) {
 
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(text || "Gmail request failed.");
+    throw new SyncError({
+      message: "Gmail request failed.",
+      stage: "gmail_api",
+      code: "gmail_request_failed",
+      status: 502,
+      details: {
+        url,
+        responseStatus: response.status,
+        responseBody: text.slice(0, 500),
+      },
+    });
   }
 
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new SyncError({
+      message: "Gmail returned an unreadable response.",
+      stage: "gmail_api",
+      code: "gmail_invalid_json",
+      status: 502,
+      details: {
+        url,
+        responseBody: text.slice(0, 500),
+      },
+    });
+  }
 }
 
 async function listMessageIds(accessToken: string, q: string, maxResults = 8) {
@@ -78,16 +141,43 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
   const stillValid = tokenRow.access_token && expiresAt > Date.now() + 60_000;
 
   if (stillValid) {
+    logSyncEvent("log", "using_stored_access_token", { userId, expiresAt: tokenRow.expires_at });
     return tokenRow.access_token;
   }
 
   if (!tokenRow.refresh_token) {
-    throw new Error("Reconnect Gmail to keep importing real matches.");
+    throw new SyncError({
+      message: "Reconnect Gmail to keep importing real matches.",
+      stage: "token_refresh",
+      code: "gmail_refresh_token_missing",
+      status: 409,
+      details: { userId },
+    });
   }
 
-  const refreshed = await refreshAccessToken(tokenRow.refresh_token);
+  logSyncEvent("log", "refreshing_access_token", { userId });
+
+  let refreshed;
+  try {
+    refreshed = await refreshAccessToken(tokenRow.refresh_token);
+  } catch (error) {
+    throw new SyncError({
+      message: error instanceof Error ? error.message : "Could not refresh Gmail access.",
+      stage: "token_refresh",
+      code: "gmail_refresh_failed",
+      status: 502,
+      details: { userId },
+    });
+  }
+
   if (!refreshed.access_token) {
-    throw new Error("Could not refresh Gmail access.");
+    throw new SyncError({
+      message: "Could not refresh Gmail access.",
+      stage: "token_refresh",
+      code: "gmail_refresh_missing_access_token",
+      status: 502,
+      details: { userId },
+    });
   }
 
   const nextExpiresAt = refreshed.expires_in
@@ -103,7 +193,13 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
   }).eq("user_id", userId);
 
   if (error) {
-    throw new Error(error.message);
+    throw new SyncError({
+      message: error.message,
+      stage: "token_refresh",
+      code: "gmail_token_update_failed",
+      status: 500,
+      details: { userId },
+    });
   }
 
   return refreshed.access_token;
@@ -124,12 +220,46 @@ Deno.serve(async (req) => {
       admin.from("preferences").select("enabled_categories").eq("user_id", user.id).single(),
     ]);
 
-    if (connectionError) throw new Error(connectionError.message);
-    if (tokenError) throw new Error(tokenError.message);
-    if (preferenceError) throw new Error(preferenceError.message);
+    if (connectionError) {
+      throw new SyncError({
+        message: connectionError.message,
+        stage: "connection_lookup",
+        code: "gmail_connection_lookup_failed",
+        status: 500,
+        details: { userId: user.id },
+      });
+    }
+    if (tokenError) {
+      throw new SyncError({
+        message: tokenError.message,
+        stage: "token_lookup",
+        code: "gmail_token_lookup_failed",
+        status: 500,
+        details: { userId: user.id },
+      });
+    }
+    if (preferenceError) {
+      throw new SyncError({
+        message: preferenceError.message,
+        stage: "preferences_lookup",
+        code: "gmail_preferences_lookup_failed",
+        status: 500,
+        details: { userId: user.id },
+      });
+    }
 
     if (!connection || !tokenRow) {
-      return jsonResponse({ error: "Connect Gmail first." }, 409);
+      throw new SyncError({
+        message: "Connect Gmail first.",
+        stage: "connection_lookup",
+        code: "gmail_not_connected",
+        status: 409,
+        details: {
+          userId: user.id,
+          hasConnection: Boolean(connection),
+          hasTokenRow: Boolean(tokenRow),
+        },
+      });
     }
 
     const allowedCategories = (Array.isArray(preferences.enabled_categories) ? preferences.enabled_categories : [])
@@ -138,15 +268,40 @@ Deno.serve(async (req) => {
     const accessToken = await ensureAccessToken(user.id, tokenRow as StoredTokenRow, admin);
     const searchQueries = buildSearchQueries(categories);
 
-    const listedMessages = await Promise.all(
+    logSyncEvent("log", "starting_sync", {
+      userId: user.id,
+      gmailEmail: connection.gmail_email,
+      categories,
+      searchQueryCount: searchQueries.length,
+    });
+
+    const listedMessages = await Promise.allSettled(
       searchQueries.map(async ({ category, q }) => ({
         category,
+        q,
         ids: await listMessageIds(accessToken, q),
       })),
     );
 
     const messageIdsByHint = new Map<string, GmailCategory>();
-    for (const { category, ids } of listedMessages) {
+    const listFailures: Array<Record<string, unknown>> = [];
+
+    for (const result of listedMessages) {
+      if (result.status === "rejected") {
+        const failure = normalizeError(result.reason);
+        const details = {
+          stage: failure.stage,
+          code: failure.code,
+          message: failure.message,
+          ...(failure.details ?? {}),
+        };
+        listFailures.push(details);
+        logSyncEvent("warn", "list_query_failed", details);
+        continue;
+      }
+
+      const { category, q, ids } = result.value;
+      logSyncEvent("log", "list_query_succeeded", { category, query: q, count: ids.length });
       ids.forEach((id) => {
         if (!messageIdsByHint.has(id) && messageIdsByHint.size < MAX_MESSAGE_IDS_TO_SCAN) {
           messageIdsByHint.set(id, category);
@@ -158,42 +313,127 @@ Deno.serve(async (req) => {
       }
     }
 
-    const candidateResults = (await Promise.all(
+    if (messageIdsByHint.size === 0 && listFailures.length === listedMessages.length && listedMessages.length > 0) {
+      throw new SyncError({
+        message: "Undo could not scan Gmail right now.",
+        stage: "gmail_list",
+        code: "gmail_all_queries_failed",
+        status: 502,
+        details: {
+          userId: user.id,
+          failedQueries: listFailures.length,
+        },
+      });
+    }
+
+    const candidateSettled = await Promise.allSettled(
       Array.from(messageIdsByHint.entries()).map(async ([messageId, hint]) => {
         const message = await getMessage(accessToken, messageId);
-        return messageToCandidate(message, hint, categories);
+        return {
+          messageId,
+          hint,
+          candidate: messageToCandidate(message, hint, categories),
+        };
       }),
-    )).filter((candidate): candidate is Candidate => Boolean(candidate));
+    );
+
+    const messageFailures: Array<Record<string, unknown>> = [];
+    const candidateResults: Candidate[] = [];
+
+    for (const result of candidateSettled) {
+      if (result.status === "rejected") {
+        const failure = normalizeError(result.reason);
+        const details = {
+          stage: failure.stage,
+          code: failure.code,
+          message: failure.message,
+          ...(failure.details ?? {}),
+        };
+        messageFailures.push(details);
+        logSyncEvent("warn", "message_processing_failed", details);
+        continue;
+      }
+
+      if (result.value.candidate) {
+        candidateResults.push(result.value.candidate);
+      }
+    }
+
+    if (candidateResults.length === 0 && messageFailures.length === candidateSettled.length && candidateSettled.length > 0) {
+      throw new SyncError({
+        message: "Undo could not finish reading Gmail right now.",
+        stage: "candidate_processing",
+        code: "gmail_all_messages_failed",
+        status: 502,
+        details: {
+          userId: user.id,
+          failedMessages: messageFailures.length,
+        },
+      });
+    }
 
     const deduped = Array.from(
       new Map(candidateResults.map((candidate) => [candidate.id, candidate])).values(),
     ).sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
       .slice(0, MAX_CANDIDATES_TO_RETURN);
 
-    await admin.from("gmail_connections").update({
+    const { error: updateError } = await admin.from("gmail_connections").update({
       last_synced_at: new Date().toISOString(),
       last_sync_status: "synced",
       last_sync_error: null,
       updated_at: new Date().toISOString(),
     }).eq("user_id", user.id);
 
+    if (updateError) {
+      logSyncEvent("error", "connection_sync_state_update_failed", {
+        userId: user.id,
+        message: updateError.message,
+      });
+    }
+
+    logSyncEvent("log", "sync_completed", {
+      userId: user.id,
+      fetchedMessageCount: messageIdsByHint.size,
+      candidateCount: deduped.length,
+      listFailureCount: listFailures.length,
+      messageFailureCount: messageFailures.length,
+    });
+
     return jsonResponse({ candidates: deduped });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not scan Gmail right now.";
-    const status = message === "Unauthorized" ? 401 : 500;
+    const failure = normalizeError(error);
+    logSyncEvent("error", "sync_failed", {
+      stage: failure.stage,
+      code: failure.code,
+      status: failure.status,
+      message: failure.message,
+      ...(failure.details ?? {}),
+    });
 
     try {
       const user = await requireUser(req);
       const admin = createAdminClient();
-      await admin.from("gmail_connections").update({
+      const { error: updateError } = await admin.from("gmail_connections").update({
         last_sync_status: "error",
-        last_sync_error: message,
+        last_sync_error: failure.message,
         updated_at: new Date().toISOString(),
       }).eq("user_id", user.id);
+
+      if (updateError) {
+        logSyncEvent("error", "connection_error_state_update_failed", {
+          userId: user.id,
+          message: updateError.message,
+        });
+      }
     } catch {
       // Keep the original sync error as the primary response.
     }
 
-    return jsonResponse({ error: message }, status);
+    return jsonResponse({
+      error: failure.message,
+      code: failure.code,
+      stage: failure.stage,
+      details: failure.details,
+    }, failure.status);
   }
 });
