@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound,
@@ -10,8 +10,16 @@ import { useAuth } from "@/context/AuthContext";
 import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
 import { appConfig } from "@/lib/app-config";
+import {
+  clearGmailRetryAfter,
+  formatGmailSyncError,
+  GMAIL_RATE_LIMIT_COOLDOWN_MS,
+  getGmailRetryAfter,
+  setGmailRetryAfter,
+  stashGmailReviewCandidates,
+} from "@/lib/gmail-flow";
 import { autoCategories } from "@/lib/onboarding";
-import { appRepository } from "@/lib/persistence";
+import { AppFunctionError, appRepository } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
@@ -31,6 +39,8 @@ const Settings = () => {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const { active, preferences, onboarding, updatePreferences, gmailConnection, refresh } = useUndo();
+  const [scanningGmail, setScanningGmail] = useState(false);
+  const [gmailActionError, setGmailActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const gmailStatus = searchParams.get("gmail");
@@ -39,7 +49,8 @@ const Settings = () => {
     if (gmailStatus === "connected") {
       void refresh()
         .then(() => {
-          toast.success("Gmail connected.");
+          setGmailActionError(null);
+          toast.success("Gmail connected. Start the first scan when you're ready.");
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : "Undo could not refresh Gmail status.";
@@ -52,11 +63,11 @@ const Settings = () => {
     }
 
     if (gmailStatus === "error") {
-      toast.error(
-        reason
-          ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
-          : "Undo could not finish the Gmail connection.",
-      );
+      const message = reason
+        ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
+        : "Undo could not finish the Gmail connection.";
+      setGmailActionError(message);
+      toast.error(message);
       navigate("/settings", { replace: true });
     }
   }, [searchParams, refresh, navigate]);
@@ -69,6 +80,26 @@ const Settings = () => {
   const accountMeta = user?.name?.trim() ? user?.email?.trim() ?? null : null;
   const watchedByGmail = onboarding.pickedCategories.length > 0 ? onboarding.pickedCategories : autoCategories;
   const enabledCats = preferences.enabledCategories;
+  const hasScannedGmail = Boolean(gmailConnection?.lastSyncedAt) || gmailConnection?.lastSyncStatus === "error";
+  const gmailScanLabel = !gmailConnection
+    ? "Off"
+    : gmailConnection.lastSyncStatus === "error"
+      ? "Needs retry"
+      : hasScannedGmail
+        ? "Connected"
+        : "Ready to scan";
+  const gmailScanSummary = !gmailConnection
+    ? "Connect Gmail so Undo can look for likely trials, renewals, returns, and bills."
+    : gmailConnection.lastSyncStatus === "error"
+      ? "Connected. The last scan did not finish."
+      : hasScannedGmail
+        ? `Last checked ${formatSyncTime(gmailConnection.lastSyncedAt)}.`
+        : "Connected. First scan not run yet.";
+  const gmailActionLabel = !gmailConnection
+    ? "Connect Gmail"
+    : hasScannedGmail
+      ? "Scan Gmail now"
+      : "Run first scan";
   const resourceLinks = [
     appConfig.hasSupportEmail ? {
       href: `mailto:${appConfig.supportEmail}`,
@@ -99,6 +130,8 @@ const Settings = () => {
     try {
       await appRepository.gmail.disconnect();
       await refresh();
+      setGmailActionError(null);
+      clearGmailRetryAfter();
       toast.success("Gmail turned off.", {
         duration: 2400,
       });
@@ -110,11 +143,53 @@ const Settings = () => {
 
   const connectGmail = async () => {
     try {
+      setGmailActionError(null);
+      clearGmailRetryAfter();
       const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/settings" });
       window.location.assign(url);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Undo could not start Gmail connection.";
+      setGmailActionError(message);
       toast.error(message);
+    }
+  };
+
+  const runGmailScan = async () => {
+    const retryAfterMs = getGmailRetryAfter();
+    if (retryAfterMs > Date.now()) {
+      const message = "Gmail is busy right now. Please wait a minute and try again.";
+      setGmailActionError(message);
+      toast.error(message);
+      return;
+    }
+
+    setScanningGmail(true);
+    setGmailActionError(null);
+
+    try {
+      const nextCandidates = await appRepository.gmail.syncCandidates();
+      clearGmailRetryAfter();
+      await refresh();
+
+      if (nextCandidates.length > 0) {
+        stashGmailReviewCandidates(nextCandidates);
+        toast.success("Undo found a few things to review.");
+        navigate("/onboarding");
+        return;
+      }
+
+      toast.success("Nothing to review right now.");
+    } catch (error) {
+      const isRateLimited = error instanceof AppFunctionError && error.code === "gmail_rate_limited";
+      const message = formatGmailSyncError(error);
+      if (isRateLimited) {
+        setGmailRetryAfter(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS);
+      }
+      await refresh().catch(() => undefined);
+      setGmailActionError(message);
+      toast.error(message);
+    } finally {
+      setScanningGmail(false);
     }
   };
 
@@ -167,13 +242,13 @@ const Settings = () => {
                   <p className="text-sm font-medium text-foreground">Gmail</p>
                   <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
                     {onboarding.gmailConnected
-                      ? "Undo checks Gmail for the categories you picked and keeps review before anything is kept."
+                      ? "Undo stays focused on the categories you picked and keeps review before anything is kept."
                       : "Connect Gmail so Undo can look for likely trials, renewals, returns, and bills."}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
                   <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-                  {onboarding.gmailConnected ? "Connected" : "Off"}
+                  {gmailScanLabel}
                 </span>
               </div>
 
@@ -186,22 +261,43 @@ const Settings = () => {
                 </p>
               </div>
 
-              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                {onboarding.gmailConnected
-                  ? (gmailConnection?.email
-                      ? `Connected as ${gmailConnection.email}. Undo keeps the scope narrow, and you review everything first.`
-                      : "Undo keeps the scope narrow, and you review everything first.")
-                  : "Undo stays focused on those categories, and review still comes before anything is kept."}
-              </p>
+              <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Scan status
+                </p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
+                  {gmailScanSummary}
+                </p>
+                {gmailConnection?.email && (
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    Connected as {gmailConnection.email}.
+                  </p>
+                )}
+              </div>
+
+              {(gmailActionError || gmailConnection?.lastSyncStatus === "error") && (
+                <p className="mt-3 rounded-2xl bg-critical-soft/70 px-3 py-2.5 text-[11.5px] leading-relaxed text-critical">
+                  {gmailActionError ?? gmailConnection?.lastSyncError ?? "Undo could not scan Gmail right now."}
+                </p>
+              )}
             </div>
           </div>
 
           <button
-            onClick={() => void (onboarding.gmailConnected ? disconnectGmail() : connectGmail())}
+            onClick={() => void (gmailConnection ? runGmailScan() : connectGmail())}
+            disabled={scanningGmail}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
-            {onboarding.gmailConnected ? "Turn off Gmail" : "Connect Gmail"}
+            {scanningGmail ? "Scanning Gmail..." : gmailActionLabel}
           </button>
+          {gmailConnection && (
+            <button
+              onClick={() => void disconnectGmail()}
+              className="mt-3 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Turn off Gmail
+            </button>
+          )}
         </section>
 
         {isPremium ? (
@@ -402,6 +498,24 @@ function formatCategoryList(categories: Category[]) {
   if (labels.length <= 1) return labels[0] ?? "";
   if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
+
+function formatSyncTime(value?: string) {
+  if (!value) {
+    return "just now";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "recently";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 export default Settings;

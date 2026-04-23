@@ -13,6 +13,14 @@ import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { shortDue } from "@/lib/urgency";
 import { AppFunctionError, appRepository } from "@/lib/persistence";
+import {
+  clearGmailRetryAfter,
+  formatGmailSyncError,
+  GMAIL_RATE_LIMIT_COOLDOWN_MS,
+  getGmailRetryAfter,
+  setGmailRetryAfter,
+  takePendingGmailReviewCandidates,
+} from "@/lib/gmail-flow";
 import { toast } from "sonner";
 
 type Step = "categories" | "permission" | "connected" | "scanning" | "review";
@@ -41,9 +49,6 @@ const categoryPlural: Record<Category, string> = {
   followup: "Follow-ups",
 };
 
-const GMAIL_SYNC_RETRY_AFTER_KEY = "undo.gmail.sync-retry-after";
-const GMAIL_RATE_LIMIT_COOLDOWN_MS = 60_000;
-
 function formatCategoryList(categories: Category[]) {
   const labels = categories.map((category) => categoryPlural[category]);
   if (labels.length <= 1) return labels[0] ?? "";
@@ -68,6 +73,18 @@ const Onboarding = () => {
   }, [onboarding.pickedCategories]);
 
   useEffect(() => {
+    const pendingCandidates = takePendingGmailReviewCandidates();
+    if (pendingCandidates.length === 0) {
+      return;
+    }
+
+    setCandidates(pendingCandidates);
+    setDismissed(new Set());
+    setSyncError(null);
+    setStep("review");
+  }, []);
+
+  useEffect(() => {
     const gmailStatus = searchParams.get("gmail");
     const reason = searchParams.get("reason");
     if (gmailStatus === "connected") {
@@ -79,9 +96,7 @@ const Onboarding = () => {
     }
 
     if (gmailStatus === "error") {
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(GMAIL_SYNC_RETRY_AFTER_KEY);
-      }
+      clearGmailRetryAfter();
       const message = reason
         ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
         : "Undo could not finish the Gmail connection.";
@@ -104,9 +119,7 @@ const Onboarding = () => {
     setSyncError(null);
     try {
       await onboarding.savePrefs(picked);
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(GMAIL_SYNC_RETRY_AFTER_KEY);
-      }
+      clearGmailRetryAfter();
       const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/onboarding" });
       window.location.assign(url);
     } catch (error) {
@@ -118,9 +131,7 @@ const Onboarding = () => {
   };
 
   const startFirstScan = async () => {
-    const retryAfterMs = typeof window !== "undefined"
-      ? Number(window.sessionStorage.getItem(GMAIL_SYNC_RETRY_AFTER_KEY) ?? "0")
-      : 0;
+    const retryAfterMs = getGmailRetryAfter();
 
     if (retryAfterMs > Date.now()) {
       const message = "Gmail is busy right now. Please wait a minute and try again.";
@@ -134,23 +145,20 @@ const Onboarding = () => {
     try {
       await refresh();
       const nextCandidates = await appRepository.gmail.syncCandidates();
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(GMAIL_SYNC_RETRY_AFTER_KEY);
-      }
+      clearGmailRetryAfter();
+      await refresh();
       setCandidates(nextCandidates);
       setDismissed(new Set());
       setStep("review");
       navigate("/onboarding", { replace: true });
     } catch (error) {
       const isRateLimited = error instanceof AppFunctionError && error.code === "gmail_rate_limited";
-      const message = error instanceof Error ? error.message : "Undo could not scan Gmail right now.";
+      const message = formatGmailSyncError(error);
       console.error("[Undo Gmail] first scan failed", error);
-      if (typeof window !== "undefined" && isRateLimited) {
-        window.sessionStorage.setItem(
-          GMAIL_SYNC_RETRY_AFTER_KEY,
-          String(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS),
-        );
+      if (isRateLimited) {
+        setGmailRetryAfter(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS);
       }
+      await refresh().catch(() => undefined);
       setSyncError(message);
       toast.error(message);
       setStep("connected");
