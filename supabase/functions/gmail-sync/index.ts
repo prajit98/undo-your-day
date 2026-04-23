@@ -7,6 +7,9 @@ import { createAdminClient, requireUser } from "../_shared/supabase.ts";
 
 const GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const AUTO_CATEGORIES = new Set(["trial", "renewal", "return", "bill"]);
+const GMAIL_FETCH_TIMEOUT_MS = 10_000;
+const MAX_MESSAGE_IDS_TO_SCAN = 18;
+const MAX_CANDIDATES_TO_RETURN = 6;
 
 type StoredTokenRow = {
   access_token?: string | null;
@@ -24,11 +27,28 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 async function gmailFetchJson<T>(accessToken: string, url: string) {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GMAIL_FETCH_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Gmail took too long to respond.");
+    }
+
+    throw error;
+  }
+
+  clearTimeout(timeoutId);
 
   const text = await response.text();
   if (!response.ok) {
@@ -118,32 +138,37 @@ Deno.serve(async (req) => {
     const accessToken = await ensureAccessToken(user.id, tokenRow as StoredTokenRow, admin);
     const searchQueries = buildSearchQueries(categories);
 
+    const listedMessages = await Promise.all(
+      searchQueries.map(async ({ category, q }) => ({
+        category,
+        ids: await listMessageIds(accessToken, q),
+      })),
+    );
+
     const messageIdsByHint = new Map<string, GmailCategory>();
-    for (const { category, q } of searchQueries) {
-      const ids = await listMessageIds(accessToken, q);
+    for (const { category, ids } of listedMessages) {
       ids.forEach((id) => {
-        if (!messageIdsByHint.has(id)) {
+        if (!messageIdsByHint.has(id) && messageIdsByHint.size < MAX_MESSAGE_IDS_TO_SCAN) {
           messageIdsByHint.set(id, category);
         }
       });
-      if (messageIdsByHint.size >= 30) break;
-    }
 
-    const candidateResults: Candidate[] = [];
-
-    for (const [messageId, hint] of messageIdsByHint.entries()) {
-      const message = await getMessage(accessToken, messageId);
-      const candidate = messageToCandidate(message, hint, categories);
-      if (candidate) {
-        candidateResults.push(candidate);
+      if (messageIdsByHint.size >= MAX_MESSAGE_IDS_TO_SCAN) {
+        break;
       }
-      if (candidateResults.length >= 12) break;
     }
+
+    const candidateResults = (await Promise.all(
+      Array.from(messageIdsByHint.entries()).map(async ([messageId, hint]) => {
+        const message = await getMessage(accessToken, messageId);
+        return messageToCandidate(message, hint, categories);
+      }),
+    )).filter((candidate): candidate is Candidate => Boolean(candidate));
 
     const deduped = Array.from(
       new Map(candidateResults.map((candidate) => [candidate.id, candidate])).values(),
     ).sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
-      .slice(0, 6);
+      .slice(0, MAX_CANDIDATES_TO_RETURN);
 
     await admin.from("gmail_connections").update({
       last_synced_at: new Date().toISOString(),

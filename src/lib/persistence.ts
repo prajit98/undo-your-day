@@ -385,9 +385,19 @@ const supabase = hasSupabaseConfig
     })
   : null;
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException
+    ? error.name === "AbortError"
+    : error instanceof Error && error.name === "AbortError";
+}
+
 async function invokeSupabaseFunction<TResponse>(
   name: string,
   body?: Record<string, unknown>,
+  options?: {
+    timeoutMs?: number;
+    timeoutMessage?: string;
+  },
 ): Promise<TResponse> {
   if (!supabase || !supabaseUrl) {
     throw new Error("Supabase is not configured.");
@@ -411,14 +421,37 @@ async function invokeSupabaseFunction<TResponse>(
     throw new Error("Please sign in again to continue.");
   }
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body ?? {}),
-  });
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : undefined;
+  const timeoutId = controller && options?.timeoutMs
+    ? globalThis.setTimeout(() => controller.abort(), options.timeoutMs)
+    : undefined;
+
+  let response: Response;
+  try {
+    response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body ?? {}),
+      signal: controller?.signal,
+    });
+  } catch (error) {
+    if (timeoutId) {
+      globalThis.clearTimeout(timeoutId);
+    }
+
+    if (isAbortError(error)) {
+      throw new Error(options?.timeoutMessage ?? `Undo could not complete ${name}.`);
+    }
+
+    throw error;
+  }
+
+  if (timeoutId) {
+    globalThis.clearTimeout(timeoutId);
+  }
 
   const text = await response.text();
   let payload: Record<string, unknown> = {};
@@ -900,7 +933,14 @@ function buildSupabaseRepository(): AppRepository {
         return data.url;
       },
       async syncCandidates() {
-        const data = await invokeSupabaseFunction<{ candidates?: Candidate[] }>("gmail-sync");
+        const data = await invokeSupabaseFunction<{ candidates?: Candidate[] }>(
+          "gmail-sync",
+          undefined,
+          {
+            timeoutMs: 30_000,
+            timeoutMessage: "Undo could not finish scanning Gmail right now. Please try again.",
+          },
+        );
         return Array.isArray(data.candidates) ? data.candidates : [];
       },
       async disconnect() {
