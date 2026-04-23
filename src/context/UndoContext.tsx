@@ -7,6 +7,7 @@ import {
   Category,
   CreateReminderInput,
   CreateUndoItemInput,
+  GmailConnection,
   ItemStatus,
   UndoItem,
   UndoPreferences,
@@ -21,9 +22,11 @@ interface UndoContextValue {
   ready: boolean;
   profile: UndoProfile | null;
   preferences: UndoPreferences | null;
+  gmailConnection: GmailConnection | null;
   items: UndoItem[];
   reminders: UndoReminder[];
   uploads: UndoUpload[];
+  refresh: () => Promise<void>;
   setStatus: (id: string, status: ItemStatus) => Promise<void>;
   snooze: (id: string, hours: number) => Promise<void>;
   addItem: (item: CreateUndoItemInput) => Promise<UndoItem | null>;
@@ -131,9 +134,19 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState<UndoProfile | null>(null);
   const [preferences, setPreferences] = useState<UndoPreferences | null>(null);
+  const [gmailConnection, setGmailConnection] = useState<GmailConnection | null>(null);
   const [storedItems, setStoredItems] = useState<UndoItem[]>([]);
   const [reminders, setReminders] = useState<UndoReminder[]>([]);
   const [uploads, setUploads] = useState<UndoUpload[]>([]);
+
+  const applySnapshot = useCallback((snapshot: Awaited<ReturnType<typeof appRepository.loadSnapshot>>) => {
+    setProfile(snapshot.profile);
+    setPreferences(snapshot.preferences);
+    setGmailConnection(snapshot.gmailConnection);
+    setStoredItems(snapshot.items);
+    setReminders(snapshot.reminders);
+    setUploads(snapshot.uploads);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +158,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setProfile(null);
       setPreferences(null);
+      setGmailConnection(null);
       setStoredItems([]);
       setReminders([]);
       setUploads([]);
@@ -157,17 +171,14 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     appRepository.loadSnapshot(user)
       .then((snapshot) => {
         if (cancelled) return;
-        setProfile(snapshot.profile);
-        setPreferences(snapshot.preferences);
-        setStoredItems(snapshot.items);
-        setReminders(snapshot.reminders);
-        setUploads(snapshot.uploads);
+        applySnapshot(snapshot);
         setReady(true);
       })
       .catch(() => {
         if (cancelled) return;
         setProfile(user);
         setPreferences(createDefaultPreferences(user.id));
+        setGmailConnection(null);
         setStoredItems([]);
         setReminders([]);
         setUploads([]);
@@ -177,7 +188,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, authReady]);
+  }, [user, authReady, applySnapshot]);
 
   const items = useMemo(
     () => mergeItemReminderState(storedItems, reminders),
@@ -324,7 +335,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     () => ({
       isComplete: Boolean(preferences?.onboardingCompleted),
       hasFirstCapture: Boolean(preferences?.firstCaptureCompleted),
-      gmailConnected: Boolean(preferences?.gmailConnected),
+      gmailConnected: Boolean(gmailConnection),
       pickedCategories: (() => {
         const picked = preferences?.enabledCategories.filter((category) => autoCategories.includes(category));
         return picked && picked.length > 0 ? picked : autoCategories;
@@ -333,10 +344,8 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         await updatePreferences({ onboardingCompleted: true });
       },
       reset: async () => {
-        if (!preferences) return;
         await updatePreferences({
           onboardingCompleted: false,
-          gmailConnected: false,
           firstCaptureCompleted: false,
         });
       },
@@ -353,17 +362,25 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         await updatePreferences({ firstCaptureCompleted: true });
       },
     }),
-    [preferences, updatePreferences],
+    [preferences, gmailConnection, updatePreferences],
   );
+
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    const snapshot = await appRepository.loadSnapshot(user);
+    applySnapshot(snapshot);
+  }, [user, applySnapshot]);
 
   const value = useMemo<UndoContextValue>(
     () => ({
       ready,
       profile,
       preferences,
+      gmailConnection,
       items,
       reminders,
       uploads,
+      refresh,
       setStatus,
       snooze,
       addItem,
@@ -377,9 +394,11 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       ready,
       profile,
       preferences,
+      gmailConnection,
       items,
       reminders,
       uploads,
+      refresh,
       setStatus,
       snooze,
       addItem,

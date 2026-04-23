@@ -4,6 +4,7 @@ import {
   Category,
   CreateReminderInput,
   CreateUndoItemInput,
+  GmailConnection,
   UndoItem,
   UndoPreferences,
   UndoProfile,
@@ -11,6 +12,7 @@ import {
   UndoUpload,
   createDefaultPreferences,
 } from "./undo-data";
+import type { Candidate } from "./candidates";
 import { appConfig, backendSetupError, type AppBackendMode } from "./app-config";
 import { urgencyFor } from "./urgency";
 
@@ -55,6 +57,11 @@ export interface AppRepository {
     userId: string,
     input: { fileType: UndoUpload["fileType"]; extractedText?: string },
   ) => Promise<UndoUpload>;
+  gmail: {
+    getAuthorizationUrl: (input: { returnTo: "/onboarding" | "/settings" }) => Promise<string>;
+    syncCandidates: () => Promise<Candidate[]>;
+    disconnect: () => Promise<void>;
+  };
 }
 
 const subscribers = new Set<(user: UndoProfile | null) => void>();
@@ -255,6 +262,7 @@ function buildLocalRepository(): AppRepository {
           db.undoItems.some((item) => item.id === reminder.undoItemId && item.userId === user.id)
         ),
         uploads: db.uploads.filter((upload) => upload.userId === user.id),
+        gmailConnection: null,
       };
     },
     async updatePreferences(userId, patch) {
@@ -354,6 +362,17 @@ function buildLocalRepository(): AppRepository {
       writeLocalDb(db);
       return upload;
     },
+    gmail: {
+      async getAuthorizationUrl() {
+        throw new Error("Real Gmail connection needs Supabase.");
+      },
+      async syncCandidates() {
+        throw new Error("Real Gmail sync needs Supabase.");
+      },
+      async disconnect() {
+        throw new Error("Real Gmail connection needs Supabase.");
+      },
+    },
   };
 }
 
@@ -365,6 +384,53 @@ const supabase = hasSupabaseConfig
       auth: { persistSession: true, autoRefreshToken: true },
     })
   : null;
+
+async function invokeSupabaseFunction<TResponse>(
+  name: string,
+  body?: Record<string, unknown>,
+): Promise<TResponse> {
+  if (!supabase || !supabaseUrl) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw new Error(sessionError.message);
+  }
+
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    throw new Error("Please sign in again to continue.");
+  }
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body ?? {}),
+  });
+
+  const text = await response.text();
+  let payload: Record<string, unknown> = {};
+  if (text) {
+    try {
+      payload = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      payload = { error: text };
+    }
+  }
+
+  if (!response.ok) {
+    const message = typeof payload.error === "string"
+      ? payload.error
+      : `Undo could not complete ${name}.`;
+    throw new Error(message);
+  }
+
+  return payload as TResponse;
+}
 
 function normalizeSupabaseUser(user: User): UndoProfile {
   return {
@@ -438,6 +504,26 @@ function toSupabaseUpload(record: Record<string, unknown>): UndoUpload {
     fileType: record.file_type as UndoUpload["fileType"],
     extractedText: typeof record.extracted_text === "string" ? record.extracted_text : undefined,
     createdAt: String(record.created_at),
+  };
+}
+
+function toSupabaseGmailConnection(record: Record<string, unknown>): GmailConnection {
+  return {
+    userId: String(record.user_id),
+    email: String(record.gmail_email),
+    scope: Array.isArray(record.scope)
+      ? record.scope.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    connectedAt: String(record.connected_at),
+    lastSyncedAt: typeof record.last_synced_at === "string" ? record.last_synced_at : undefined,
+    lastSyncStatus: record.last_sync_status === "error"
+      ? "error"
+      : record.last_sync_status === "synced"
+        ? "synced"
+        : "connected",
+    lastSyncError: typeof record.last_sync_error === "string" ? record.last_sync_error : undefined,
+    createdAt: String(record.created_at ?? record.connected_at ?? new Date().toISOString()),
+    updatedAt: String(record.updated_at ?? record.connected_at ?? new Date().toISOString()),
   };
 }
 
@@ -552,15 +638,17 @@ function buildSupabaseRepository(): AppRepository {
 
       await ensureSupabaseProfile(user);
 
-      const [{ data: preferencesData, error: preferencesError }, { data: itemsData, error: itemsError }, { data: uploadsData, error: uploadsError }] = await Promise.all([
+      const [{ data: preferencesData, error: preferencesError }, { data: itemsData, error: itemsError }, { data: uploadsData, error: uploadsError }, { data: gmailConnectionData, error: gmailConnectionError }] = await Promise.all([
         supabase.from("preferences").select("*").eq("user_id", user.id).single(),
         supabase.from("undo_items").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("uploads").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("gmail_connections").select("*").eq("user_id", user.id).maybeSingle(),
       ]);
 
       if (preferencesError) throw new Error(preferencesError.message);
       if (itemsError) throw new Error(itemsError.message);
       if (uploadsError) throw new Error(uploadsError.message);
+      if (gmailConnectionError) throw new Error(gmailConnectionError.message);
 
       const itemIds = (itemsData ?? []).map((item) => item.id as string);
       const { data: reminderData, error: reminderError } = itemIds.length
@@ -569,12 +657,21 @@ function buildSupabaseRepository(): AppRepository {
 
       if (reminderError) throw new Error(reminderError.message);
 
+      const gmailConnection = gmailConnectionData
+        ? toSupabaseGmailConnection(gmailConnectionData as Record<string, unknown>)
+        : null;
+      const preferences = toSupabasePreferences({
+        ...(preferencesData as Record<string, unknown>),
+        gmail_connected: Boolean(gmailConnection),
+      });
+
       return {
         profile: user,
-        preferences: toSupabasePreferences(preferencesData as Record<string, unknown>),
+        preferences,
         items: (itemsData ?? []).map((item) => toSupabaseItem(item as Record<string, unknown>)),
         reminders: (reminderData ?? []).map((reminder) => toSupabaseReminder(reminder as Record<string, unknown>)),
         uploads: (uploadsData ?? []).map((upload) => toSupabaseUpload(upload as Record<string, unknown>)),
+        gmailConnection,
       };
     },
     async updatePreferences(userId, patch) {
@@ -786,6 +883,22 @@ function buildSupabaseRepository(): AppRepository {
 
       return toSupabaseUpload(data as Record<string, unknown>);
     },
+    gmail: {
+      async getAuthorizationUrl({ returnTo }) {
+        const data = await invokeSupabaseFunction<{ url?: string }>("gmail-authorize", { returnTo });
+        if (!data.url) {
+          throw new Error("Undo could not start Gmail connection.");
+        }
+        return data.url;
+      },
+      async syncCandidates() {
+        const data = await invokeSupabaseFunction<{ candidates?: Candidate[] }>("gmail-sync");
+        return Array.isArray(data.candidates) ? data.candidates : [];
+      },
+      async disconnect() {
+        await invokeSupabaseFunction("gmail-disconnect");
+      },
+    },
   };
 }
 
@@ -830,6 +943,17 @@ function buildUnconfiguredRepository(): AppRepository {
     },
     async createUpload() {
       return fail();
+    },
+    gmail: {
+      async getAuthorizationUrl() {
+        return fail();
+      },
+      async syncCandidates() {
+        return fail();
+      },
+      async disconnect() {
+        return fail();
+      },
     },
   };
 }

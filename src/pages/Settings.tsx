@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound,
 } from "lucide-react";
@@ -10,6 +11,7 @@ import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
 import { appConfig } from "@/lib/app-config";
 import { autoCategories } from "@/lib/onboarding";
+import { appRepository } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
@@ -25,9 +27,39 @@ const categoryPlural: Record<Category, string> = {
 
 const Settings = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
-  const { active, preferences, onboarding, updatePreferences } = useUndo();
+  const { active, preferences, onboarding, updatePreferences, gmailConnection, refresh } = useUndo();
+
+  useEffect(() => {
+    const gmailStatus = searchParams.get("gmail");
+    const reason = searchParams.get("reason");
+
+    if (gmailStatus === "connected") {
+      void refresh()
+        .then(() => {
+          toast.success("Gmail connected.");
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : "Undo could not refresh Gmail status.";
+          toast.error(message);
+        })
+        .finally(() => {
+          navigate("/settings", { replace: true });
+        });
+      return;
+    }
+
+    if (gmailStatus === "error") {
+      toast.error(
+        reason
+          ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
+          : "Undo could not finish the Gmail connection.",
+      );
+      navigate("/settings", { replace: true });
+    }
+  }, [searchParams, refresh, navigate]);
 
   if (!preferences) {
     return null;
@@ -64,10 +96,26 @@ const Settings = () => {
   };
 
   const disconnectGmail = async () => {
-    await onboarding.setGmailConnected(false);
-    toast.success("Gmail turned off.", {
-      duration: 2400,
-    });
+    try {
+      await appRepository.gmail.disconnect();
+      await refresh();
+      toast.success("Gmail turned off.", {
+        duration: 2400,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not turn Gmail off.";
+      toast.error(message);
+    }
+  };
+
+  const connectGmail = async () => {
+    try {
+      const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/settings" });
+      window.location.assign(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not start Gmail connection.";
+      toast.error(message);
+    }
   };
 
   return (
@@ -119,13 +167,13 @@ const Settings = () => {
                   <p className="text-sm font-medium text-foreground">Gmail</p>
                   <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
                     {onboarding.gmailConnected
-                      ? "Undo stays focused on the categories you picked and keeps review before anything is kept."
-                      : "See how Gmail fits into Undo before automatic detection goes live."}
+                      ? "Undo checks Gmail for the categories you picked and keeps review before anything is kept."
+                      : "Connect Gmail so Undo can look for likely trials, renewals, returns, and bills."}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
                   <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-                  {onboarding.gmailConnected ? "Review first" : "Off"}
+                  {onboarding.gmailConnected ? "Connected" : "Off"}
                 </span>
               </div>
 
@@ -140,17 +188,19 @@ const Settings = () => {
 
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                 {onboarding.gmailConnected
-                  ? "Automatic detection is not live yet. Undo keeps the scope narrow, and you review everything first."
+                  ? (gmailConnection?.email
+                      ? `Connected as ${gmailConnection.email}. Undo keeps the scope narrow, and you review everything first.`
+                      : "Undo keeps the scope narrow, and you review everything first.")
                   : "Undo stays focused on those categories, and review still comes before anything is kept."}
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => (onboarding.gmailConnected ? disconnectGmail() : navigate("/onboarding"))}
+            onClick={() => void (onboarding.gmailConnected ? disconnectGmail() : connectGmail())}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
-            {onboarding.gmailConnected ? "Turn off Gmail" : "See how Gmail works"}
+            {onboarding.gmailConnected ? "Turn off Gmail" : "Connect Gmail"}
           </button>
         </section>
 

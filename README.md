@@ -42,14 +42,36 @@ Development only:
    - staging
    - production
 2. Apply the SQL in `supabase/migrations/20260422_undo_foundation.sql`
-3. Enable email/password auth
-4. Add your production site URL and any preview URLs to Supabase Auth redirect settings
-5. Put the production anon key and URL into your app environment
+3. Apply the SQL in `supabase/migrations/20260423_gmail_mvp.sql`
+4. Enable email/password auth
+5. Add your production site URL and any preview URLs to Supabase Auth redirect settings
+6. Put the production anon key and URL into your app environment
 
 Important:
 
 - Do not ship a production build with `VITE_USE_LOCAL_ADAPTER=true`
 - Production builds should use the Supabase adapter only
+
+## Gmail setup
+
+Undo's Gmail MVP uses Supabase Edge Functions so OAuth tokens stay off the client.
+
+1. In Google Cloud, enable the Gmail API.
+2. Create a Web application OAuth client.
+3. Add the redirect URI for your Supabase callback function:
+   - `https://<your-project-ref>.supabase.co/functions/v1/gmail-callback`
+4. Set these Supabase Edge Function secrets from `supabase/functions/.env.example`:
+   - `GOOGLE_OAUTH_CLIENT_ID`
+   - `GOOGLE_OAUTH_CLIENT_SECRET`
+   - `GOOGLE_OAUTH_REDIRECT_URI`
+   - `APP_PUBLIC_URL`
+5. Deploy these functions:
+   - `gmail-authorize`
+   - `gmail-callback`
+   - `gmail-sync`
+   - `gmail-disconnect`
+
+The Gmail scope for this MVP is read-only and Undo still sends every match through review before anything is kept.
 
 ## Native app shell
 

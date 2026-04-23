@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Sparkles, RefreshCw, PackageOpen, Receipt, Check, ChevronLeft,
   ShieldCheck, Eye, Mail, Pencil, X, ArrowRight, Lock,
@@ -7,11 +7,12 @@ import {
 import { cn } from "@/lib/utils";
 import { Category, categoryMeta } from "@/lib/undo-data";
 import { autoCategories } from "@/lib/onboarding";
-import { Candidate, candidateToItem, generateCandidates } from "@/lib/candidates";
+import { Candidate, candidateToItem } from "@/lib/candidates";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { shortDue } from "@/lib/urgency";
+import { appRepository } from "@/lib/persistence";
 import { toast } from "sonner";
 
 type Step = "categories" | "permission" | "scanning" | "review";
@@ -49,22 +50,80 @@ function formatCategoryList(categories: Category[]) {
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { addItem, onboarding } = useUndo();
+  const [searchParams] = useSearchParams();
+  const { addItem, onboarding, refresh, gmailConnection } = useUndo();
   const { isPremium, availableActiveSlots, canCreateActiveItems, showUpgrade } = usePremium();
   const [step, setStep] = useState<Step>("categories");
   const [picked, setPicked] = useState<Category[]>(onboarding.pickedCategories);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     setPicked(onboarding.pickedCategories);
   }, [onboarding.pickedCategories]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const gmailStatus = searchParams.get("gmail");
+    const reason = searchParams.get("reason");
+
+    const syncRealCandidates = async () => {
+      setStep("scanning");
+      try {
+        await refresh();
+        const nextCandidates = await appRepository.gmail.syncCandidates();
+        if (cancelled) return;
+        setCandidates(nextCandidates);
+        setDismissed(new Set());
+        setStep("review");
+        navigate("/onboarding", { replace: true });
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Undo could not scan Gmail right now.";
+        toast.error(message);
+        setStep("permission");
+        navigate("/onboarding", { replace: true });
+      }
+    };
+
+    if (gmailStatus === "connected") {
+      void syncRealCandidates();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (gmailStatus === "error") {
+      const message = reason
+        ? `Gmail connection did not finish: ${reason.replace(/_/g, " ")}.`
+        : "Undo could not finish the Gmail connection.";
+      toast.error(message);
+      navigate("/onboarding", { replace: true });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, refresh, navigate]);
+
   const skipGmail = async () => {
     await onboarding.savePrefs(picked);
-    await onboarding.setGmailConnected(false);
     await onboarding.complete();
     navigate("/app");
+  };
+
+  const connectGmail = async () => {
+    setConnecting(true);
+    try {
+      await onboarding.savePrefs(picked);
+      const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/onboarding" });
+      window.location.assign(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not start the Gmail connection.";
+      toast.error(message);
+      setConnecting(false);
+    }
   };
 
   const keepCandidate = async (candidate: Candidate) => {
@@ -138,23 +197,16 @@ const Onboarding = () => {
         {step === "permission" && (
           <PermissionStep
             picked={picked}
-            onConnect={async () => {
-              await onboarding.setGmailConnected(true);
-              setStep("scanning");
-            }}
+            isConnected={Boolean(gmailConnection)}
+            isConnecting={connecting}
+            onConnect={() => void connectGmail()}
             onSkip={() => void skipGmail()}
             onBack={() => setStep("categories")}
           />
         )}
 
         {step === "scanning" && (
-          <ScanningStep
-            picked={picked}
-            onDone={() => {
-              setCandidates(generateCandidates(picked));
-              setStep("review");
-            }}
-          />
+          <ScanningStep picked={picked} />
         )}
 
         {step === "review" && (
@@ -274,9 +326,11 @@ function CategoryStep({
 }
 
 function PermissionStep({
-  picked, onConnect, onSkip, onBack,
+  picked, isConnected, isConnecting, onConnect, onSkip, onBack,
 }: {
   picked: Category[];
+  isConnected: boolean;
+  isConnecting: boolean;
   onConnect: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
   onBack: () => void;
@@ -304,7 +358,7 @@ function PermissionStep({
           Let Undo catch the small things you still have time to fix.
         </h1>
         <p className="mt-4 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
-          Undo is designed to stay focused on likely {scopedCategories}. You review everything before anything is kept.
+          Undo only checks Gmail for likely {scopedCategories}. You review everything before anything is kept.
         </p>
 
         <div className="mt-9 space-y-3">
@@ -334,10 +388,11 @@ function PermissionStep({
       <footer className="px-7 pb-10 pt-8">
         <button
           onClick={() => void onConnect()}
+          disabled={isConnecting}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           <Mail className="h-4 w-4" strokeWidth={1.9} />
-          See how Gmail works
+          {isConnecting ? "Opening Gmail..." : isConnected ? "Reconnect Gmail" : "Connect Gmail"}
         </button>
         <button
           onClick={() => void onSkip()}
@@ -397,25 +452,23 @@ function InfoCard({
 }
 
 const SCAN_MESSAGES = [
-  "Checking trial end dates",
-  "Looking for renewal and bill deadlines",
-  "Pulling out return windows and amounts",
-  "Reviewing everything before anything is kept",
+  "Checking Gmail for likely trial end dates",
+  "Looking for renewal, return, and bill deadlines",
+  "Pulling out dates, amounts, and time windows",
+  "Keeping everything in review before the feed",
 ];
 
-function ScanningStep({ picked, onDone }: { picked: Category[]; onDone: () => void }) {
+function ScanningStep({ picked }: { picked: Category[] }) {
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
     const cycle = setInterval(() => {
       setMessageIndex((current) => (current + 1) % SCAN_MESSAGES.length);
     }, 1700);
-    const finish = setTimeout(onDone, 6200);
     return () => {
       clearInterval(cycle);
-      clearTimeout(finish);
     };
-  }, [onDone]);
+  }, []);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-8 text-center animate-fade-in">
@@ -729,7 +782,7 @@ function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onS
         Nothing to fix right now.
       </h1>
       <p className="mt-3 text-center text-[14px] leading-relaxed text-muted-foreground text-balance">
-        No strong matches this time. You can still add something yourself.
+        No strong Gmail matches this time. You can still add something yourself.
       </p>
 
       <div className="mt-9 space-y-3">

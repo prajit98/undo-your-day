@@ -122,7 +122,7 @@ const Index = () => {
           <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
             {gmailConnected
               ? "Undo keeps review first, and you stay in control."
-              : "See how Gmail works in Undo. You still review everything first."}
+              : "Connect Gmail to let Undo look for likely trials, renewals, returns, and bills. You still review everything first."}
           </p>
           {!gmailConnected ? (
             <Link
@@ -130,7 +130,7 @@ const Index = () => {
               className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
             >
               <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
-              See how Gmail works
+              Connect Gmail
             </Link>
           ) : (
             <Link

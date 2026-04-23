@@ -52,6 +52,18 @@ export interface UndoUpload {
   createdAt: string;
 }
 
+export interface GmailConnection {
+  userId: string;
+  email: string;
+  scope: string[];
+  connectedAt: string;
+  lastSyncedAt?: string;
+  lastSyncStatus: "connected" | "synced" | "error";
+  lastSyncError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UndoPreferences {
   id: string;
   userId: string;
@@ -99,6 +111,7 @@ export interface AppSnapshot {
   items: UndoItem[];
   reminders: UndoReminder[];
   uploads: UndoUpload[];
+  gmailConnection: GmailConnection | null;
 }
 
 export const DEFAULT_NOTIFICATION_TIME = "09:00";

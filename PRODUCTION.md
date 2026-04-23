@@ -8,8 +8,10 @@ Before launch:
 
 - create separate Supabase projects for dev, staging, and production
 - apply `supabase/migrations/20260422_undo_foundation.sql`
+- apply `supabase/migrations/20260423_gmail_mvp.sql`
 - enable email/password auth
 - set the production environment variables from `.env.example`
+- set the production Edge Function secrets from `supabase/functions/.env.example`
 - verify RLS policies in production
 - turn on database backups
 
