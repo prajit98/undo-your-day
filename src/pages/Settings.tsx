@@ -19,7 +19,7 @@ import {
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
 import { autoCategories } from "@/lib/onboarding";
-import { AppFunctionError, appRepository, type GmailDiagnosticResult } from "@/lib/persistence";
+import { appRepository, type GmailDiagnosticResult } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
@@ -32,6 +32,201 @@ const categoryPlural: Record<Category, string> = {
   bill: "Bills",
   followup: "Follow-ups",
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function fallbackDiagnosticResult(input: {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+  status?: number;
+  stage?: string;
+}): GmailDiagnosticResult {
+  return {
+    diagnostic: true,
+    success: false,
+    stage: input.stage ?? "frontend",
+    code: input.code,
+    message: input.message,
+    requestId: "local",
+    requestCountUsed: 0,
+    tokenRefreshSucceeded: false,
+    gmailListSucceeded: false,
+    gmailMessageFetchSucceeded: false,
+    parsingSucceeded: false,
+    checks: {
+      connected: true,
+      tokenLookupSucceeded: false,
+      accessTokenResolved: false,
+      tokenRefreshAttempted: false,
+      tokenRefreshSucceeded: false,
+      gmailListSucceeded: false,
+      gmailMessageFetchSucceeded: false,
+      parsingSucceeded: false,
+    },
+    details: {
+      status: input.status,
+      directFetch: true,
+      ...(input.details ?? {}),
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function readDiagnosticAccessToken() {
+  if (typeof window === "undefined") {
+    return { accessToken: undefined, details: { reason: "window_unavailable" } };
+  }
+
+  if (!appConfig.supabaseUrl) {
+    return { accessToken: undefined, details: { reason: "supabase_url_missing" } };
+  }
+
+  let storage: Storage;
+  try {
+    storage = window.localStorage;
+  } catch (error) {
+    return {
+      accessToken: undefined,
+      details: {
+        reason: "local_storage_unavailable",
+        errorMessage: error instanceof Error ? error.message : "Unknown storage error.",
+      },
+    };
+  }
+
+  let projectRef = "";
+  try {
+    projectRef = new URL(appConfig.supabaseUrl).hostname.split(".")[0] ?? "";
+  } catch (error) {
+    return {
+      accessToken: undefined,
+      details: {
+        reason: "supabase_url_invalid",
+        errorMessage: error instanceof Error ? error.message : "Invalid Supabase URL.",
+      },
+    };
+  }
+
+  const keyCandidates = new Set<string>();
+  if (projectRef) {
+    keyCandidates.add(`sb-${projectRef}-auth-token`);
+  }
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
+      keyCandidates.add(key);
+    }
+  }
+
+  for (const key of keyCandidates) {
+    const raw = storage.getItem(key);
+    if (!raw) continue;
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        access_token?: string;
+        currentSession?: { access_token?: string };
+      };
+      const accessToken = parsed.access_token ?? parsed.currentSession?.access_token;
+      if (accessToken) {
+        return {
+          accessToken,
+          details: {
+            tokenStorageKey: key,
+            checkedStorageKeyCount: keyCandidates.size,
+          },
+        };
+      }
+    } catch {
+      // Ignore stale or unrelated Supabase auth entries.
+    }
+  }
+
+  return {
+    accessToken: undefined,
+    details: {
+      reason: "access_token_not_found",
+      checkedStorageKeyCount: keyCandidates.size,
+    },
+  };
+}
+
+async function runDirectGmailDiagnostic() {
+  const tokenResult = readDiagnosticAccessToken();
+  if (!tokenResult.accessToken) {
+    return fallbackDiagnosticResult({
+      code: "diagnostic_access_token_missing",
+      message: "Undo could not find the current browser access token.",
+      details: tokenResult.details,
+    });
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 20_000);
+
+  try {
+    const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/gmail-sync`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${tokenResult.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ mode: "diagnostic" }),
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let payload: unknown = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = { error: text };
+      }
+    }
+
+    if (isRecord(payload) && payload.diagnostic === true) {
+      return payload as unknown as GmailDiagnosticResult;
+    }
+
+    return fallbackDiagnosticResult({
+      stage: isRecord(payload) && typeof payload.stage === "string" ? payload.stage : "function_response",
+      code: isRecord(payload) && typeof payload.code === "string" ? payload.code : "diagnostic_unstructured_response",
+      message: isRecord(payload) && typeof payload.error === "string"
+        ? payload.error
+        : response.ok
+          ? "Gmail diagnostic returned an unreadable response."
+          : "Gmail diagnostic request failed.",
+      status: response.status,
+      details: {
+        ...tokenResult.details,
+        responseOk: response.ok,
+        rawPayload: payload,
+      },
+    });
+  } catch (error) {
+    const aborted = error instanceof DOMException
+      ? error.name === "AbortError"
+      : error instanceof Error && error.name === "AbortError";
+
+    return fallbackDiagnosticResult({
+      code: aborted ? "diagnostic_request_timeout" : "diagnostic_direct_fetch_failed",
+      message: aborted
+        ? "Undo could not finish the Gmail diagnostic in time."
+        : "Undo could not run the Gmail diagnostic.",
+      details: {
+        ...tokenResult.details,
+        errorMessage: error instanceof Error ? error.message : "Unknown direct fetch error.",
+      },
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -203,7 +398,7 @@ const Settings = () => {
     setGmailDiagnostic(null);
 
     try {
-      const result = await appRepository.gmail.runDiagnostic();
+      const result = await runDirectGmailDiagnostic();
       setGmailDiagnostic(result);
       if (result.success) {
         toast.success("Gmail diagnostic finished.");
@@ -211,15 +406,14 @@ const Settings = () => {
         toast.error(`Gmail diagnostic stopped at ${result.stage}.`);
       }
     } catch (error) {
-      const appError = error instanceof AppFunctionError ? error : null;
       const errorMessage = error instanceof Error ? error.message : "Unknown diagnostic error.";
       const result: GmailDiagnosticResult = {
         diagnostic: true,
         success: false,
-        stage: appError?.stage ?? "frontend",
-        code: appError?.code ?? "diagnostic_request_failed",
-        message: appError?.message ?? "Undo could not run the Gmail diagnostic.",
-        requestId: typeof appError?.details?.requestId === "string" ? appError.details.requestId : "local",
+        stage: "frontend",
+        code: "diagnostic_request_failed",
+        message: errorMessage,
+        requestId: "local",
         requestCountUsed: 0,
         tokenRefreshSucceeded: false,
         gmailListSucceeded: false,
@@ -237,8 +431,7 @@ const Settings = () => {
         },
         details: {
           errorMessage,
-          status: appError?.status,
-          ...(appError?.details ?? {}),
+          directFetch: true,
         },
         timestamp: new Date().toISOString(),
       };
