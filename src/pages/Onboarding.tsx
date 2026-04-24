@@ -20,7 +20,6 @@ import {
   getGmailRetryAfter,
   isGmailRateLimitError,
   setGmailRetryAfter,
-  takePendingGmailReviewCandidates,
 } from "@/lib/gmail-flow";
 import { toast } from "sonner";
 
@@ -66,6 +65,7 @@ const Onboarding = () => {
   const [picked, setPicked] = useState<Category[]>(onboarding.pickedCategories);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [loadingCandidates, setLoadingCandidates] = useState(() => onboarding.isComplete);
   const [connecting, setConnecting] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -74,16 +74,48 @@ const Onboarding = () => {
   }, [onboarding.pickedCategories]);
 
   useEffect(() => {
-    const pendingCandidates = takePendingGmailReviewCandidates();
-    if (pendingCandidates.length === 0) {
+    if (!onboarding.isComplete && !gmailConnection) {
       return;
     }
 
-    setCandidates(pendingCandidates);
-    setDismissed(new Set());
-    setSyncError(null);
-    setStep("review");
-  }, []);
+    let cancelled = false;
+    setLoadingCandidates(true);
+
+    appRepository.gmail.listPendingCandidates()
+      .then((pendingCandidates) => {
+        if (cancelled) return;
+
+        if (pendingCandidates.length > 0) {
+          setCandidates(pendingCandidates);
+          setDismissed(new Set());
+          setSyncError(null);
+          setStep("review");
+          return;
+        }
+
+        if (onboarding.isComplete) {
+          navigate("/app", { replace: true });
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message = formatGmailSyncError(error);
+        setSyncError(message);
+        if (onboarding.isComplete) {
+          toast.error(message);
+          navigate("/app", { replace: true });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingCandidates(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gmailConnection, navigate, onboarding.isComplete]);
 
   useEffect(() => {
     const gmailStatus = searchParams.get("gmail");
@@ -172,6 +204,7 @@ const Onboarding = () => {
     }
 
     await addItem(candidateToItem(candidate));
+    await appRepository.gmail.updateCandidateStatus(candidate.id, "kept");
     return true;
   };
 
@@ -183,6 +216,7 @@ const Onboarding = () => {
     if (isPremium || items.length <= availableActiveSlots) {
       for (const candidate of items) {
         await addItem(candidateToItem(candidate));
+        await appRepository.gmail.updateCandidateStatus(candidate.id, "kept");
       }
       await onboarding.savePrefs(picked);
       await onboarding.complete();
@@ -202,10 +236,27 @@ const Onboarding = () => {
 
     for (const candidate of items.slice(0, availableActiveSlots)) {
       await addItem(candidateToItem(candidate));
+      await appRepository.gmail.updateCandidateStatus(candidate.id, "kept");
     }
     showUpgrade("limit");
 
     return { keptCount: availableActiveSlots, completed: false };
+  };
+
+  const dismissCandidate = async (id: string) => {
+    try {
+      await appRepository.gmail.updateCandidateStatus(id, "dismissed");
+      setDismissed((current) => new Set(current).add(id));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not dismiss this suggestion.";
+      toast.error(message);
+    }
+  };
+
+  const dismissRemainingCandidates = async (remainingIds: string[]) => {
+    await Promise.all(
+      remainingIds.map((id) => appRepository.gmail.updateCandidateStatus(id, "dismissed")),
+    );
   };
 
   return (
@@ -220,7 +271,11 @@ const Onboarding = () => {
       />
 
       <div className="relative mx-auto flex min-h-screen max-w-md flex-col">
-        {step === "categories" && (
+        {loadingCandidates && onboarding.isComplete && (
+          <OpeningReviewStep />
+        )}
+
+        {!loadingCandidates && step === "categories" && (
           <CategoryStep
             picked={picked}
             onToggle={(category) =>
@@ -234,7 +289,7 @@ const Onboarding = () => {
           />
         )}
 
-        {step === "permission" && (
+        {!loadingCandidates && step === "permission" && (
           <PermissionStep
             picked={picked}
             isConnected={Boolean(gmailConnection)}
@@ -246,11 +301,11 @@ const Onboarding = () => {
           />
         )}
 
-        {step === "scanning" && (
+        {!loadingCandidates && step === "scanning" && (
           <ScanningStep picked={picked} />
         )}
 
-        {step === "connected" && (
+        {!loadingCandidates && step === "connected" && (
           <ConnectedStep
             picked={picked}
             syncError={syncError}
@@ -260,13 +315,19 @@ const Onboarding = () => {
           />
         )}
 
-        {step === "review" && (
+        {!loadingCandidates && step === "review" && (
           <ReviewStep
             candidates={candidates.filter((candidate) => !dismissed.has(candidate.id))}
-            onDismiss={(id) => setDismissed((current) => new Set(current).add(id))}
+            onDismiss={dismissCandidate}
             onKeepAll={keepAllCandidates}
             onKeep={keepCandidate}
-            onFinish={async (keptCount) => {
+            onFinish={async (keptCount, remainingIds) => {
+              try {
+                await dismissRemainingCandidates(remainingIds);
+              } catch {
+                toast.error("Undo could not clear the remaining suggestions. Please try again.");
+                return;
+              }
               await onboarding.savePrefs(picked);
               await onboarding.complete();
               if (keptCount > 0) {
@@ -291,6 +352,25 @@ const Onboarding = () => {
     </div>
   );
 };
+
+function OpeningReviewStep() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center animate-fade-in">
+      <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-soft text-primary shadow-soft">
+        <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
+      </div>
+      <h1 className="mt-8 max-w-[13ch] font-display text-[30px] leading-[1.08] tracking-snug text-foreground text-balance">
+        Opening your review.
+      </h1>
+      <p className="mt-3 max-w-[18rem] text-[13px] leading-relaxed text-muted-foreground text-balance">
+        Undo is checking for saved Gmail suggestions first.
+      </p>
+      <div className="mt-7 h-[2px] w-32 overflow-hidden rounded-full bg-surface">
+        <div className="shimmer h-full w-full rounded-full" />
+      </div>
+    </div>
+  );
+}
 
 function CategoryStep({
   picked, onToggle, onContinue,
@@ -675,10 +755,10 @@ function ReviewStep({
   candidates, onDismiss, onKeep, onKeepAll, onFinish, onEmptyManual,
 }: {
   candidates: Candidate[];
-  onDismiss: (id: string) => void;
+  onDismiss: (id: string) => void | Promise<void>;
   onKeep: (candidate: Candidate) => Promise<boolean>;
   onKeepAll: (items: Candidate[]) => Promise<{ keptCount: number; completed: boolean }>;
-  onFinish: (keptCount: number) => Promise<void>;
+  onFinish: (keptCount: number, remainingIds: string[]) => Promise<void>;
   onEmptyManual: () => Promise<void>;
 }) {
   const [kept, setKept] = useState<Set<string>>(new Set());
@@ -691,7 +771,7 @@ function ReviewStep({
   );
 
   if (candidates.length === 0) {
-    return <EmptyMatches onManual={onEmptyManual} onSkip={() => onFinish(0)} />;
+    return <EmptyMatches onManual={onEmptyManual} onSkip={() => onFinish(0, [])} />;
   }
 
   return (
@@ -765,7 +845,7 @@ function ReviewStep({
               }
               setKept((current) => new Set(current).add(candidate.id));
             }}
-            onDismiss={() => onDismiss(candidate.id)}
+            onDismiss={() => void onDismiss(candidate.id)}
           />
         ))}
 
@@ -786,7 +866,7 @@ function ReviewStep({
 
       <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background/95 to-transparent px-6 pb-8 pt-8">
         <button
-          onClick={() => void onFinish(kept.size)}
+          onClick={() => void onFinish(kept.size, remaining.map((candidate) => candidate.id))}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
           {anyKept
@@ -807,9 +887,10 @@ function CandidateCard({
   candidate: Candidate;
   index: number;
   onKeep: () => Promise<void>;
-  onDismiss: () => void;
+  onDismiss: () => void | Promise<void>;
 }) {
   const isUrgent = Boolean(candidate.urgent);
+  const sourceLabel = candidate.merchant ?? candidate.source;
 
   return (
     <article
@@ -846,11 +927,11 @@ function CandidateCard({
           </span>
           <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {shortDue(candidate.dueAt)}
-            {candidate.source && ` - ${candidate.source}`}
+            {sourceLabel && ` - ${sourceLabel}`}
           </span>
         </div>
         <button
-          onClick={onDismiss}
+          onClick={() => void onDismiss()}
           aria-label="Dismiss"
           className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
         >
@@ -904,7 +985,7 @@ function CandidateCard({
           <Pencil className="h-4 w-4" strokeWidth={1.7} />
         </button>
         <button
-          onClick={onDismiss}
+          onClick={() => void onDismiss()}
           aria-label="Dismiss"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
         >

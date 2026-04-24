@@ -2,13 +2,17 @@ export type GmailCategory = "trial" | "renewal" | "return" | "bill";
 
 export interface Candidate {
   id: string;
+  source: "gmail";
+  sourceMessageId: string;
   title: string;
   detail?: string;
   category: GmailCategory;
   dueAt: string;
   amountValue?: number;
   amount?: string;
-  source?: string;
+  merchant?: string;
+  currency?: string;
+  status?: "pending" | "kept" | "dismissed";
   urgent?: boolean;
 }
 
@@ -464,13 +468,16 @@ export function messageToCandidate(message: GmailMessage, hint: GmailCategory, a
 
   return {
     id: `gmail:${message.id}`,
+    source: "gmail",
+    sourceMessageId: message.id,
     title,
     detail,
     category,
     dueAt,
     amountValue,
     amount,
-    source,
+    merchant: source,
+    currency: amountValue ? "USD" : undefined,
     urgent: daysUntilDue <= 2,
   } satisfies Candidate;
 }

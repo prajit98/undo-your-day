@@ -17,7 +17,6 @@ import {
   getGmailRetryAfter,
   isGmailRateLimitError,
   setGmailRetryAfter,
-  stashGmailReviewCandidates,
 } from "@/lib/gmail-flow";
 import { autoCategories } from "@/lib/onboarding";
 import { appRepository } from "@/lib/persistence";
@@ -173,7 +172,6 @@ const Settings = () => {
       await refresh();
 
       if (nextCandidates.length > 0) {
-        stashGmailReviewCandidates(nextCandidates);
         toast.success("Undo found a few things to review.");
         navigate("/onboarding");
         return;

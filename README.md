@@ -43,9 +43,10 @@ Development only:
    - production
 2. Apply the SQL in `supabase/migrations/20260422_undo_foundation.sql`
 3. Apply the SQL in `supabase/migrations/20260423_gmail_mvp.sql`
-4. Enable email/password auth
-5. Add your production site URL and any preview URLs to Supabase Auth redirect settings
-6. Put the production anon key and URL into your app environment
+4. Apply the SQL in `supabase/migrations/20260424_candidate_items.sql`
+5. Enable email/password auth
+6. Add your production site URL and any preview URLs to Supabase Auth redirect settings
+7. Put the production anon key and URL into your app environment
 
 Important:
 

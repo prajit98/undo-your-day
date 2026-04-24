@@ -12,7 +12,7 @@ import {
   UndoUpload,
   createDefaultPreferences,
 } from "./undo-data";
-import type { Candidate } from "./candidates";
+import type { Candidate, CandidateStatus } from "./candidates";
 import { appConfig, backendSetupError, type AppBackendMode } from "./app-config";
 import { urgencyFor } from "./urgency";
 
@@ -60,6 +60,8 @@ export interface AppRepository {
   gmail: {
     getAuthorizationUrl: (input: { returnTo: "/onboarding" | "/settings" }) => Promise<string>;
     syncCandidates: () => Promise<Candidate[]>;
+    listPendingCandidates: () => Promise<Candidate[]>;
+    updateCandidateStatus: (candidateId: string, status: CandidateStatus) => Promise<void>;
     disconnect: () => Promise<void>;
   };
 }
@@ -393,6 +395,12 @@ function buildLocalRepository(): AppRepository {
       async syncCandidates() {
         throw new Error("Real Gmail sync needs Supabase.");
       },
+      async listPendingCandidates() {
+        return [];
+      },
+      async updateCandidateStatus() {
+        return undefined;
+      },
       async disconnect() {
         throw new Error("Real Gmail connection needs Supabase.");
       },
@@ -596,6 +604,48 @@ function toSupabaseGmailConnection(record: Record<string, unknown>): GmailConnec
     lastSyncError: typeof record.last_sync_error === "string" ? record.last_sync_error : undefined,
     createdAt: String(record.created_at ?? record.connected_at ?? new Date().toISOString()),
     updatedAt: String(record.updated_at ?? record.connected_at ?? new Date().toISOString()),
+  };
+}
+
+function numericValue(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function formatCurrency(value?: number, currency = "USD") {
+  if (typeof value !== "number") return undefined;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+  }).format(value);
+}
+
+function toSupabaseCandidate(record: Record<string, unknown>): Candidate {
+  const amountValue = numericValue(record.amount);
+  const currency = typeof record.currency === "string" ? record.currency : "USD";
+  const dueAt = String(record.due_at);
+  const daysUntilDue = Math.round((new Date(dueAt).getTime() - Date.now()) / 86400000);
+  const merchant = typeof record.merchant === "string" ? record.merchant : undefined;
+
+  return {
+    id: String(record.id),
+    source: typeof record.source === "string" ? record.source : "gmail",
+    sourceMessageId: typeof record.source_message_id === "string" ? record.source_message_id : undefined,
+    title: String(record.title),
+    detail: typeof record.description === "string" ? record.description : undefined,
+    category: record.category as Candidate["category"],
+    dueAt,
+    amountValue,
+    amount: formatCurrency(amountValue, currency),
+    merchant,
+    currency,
+    status: record.status as CandidateStatus,
+    urgent: daysUntilDue <= 2,
   };
 }
 
@@ -974,6 +1024,42 @@ function buildSupabaseRepository(): AppRepository {
         );
         return Array.isArray(data.candidates) ? data.candidates : [];
       },
+      async listPendingCandidates() {
+        if (!supabase) {
+          throw new Error("Supabase is not configured.");
+        }
+
+        const { data, error } = await supabase
+          .from("candidate_items")
+          .select("id, source, source_message_id, category, title, description, merchant, amount, currency, due_at, status")
+          .eq("source", "gmail")
+          .eq("status", "pending")
+          .order("due_at", { ascending: true })
+          .limit(20);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return (data ?? []).map((candidate) => toSupabaseCandidate(candidate as Record<string, unknown>));
+      },
+      async updateCandidateStatus(candidateId, status) {
+        if (!supabase) {
+          throw new Error("Supabase is not configured.");
+        }
+
+        const { error } = await supabase
+          .from("candidate_items")
+          .update({
+            status,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", candidateId);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+      },
       async disconnect() {
         await invokeSupabaseFunction("gmail-disconnect");
       },
@@ -1028,6 +1114,12 @@ function buildUnconfiguredRepository(): AppRepository {
         return fail();
       },
       async syncCandidates() {
+        return fail();
+      },
+      async listPendingCandidates() {
+        return fail();
+      },
+      async updateCandidateStatus() {
         return fail();
       },
       async disconnect() {

@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUndo } from "@/context/UndoContext";
-import { hasPendingGmailReviewCandidates } from "@/lib/gmail-flow";
 
 const PUBLIC_PATHS = new Set(["/", "/landing", "/early-access-confirmed", "/auth"]);
 
@@ -39,9 +38,6 @@ export function OnboardingGate() {
       return;
     }
 
-    if (onboarding.isComplete && pathname === "/onboarding" && !hasPendingGmailReviewCandidates()) {
-      navigate("/app", { replace: true });
-    }
   }, [isBooting, user, pathname, onboarding.isComplete, navigate]);
 
   if (!isBooting || PUBLIC_PATHS.has(pathname)) {

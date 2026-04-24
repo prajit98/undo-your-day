@@ -20,6 +20,23 @@ type StoredTokenRow = {
   expires_at?: string | null;
 };
 
+type CandidateStatus = "pending" | "kept" | "dismissed";
+
+type CandidateItemRow = {
+  id: string;
+  user_id: string;
+  source: string;
+  source_message_id: string;
+  category: GmailCategory;
+  title: string;
+  description?: string | null;
+  merchant?: string | null;
+  amount?: number | string | null;
+  currency?: string | null;
+  due_at: string;
+  status: CandidateStatus;
+};
+
 class SyncError extends Error {
   stage: string;
   code: string;
@@ -334,6 +351,161 @@ async function ensurePreferencesRow(userId: string, admin = createAdminClient())
   return insertedPreferences;
 }
 
+function amountNumber(value: CandidateItemRow["amount"]) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function formatAmount(value?: number, currency = "USD") {
+  if (typeof value !== "number") return undefined;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+  }).format(value);
+}
+
+function candidateItemToCandidate(row: CandidateItemRow): Candidate {
+  const amountValue = amountNumber(row.amount);
+  const currency = row.currency ?? "USD";
+  const daysUntilDue = Math.round((new Date(row.due_at).getTime() - Date.now()) / 86400000);
+
+  return {
+    id: row.id,
+    source: "gmail",
+    sourceMessageId: row.source_message_id,
+    title: row.title,
+    detail: row.description ?? undefined,
+    category: row.category,
+    dueAt: row.due_at,
+    amountValue,
+    amount: formatAmount(amountValue, currency),
+    merchant: row.merchant ?? undefined,
+    currency,
+    status: row.status,
+    urgent: daysUntilDue <= 2,
+  };
+}
+
+async function fetchPendingCandidateItems(userId: string, admin = createAdminClient()) {
+  const { data, error } = await admin
+    .from("candidate_items")
+    .select("id, user_id, source, source_message_id, category, title, description, merchant, amount, currency, due_at, status")
+    .eq("user_id", userId)
+    .eq("source", "gmail")
+    .eq("status", "pending")
+    .order("due_at", { ascending: true })
+    .limit(20);
+
+  if (error) {
+    throw new SyncError({
+      message: error.message,
+      stage: "candidate_store",
+      code: "candidate_fetch_failed",
+      status: 500,
+      details: { userId },
+    });
+  }
+
+  return (data ?? []).map((row) => candidateItemToCandidate(row as CandidateItemRow));
+}
+
+async function persistCandidateItems(userId: string, candidates: Candidate[], admin = createAdminClient()) {
+  const sourceMessageIds = Array.from(
+    new Set(
+      candidates
+        .map((candidate) => candidate.sourceMessageId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  if (sourceMessageIds.length === 0) {
+    return fetchPendingCandidateItems(userId, admin);
+  }
+
+  const { data: existingRows, error: existingError } = await admin
+    .from("candidate_items")
+    .select("id, source_message_id, status")
+    .eq("user_id", userId)
+    .eq("source", "gmail")
+    .in("source_message_id", sourceMessageIds);
+
+  if (existingError) {
+    throw new SyncError({
+      message: existingError.message,
+      stage: "candidate_store",
+      code: "candidate_existing_lookup_failed",
+      status: 500,
+      details: { userId, sourceMessageIds },
+    });
+  }
+
+  const existingByMessage = new Map(
+    (existingRows ?? []).map((row) => [
+      String(row.source_message_id),
+      {
+        id: String(row.id),
+        status: row.status as CandidateStatus,
+      },
+    ]),
+  );
+  const now = new Date().toISOString();
+  const upsertRows = candidates
+    .filter((candidate) => {
+      const sourceMessageId = candidate.sourceMessageId;
+      if (!sourceMessageId) return false;
+      const existing = existingByMessage.get(sourceMessageId);
+      return !existing || existing.status === "pending";
+    })
+    .map((candidate) => {
+      const sourceMessageId = candidate.sourceMessageId!;
+      const existing = existingByMessage.get(sourceMessageId);
+
+      return {
+        ...(existing ? { id: existing.id } : {}),
+        user_id: userId,
+        source: "gmail",
+        source_message_id: sourceMessageId,
+        category: candidate.category,
+        title: candidate.title,
+        description: candidate.detail ?? null,
+        merchant: candidate.merchant ?? null,
+        amount: candidate.amountValue ?? null,
+        currency: candidate.currency ?? "USD",
+        due_at: candidate.dueAt,
+        status: "pending",
+        updated_at: now,
+      };
+    });
+
+  if (upsertRows.length > 0) {
+    const { error } = await admin
+      .from("candidate_items")
+      .upsert(upsertRows, {
+        onConflict: "user_id,source,source_message_id",
+      });
+
+    if (error) {
+      throw new SyncError({
+        message: error.message,
+        stage: "candidate_store",
+        code: "candidate_upsert_failed",
+        status: 500,
+        details: {
+          userId,
+          candidateCount: upsertRows.length,
+        },
+      });
+    }
+  }
+
+  return fetchPendingCandidateItems(userId, admin);
+}
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   let userId: string | undefined;
@@ -519,9 +691,10 @@ Deno.serve(async (req) => {
     }
 
     const deduped = Array.from(
-      new Map(candidateResults.map((candidate) => [candidate.id, candidate])).values(),
+      new Map(candidateResults.map((candidate) => [candidate.sourceMessageId, candidate])).values(),
     ).sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
       .slice(0, MAX_CANDIDATES_TO_RETURN);
+    const pendingCandidates = await persistCandidateItems(user.id, deduped, admin);
 
     const { error: updateError } = await admin.from("gmail_connections").update({
       last_synced_at: new Date().toISOString(),
@@ -543,11 +716,12 @@ Deno.serve(async (req) => {
       userId: user.id,
       fetchedMessageCount: messageIdsByHint.size,
       candidateCount: deduped.length,
+      pendingCandidateCount: pendingCandidates.length,
       listFailureCount: listFailures.length,
       messageFailureCount: messageFailures.length,
     });
 
-    return jsonResponse({ candidates: deduped });
+    return jsonResponse({ candidates: pendingCandidates });
   } catch (error) {
     const failure = buildFailurePayload(error, { requestId, userId, gmailEmail });
     logSyncEvent("error", "sync_failed", failure);
