@@ -37,6 +37,7 @@ export interface GmailMessage {
 }
 
 const AUTO_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
+const MAX_MIME_PART_DEPTH = 12;
 
 // TODO: Replace these general keyword rules with merchant-specific parsing once
 // we have real inbox samples from early testers.
@@ -165,8 +166,8 @@ function decodeBase64Url(value: string) {
   return atob(padded);
 }
 
-function extractBodyText(part?: GmailMessagePart): string {
-  if (!part) {
+function extractBodyText(part?: GmailMessagePart, depth = 0): string {
+  if (!part || depth > MAX_MIME_PART_DEPTH) {
     return "";
   }
 
@@ -196,7 +197,7 @@ function extractBodyText(part?: GmailMessagePart): string {
   }
 
   for (const nestedPart of part.parts ?? []) {
-    const nested = extractBodyText(nestedPart);
+    const nested = extractBodyText(nestedPart, depth + 1);
     if (nested) {
       return nested;
     }

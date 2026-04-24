@@ -15,11 +15,12 @@ import {
   formatGmailSyncError,
   GMAIL_RATE_LIMIT_COOLDOWN_MS,
   getGmailRetryAfter,
+  isGmailRateLimitError,
   setGmailRetryAfter,
   stashGmailReviewCandidates,
 } from "@/lib/gmail-flow";
 import { autoCategories } from "@/lib/onboarding";
-import { AppFunctionError, appRepository } from "@/lib/persistence";
+import { appRepository } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
@@ -180,7 +181,7 @@ const Settings = () => {
 
       toast.success("Nothing to review right now.");
     } catch (error) {
-      const isRateLimited = error instanceof AppFunctionError && error.code === "gmail_rate_limited";
+      const isRateLimited = isGmailRateLimitError(error);
       const message = formatGmailSyncError(error);
       if (isRateLimited) {
         setGmailRetryAfter(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS);

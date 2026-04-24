@@ -12,12 +12,13 @@ import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { shortDue } from "@/lib/urgency";
-import { AppFunctionError, appRepository } from "@/lib/persistence";
+import { appRepository } from "@/lib/persistence";
 import {
   clearGmailRetryAfter,
   formatGmailSyncError,
   GMAIL_RATE_LIMIT_COOLDOWN_MS,
   getGmailRetryAfter,
+  isGmailRateLimitError,
   setGmailRetryAfter,
   takePendingGmailReviewCandidates,
 } from "@/lib/gmail-flow";
@@ -152,7 +153,7 @@ const Onboarding = () => {
       setStep("review");
       navigate("/onboarding", { replace: true });
     } catch (error) {
-      const isRateLimited = error instanceof AppFunctionError && error.code === "gmail_rate_limited";
+      const isRateLimited = isGmailRateLimitError(error);
       const message = formatGmailSyncError(error);
       console.error("[Undo Gmail] first scan failed", error);
       if (isRateLimited) {
