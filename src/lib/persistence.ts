@@ -24,6 +24,24 @@ type AuthResult = {
   requiresEmailConfirmation?: boolean;
 };
 
+export interface GmailDiagnosticResult {
+  diagnostic: true;
+  success: boolean;
+  stage: string;
+  code: string;
+  message: string;
+  requestId: string;
+  requestCountUsed: number;
+  tokenRefreshSucceeded: boolean;
+  gmailListSucceeded: boolean;
+  gmailMessageFetchSucceeded: boolean;
+  parsingSucceeded: boolean;
+  checks: Record<string, boolean>;
+  details: Record<string, unknown>;
+  stack?: string;
+  timestamp: string;
+}
+
 type StoredUser = UndoProfile & { password: string };
 
 interface LocalDb {
@@ -60,6 +78,7 @@ export interface AppRepository {
   gmail: {
     getAuthorizationUrl: (input: { returnTo: "/onboarding" | "/settings" }) => Promise<string>;
     syncCandidates: () => Promise<Candidate[]>;
+    runDiagnostic: () => Promise<GmailDiagnosticResult>;
     listPendingCandidates: () => Promise<Candidate[]>;
     updateCandidate: (candidateId: string, patch: CandidatePatch) => Promise<Candidate>;
     updateCandidateStatus: (candidateId: string, status: CandidateStatus) => Promise<void>;
@@ -395,6 +414,9 @@ function buildLocalRepository(): AppRepository {
       },
       async syncCandidates() {
         throw new Error("Real Gmail sync needs Supabase.");
+      },
+      async runDiagnostic() {
+        throw new Error("Real Gmail diagnostic needs Supabase.");
       },
       async listPendingCandidates() {
         return [];
@@ -1028,6 +1050,16 @@ function buildSupabaseRepository(): AppRepository {
         );
         return Array.isArray(data.candidates) ? data.candidates : [];
       },
+      async runDiagnostic() {
+        return invokeSupabaseFunction<GmailDiagnosticResult>(
+          "gmail-sync",
+          { mode: "diagnostic" },
+          {
+            timeoutMs: 20_000,
+            timeoutMessage: "Undo could not finish the Gmail diagnostic.",
+          },
+        );
+      },
       async listPendingCandidates() {
         if (!supabase) {
           throw new Error("Supabase is not configured.");
@@ -1147,6 +1179,9 @@ function buildUnconfiguredRepository(): AppRepository {
         return fail();
       },
       async syncCandidates() {
+        return fail();
+      },
+      async runDiagnostic() {
         return fail();
       },
       async listPendingCandidates() {

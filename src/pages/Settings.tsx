@@ -19,7 +19,7 @@ import {
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
 import { autoCategories } from "@/lib/onboarding";
-import { appRepository } from "@/lib/persistence";
+import { appRepository, type GmailDiagnosticResult } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
@@ -40,6 +40,8 @@ const Settings = () => {
   const { isPremium } = usePremium();
   const { active, preferences, onboarding, updatePreferences, gmailConnection, refresh } = useUndo();
   const [scanningGmail, setScanningGmail] = useState(false);
+  const [runningGmailDiagnostic, setRunningGmailDiagnostic] = useState(false);
+  const [gmailDiagnostic, setGmailDiagnostic] = useState<GmailDiagnosticResult | null>(null);
   const [gmailActionError, setGmailActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -131,6 +133,7 @@ const Settings = () => {
       await appRepository.gmail.disconnect();
       await refresh();
       setGmailActionError(null);
+      setGmailDiagnostic(null);
       clearGmailRetryAfter();
       toast.success("Gmail turned off.", {
         duration: 2400,
@@ -144,6 +147,7 @@ const Settings = () => {
   const connectGmail = async () => {
     try {
       setGmailActionError(null);
+      setGmailDiagnostic(null);
       clearGmailRetryAfter();
       const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/settings" });
       window.location.assign(url);
@@ -165,6 +169,7 @@ const Settings = () => {
 
     setScanningGmail(true);
     setGmailActionError(null);
+    setGmailDiagnostic(null);
 
     try {
       const nextCandidates = await appRepository.gmail.syncCandidates();
@@ -189,6 +194,54 @@ const Settings = () => {
       toast.error(message);
     } finally {
       setScanningGmail(false);
+    }
+  };
+
+  const runGmailDiagnostic = async () => {
+    setRunningGmailDiagnostic(true);
+    setGmailActionError(null);
+    setGmailDiagnostic(null);
+
+    try {
+      const result = await appRepository.gmail.runDiagnostic();
+      setGmailDiagnostic(result);
+      if (result.success) {
+        toast.success("Gmail diagnostic finished.");
+      } else {
+        toast.error(`Gmail diagnostic stopped at ${result.stage}.`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown diagnostic error.";
+      const result: GmailDiagnosticResult = {
+        diagnostic: true,
+        success: false,
+        stage: "frontend",
+        code: "diagnostic_request_failed",
+        message: "Undo could not run the Gmail diagnostic.",
+        requestId: "local",
+        requestCountUsed: 0,
+        tokenRefreshSucceeded: false,
+        gmailListSucceeded: false,
+        gmailMessageFetchSucceeded: false,
+        parsingSucceeded: false,
+        checks: {
+          connected: Boolean(gmailConnection),
+          tokenLookupSucceeded: false,
+          accessTokenResolved: false,
+          tokenRefreshAttempted: false,
+          tokenRefreshSucceeded: false,
+          gmailListSucceeded: false,
+          gmailMessageFetchSucceeded: false,
+          parsingSucceeded: false,
+        },
+        details: { errorMessage },
+        timestamp: new Date().toISOString(),
+      };
+      setGmailDiagnostic(result);
+      setGmailActionError("Undo could not run the Gmail diagnostic right now.");
+      toast.error("Undo could not run the Gmail diagnostic right now.");
+    } finally {
+      setRunningGmailDiagnostic(false);
     }
   };
 
@@ -279,23 +332,56 @@ const Settings = () => {
                   {gmailActionError ?? gmailConnection?.lastSyncError ?? "Undo could not scan Gmail right now."}
                 </p>
               )}
+
+              {gmailDiagnostic && (
+                <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Internal diagnostic
+                    </p>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      gmailDiagnostic.success
+                        ? "bg-primary-soft text-primary"
+                        : "bg-critical-soft text-critical"
+                    }`}
+                    >
+                      {gmailDiagnostic.success ? "Passed" : "Stopped"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
+                    {gmailDiagnostic.message}
+                  </p>
+                  <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap rounded-xl bg-background/70 p-2 text-[10px] leading-relaxed text-muted-foreground">
+                    {JSON.stringify(gmailDiagnostic, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
 
           <button
             onClick={() => void (gmailConnection ? runGmailScan() : connectGmail())}
-            disabled={scanningGmail}
+            disabled={scanningGmail || runningGmailDiagnostic}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
             {scanningGmail ? "Scanning Gmail..." : gmailActionLabel}
           </button>
           {gmailConnection && (
-            <button
-              onClick={() => void disconnectGmail()}
-              className="mt-3 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Turn off Gmail
-            </button>
+            <>
+              <button
+                onClick={() => void runGmailDiagnostic()}
+                disabled={scanningGmail || runningGmailDiagnostic}
+                className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
+              >
+                {runningGmailDiagnostic ? "Running diagnostic..." : "Run Gmail diagnostic"}
+              </button>
+              <button
+                onClick={() => void disconnectGmail()}
+                className="mt-3 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Turn off Gmail
+              </button>
+            </>
           )}
         </section>
 

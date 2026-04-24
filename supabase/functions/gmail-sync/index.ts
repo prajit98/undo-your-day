@@ -13,6 +13,10 @@ const MAX_RESULTS_PER_QUERY = 2;
 const MAX_MESSAGE_IDS_TO_SCAN = 6;
 const MAX_CANDIDATES_TO_RETURN = 4;
 const DEFAULT_ENABLED_CATEGORIES = ["trial", "renewal", "return", "bill", "followup"] as const;
+const DIAGNOSTIC_QUERY = "newer_than:30d";
+const DIAGNOSTIC_MAX_RESULTS = 2;
+const DIAGNOSTIC_MAX_FETCHES = 1;
+const DIAGNOSTIC_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
 
 type StoredTokenRow = {
   access_token?: string | null;
@@ -69,6 +73,40 @@ type FailurePayload = {
   details?: Record<string, unknown>;
   userId?: string;
   gmailEmail?: string;
+  timestamp: string;
+};
+
+type AccessTokenResult = {
+  accessToken: string;
+  tokenRefreshAttempted: boolean;
+  tokenRefreshSucceeded: boolean;
+  accessTokenWasFresh: boolean;
+};
+
+type GmailDiagnosticResult = {
+  diagnostic: true;
+  success: boolean;
+  stage: string;
+  code: string;
+  message: string;
+  requestId: string;
+  requestCountUsed: number;
+  tokenRefreshSucceeded: boolean;
+  gmailListSucceeded: boolean;
+  gmailMessageFetchSucceeded: boolean;
+  parsingSucceeded: boolean;
+  checks: {
+    connected: boolean;
+    tokenLookupSucceeded: boolean;
+    accessTokenResolved: boolean;
+    tokenRefreshAttempted: boolean;
+    tokenRefreshSucceeded: boolean;
+    gmailListSucceeded: boolean;
+    gmailMessageFetchSucceeded: boolean;
+    parsingSucceeded: boolean;
+  };
+  details: Record<string, unknown>;
+  stack?: string;
   timestamp: string;
 };
 
@@ -234,13 +272,17 @@ async function getMessage(accessToken: string, messageId: string) {
   return gmailFetchJson<GmailMessage>(accessToken, url.toString());
 }
 
-async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin = createAdminClient()) {
+async function resolveAccessToken(userId: string, tokenRow: StoredTokenRow, admin = createAdminClient()): Promise<AccessTokenResult> {
   const expiresAt = tokenRow.expires_at ? new Date(tokenRow.expires_at).getTime() : 0;
-  const stillValid = tokenRow.access_token && expiresAt > Date.now() + 60_000;
 
-  if (stillValid) {
+  if (tokenRow.access_token && expiresAt > Date.now() + 60_000) {
     logSyncEvent("log", "using_stored_access_token", { userId, expiresAt: tokenRow.expires_at });
-    return tokenRow.access_token;
+    return {
+      accessToken: tokenRow.access_token,
+      tokenRefreshAttempted: false,
+      tokenRefreshSucceeded: false,
+      accessTokenWasFresh: true,
+    };
   }
 
   if (!tokenRow.refresh_token) {
@@ -249,7 +291,7 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
       stage: "token_refresh",
       code: "gmail_refresh_token_missing",
       status: 409,
-      details: { userId },
+      details: { userId, tokenRefreshAttempted: false, tokenRefreshSucceeded: false },
     });
   }
 
@@ -264,7 +306,7 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
       stage: "token_refresh",
       code: "gmail_refresh_failed",
       status: 502,
-      details: { userId },
+      details: { userId, tokenRefreshAttempted: true, tokenRefreshSucceeded: false },
     });
   }
 
@@ -274,7 +316,7 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
       stage: "token_refresh",
       code: "gmail_refresh_missing_access_token",
       status: 502,
-      details: { userId },
+      details: { userId, tokenRefreshAttempted: true, tokenRefreshSucceeded: false },
     });
   }
 
@@ -296,11 +338,225 @@ async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin
       stage: "token_refresh",
       code: "gmail_token_update_failed",
       status: 500,
-      details: { userId },
+      details: { userId, tokenRefreshAttempted: true, tokenRefreshSucceeded: true },
     });
   }
 
-  return refreshed.access_token;
+  return {
+    accessToken: refreshed.access_token,
+    tokenRefreshAttempted: true,
+    tokenRefreshSucceeded: true,
+    accessTokenWasFresh: false,
+  };
+}
+
+async function ensureAccessToken(userId: string, tokenRow: StoredTokenRow, admin = createAdminClient()) {
+  const result = await resolveAccessToken(userId, tokenRow, admin);
+  return result.accessToken;
+}
+
+function safeMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return fallback;
+}
+
+async function runGmailDiagnostic(input: {
+  requestId: string;
+  userId: string;
+  connection: Record<string, unknown> | null;
+  connectionError: unknown;
+  tokenRow: StoredTokenRow | null;
+  tokenError: unknown;
+  admin: ReturnType<typeof createAdminClient>;
+}): Promise<GmailDiagnosticResult> {
+  let requestCountUsed = 0;
+  const gmailEmail = typeof input.connection?.gmail_email === "string" ? input.connection.gmail_email : undefined;
+  const checks: GmailDiagnosticResult["checks"] = {
+    connected: false,
+    tokenLookupSucceeded: false,
+    accessTokenResolved: false,
+    tokenRefreshAttempted: false,
+    tokenRefreshSucceeded: false,
+    gmailListSucceeded: false,
+    gmailMessageFetchSucceeded: false,
+    parsingSucceeded: false,
+  };
+
+  const finish = (result: {
+    success: boolean;
+    stage: string;
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    stack?: string;
+  }): GmailDiagnosticResult => ({
+    diagnostic: true,
+    success: result.success,
+    stage: result.stage,
+    code: result.code,
+    message: result.message,
+    requestId: input.requestId,
+    requestCountUsed,
+    tokenRefreshSucceeded: checks.tokenRefreshSucceeded,
+    gmailListSucceeded: checks.gmailListSucceeded,
+    gmailMessageFetchSucceeded: checks.gmailMessageFetchSucceeded,
+    parsingSucceeded: checks.parsingSucceeded,
+    checks: { ...checks },
+    details: {
+      userId: input.userId,
+      gmailEmail,
+      diagnosticQuery: DIAGNOSTIC_QUERY,
+      maxListResults: DIAGNOSTIC_MAX_RESULTS,
+      maxMessageFetches: DIAGNOSTIC_MAX_FETCHES,
+      ...(result.details ?? {}),
+    },
+    stack: result.stack,
+    timestamp: new Date().toISOString(),
+  });
+
+  logSyncEvent("log", "diagnostic_started", {
+    requestId: input.requestId,
+    userId: input.userId,
+    gmailEmail,
+  });
+
+  try {
+    if (input.connectionError) {
+      return finish({
+        success: false,
+        stage: "connection_lookup",
+        code: "gmail_connection_lookup_failed",
+        message: safeMessage(input.connectionError, "Could not read the Gmail connection."),
+        details: { hasConnection: false },
+      });
+    }
+
+    if (input.tokenError) {
+      return finish({
+        success: false,
+        stage: "token_lookup",
+        code: "gmail_token_lookup_failed",
+        message: safeMessage(input.tokenError, "Could not read the Gmail token."),
+        details: { hasTokenRow: false },
+      });
+    }
+
+    checks.tokenLookupSucceeded = true;
+    checks.connected = Boolean(input.connection && input.tokenRow);
+
+    if (!input.connection || !input.tokenRow) {
+      return finish({
+        success: false,
+        stage: "connection_lookup",
+        code: "gmail_not_connected",
+        message: "Connect Gmail first.",
+        details: {
+          hasConnection: Boolean(input.connection),
+          hasTokenRow: Boolean(input.tokenRow),
+        },
+      });
+    }
+
+    const tokenResult = await resolveAccessToken(input.userId, input.tokenRow, input.admin);
+    checks.accessTokenResolved = true;
+    checks.tokenRefreshAttempted = tokenResult.tokenRefreshAttempted;
+    checks.tokenRefreshSucceeded = tokenResult.tokenRefreshSucceeded;
+
+    requestCountUsed += 1;
+    const messageIds = await listMessageIds(tokenResult.accessToken, DIAGNOSTIC_QUERY, DIAGNOSTIC_MAX_RESULTS);
+    checks.gmailListSucceeded = true;
+
+    if (messageIds.length === 0) {
+      const result = finish({
+        success: true,
+        stage: "gmail_list",
+        code: "diagnostic_no_messages",
+        message: "Diagnostic reached Gmail. No recent messages were returned.",
+        details: {
+          accessTokenWasFresh: tokenResult.accessTokenWasFresh,
+          listedMessageCount: 0,
+          fetchedMessageCount: 0,
+        },
+      });
+      logSyncEvent("log", "diagnostic_completed", result);
+      return result;
+    }
+
+    const messageId = messageIds.slice(0, DIAGNOSTIC_MAX_FETCHES)[0];
+    if (!messageId) {
+      return finish({
+        success: true,
+        stage: "gmail_list",
+        code: "diagnostic_no_fetchable_message",
+        message: "Diagnostic reached Gmail. No fetchable message was returned.",
+        details: {
+          accessTokenWasFresh: tokenResult.accessTokenWasFresh,
+          listedMessageCount: messageIds.length,
+          fetchedMessageCount: 0,
+        },
+      });
+    }
+
+    requestCountUsed += 1;
+    const message = await getMessage(tokenResult.accessToken, messageId);
+    checks.gmailMessageFetchSucceeded = true;
+
+    const parsedCandidate = messageToCandidate(message, "trial", DIAGNOSTIC_CATEGORIES);
+    checks.parsingSucceeded = true;
+
+    const result = finish({
+      success: true,
+      stage: "parse",
+      code: parsedCandidate ? "diagnostic_candidate_parsed" : "diagnostic_message_parsed",
+      message: parsedCandidate
+        ? "Diagnostic reached Gmail, fetched one message, and parsed an Undo candidate."
+        : "Diagnostic reached Gmail and parsed one message. It was not an Undo candidate.",
+      details: {
+        accessTokenWasFresh: tokenResult.accessTokenWasFresh,
+        listedMessageCount: messageIds.length,
+        fetchedMessageCount: 1,
+        firstMessageHasPayload: Boolean(message.payload),
+        firstMessageLabelCount: Array.isArray(message.labelIds) ? message.labelIds.length : 0,
+        firstMessageSnippetLength: typeof message.snippet === "string" ? message.snippet.length : 0,
+        parsedCandidateFound: Boolean(parsedCandidate),
+        parsedCandidateCategory: parsedCandidate?.category,
+        parsedCandidateDueAt: parsedCandidate?.dueAt,
+      },
+    });
+    logSyncEvent("log", "diagnostic_completed", result);
+    return result;
+  } catch (error) {
+    const failure = buildFailurePayload(error, {
+      requestId: input.requestId,
+      userId: input.userId,
+      gmailEmail,
+      details: { diagnostic: true },
+    });
+
+    if (typeof failure.details?.tokenRefreshAttempted === "boolean") {
+      checks.tokenRefreshAttempted = failure.details.tokenRefreshAttempted;
+    }
+    if (typeof failure.details?.tokenRefreshSucceeded === "boolean") {
+      checks.tokenRefreshSucceeded = failure.details.tokenRefreshSucceeded;
+    }
+
+    const result = finish({
+      success: false,
+      stage: failure.stage,
+      code: failure.code,
+      message: failure.message,
+      stack: failure.stack,
+      details: {
+        status: failure.status,
+        failureDetails: failure.details,
+      },
+    });
+    logSyncEvent("error", "diagnostic_failed", result);
+    return result;
+  }
 }
 
 async function ensurePreferencesRow(userId: string, admin = createAdminClient()) {
@@ -516,6 +772,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+    const diagnosticMode = body.mode === "diagnostic" || body.diagnostic === true;
     const user = await requireUser(req);
     userId = user.id;
     const admin = createAdminClient();
@@ -524,6 +782,18 @@ Deno.serve(async (req) => {
       admin.from("gmail_connections").select("*").eq("user_id", user.id).maybeSingle(),
       admin.from("gmail_tokens").select("access_token, refresh_token, expires_at").eq("user_id", user.id).maybeSingle(),
     ]);
+
+    if (diagnosticMode) {
+      return jsonResponse(await runGmailDiagnostic({
+        requestId,
+        userId: user.id,
+        connection: connection as Record<string, unknown> | null,
+        connectionError,
+        tokenRow: tokenRow as StoredTokenRow | null,
+        tokenError,
+        admin,
+      }));
+    }
 
     if (connectionError) {
       throw new SyncError({
