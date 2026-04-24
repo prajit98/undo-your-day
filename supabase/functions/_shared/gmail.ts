@@ -42,6 +42,9 @@ export interface GmailMessage {
 
 const AUTO_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
 const MAX_MIME_PART_DEPTH = 12;
+const MAX_MIME_PARTS_TO_SCAN = 80;
+const MAX_BODY_DATA_CHARS = 120_000;
+const MAX_BODY_TEXT_CHARS = 12_000;
 
 // TODO: Replace these general keyword rules with merchant-specific parsing once
 // we have real inbox samples from early testers.
@@ -165,45 +168,64 @@ function stripHtml(value: string) {
 }
 
 function decodeBase64Url(value: string) {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const safeValue = value.slice(0, MAX_BODY_DATA_CHARS);
+  const normalized = safeValue.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
   return atob(padded);
 }
 
-function extractBodyText(part?: GmailMessagePart, depth = 0): string {
-  if (!part || depth > MAX_MIME_PART_DEPTH) {
+function normalizeDecodedBody(mimeType: string, data: string) {
+  const decoded = decodeBase64Url(data).slice(0, MAX_BODY_TEXT_CHARS);
+
+  if (mimeType === "text/plain") {
+    return normalizeWhitespace(decoded);
+  }
+
+  if (mimeType === "text/html") {
+    return normalizeWhitespace(stripHtml(decoded));
+  }
+
+  return "";
+}
+
+function extractBodyText(rootPart?: GmailMessagePart): string {
+  if (!rootPart) {
     return "";
   }
 
-  const mimeType = part.mimeType?.toLowerCase() ?? "";
-  const data = part.body?.data;
+  const stack: Array<{ part: GmailMessagePart; depth: number }> = [{ part: rootPart, depth: 0 }];
+  const seen = new Set<GmailMessagePart>();
+  let scannedParts = 0;
 
-  if (data && (mimeType === "text/plain" || mimeType === "text/html")) {
-    try {
-      const decoded = decodeBase64Url(data);
-
-      if (mimeType === "text/plain") {
-        const normalized = normalizeWhitespace(decoded);
-        if (normalized) {
-          return normalized;
-        }
-      }
-
-      if (mimeType === "text/html") {
-        const normalized = normalizeWhitespace(stripHtml(decoded));
-        if (normalized) {
-          return normalized;
-        }
-      }
-    } catch {
-      return "";
+  while (stack.length > 0 && scannedParts < MAX_MIME_PARTS_TO_SCAN) {
+    const next = stack.pop();
+    if (!next || seen.has(next.part) || next.depth > MAX_MIME_PART_DEPTH) {
+      continue;
     }
-  }
 
-  for (const nestedPart of part.parts ?? []) {
-    const nested = extractBodyText(nestedPart, depth + 1);
-    if (nested) {
-      return nested;
+    seen.add(next.part);
+    scannedParts += 1;
+
+    const mimeType = next.part.mimeType?.toLowerCase() ?? "";
+    const data = next.part.body?.data;
+
+    if (data && (mimeType === "text/plain" || mimeType === "text/html")) {
+      try {
+        const normalized = normalizeDecodedBody(mimeType, data);
+        if (normalized) {
+          return normalized;
+        }
+      } catch {
+        // Keep scanning other MIME parts if this body is malformed or too large.
+      }
+    }
+
+    const nestedParts = Array.isArray(next.part.parts) ? next.part.parts : [];
+    for (let index = nestedParts.length - 1; index >= 0; index -= 1) {
+      const nestedPart = nestedParts[index];
+      if (nestedPart) {
+        stack.push({ part: nestedPart, depth: next.depth + 1 });
+      }
     }
   }
 
