@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Category, categoryMeta } from "@/lib/undo-data";
 import { autoCategories } from "@/lib/onboarding";
-import { Candidate, candidateToItem } from "@/lib/candidates";
+import { Candidate, CandidatePatch, candidateToItem } from "@/lib/candidates";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
@@ -54,6 +54,36 @@ function formatCategoryList(categories: Category[]) {
   if (labels.length <= 1) return labels[0] ?? "";
   if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
+
+function toDateInputValue(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function dateInputToIso(value: string, fallbackIso: string) {
+  if (!value) return fallbackIso;
+  const date = new Date(`${value}T17:00:00`);
+  return Number.isNaN(date.getTime()) ? fallbackIso : date.toISOString();
+}
+
+function amountInputValue(candidate: Candidate) {
+  if (typeof candidate.amountValue === "number") {
+    return String(candidate.amountValue);
+  }
+  return candidate.amount?.replace(/[^0-9.]/g, "") ?? "";
+}
+
+function parseAmountInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.replace(/[^0-9.]/g, "");
+  if (!/\d/.test(normalized)) return undefined;
+
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : undefined;
 }
 
 const Onboarding = () => {
@@ -208,6 +238,14 @@ const Onboarding = () => {
     return true;
   };
 
+  const saveCandidateEdit = async (candidateId: string, patch: CandidatePatch) => {
+    const updated = await appRepository.gmail.updateCandidate(candidateId, patch);
+    setCandidates((current) => current.map((candidate) => (
+      candidate.id === candidateId ? updated : candidate
+    )));
+    return updated;
+  };
+
   const keepAllCandidates = async (items: Candidate[]) => {
     if (items.length === 0) {
       return { keptCount: 0, completed: false };
@@ -319,6 +357,7 @@ const Onboarding = () => {
           <ReviewStep
             candidates={candidates.filter((candidate) => !dismissed.has(candidate.id))}
             onDismiss={dismissCandidate}
+            onEdit={saveCandidateEdit}
             onKeepAll={keepAllCandidates}
             onKeep={keepCandidate}
             onFinish={async (keptCount, remainingIds) => {
@@ -752,10 +791,11 @@ function ScanningStep({ picked }: { picked: Category[] }) {
 }
 
 function ReviewStep({
-  candidates, onDismiss, onKeep, onKeepAll, onFinish, onEmptyManual,
+  candidates, onDismiss, onEdit, onKeep, onKeepAll, onFinish, onEmptyManual,
 }: {
   candidates: Candidate[];
   onDismiss: (id: string) => void | Promise<void>;
+  onEdit: (id: string, patch: CandidatePatch) => Promise<Candidate>;
   onKeep: (candidate: Candidate) => Promise<boolean>;
   onKeepAll: (items: Candidate[]) => Promise<{ keptCount: number; completed: boolean }>;
   onFinish: (keptCount: number, remainingIds: string[]) => Promise<void>;
@@ -846,6 +886,7 @@ function ReviewStep({
               setKept((current) => new Set(current).add(candidate.id));
             }}
             onDismiss={() => void onDismiss(candidate.id)}
+            onEdit={onEdit}
           />
         ))}
 
@@ -882,15 +923,62 @@ function ReviewStep({
 }
 
 function CandidateCard({
-  candidate, index, onKeep, onDismiss,
+  candidate, index, onKeep, onDismiss, onEdit,
 }: {
   candidate: Candidate;
   index: number;
   onKeep: () => Promise<void>;
   onDismiss: () => void | Promise<void>;
+  onEdit: (id: string, patch: CandidatePatch) => Promise<Candidate>;
 }) {
   const isUrgent = Boolean(candidate.urgent);
   const sourceLabel = candidate.merchant ?? candidate.source;
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(candidate.title);
+  const [draftCategory, setDraftCategory] = useState<Category>(candidate.category);
+  const [draftDueDate, setDraftDueDate] = useState(toDateInputValue(candidate.dueAt));
+  const [draftAmount, setDraftAmount] = useState(amountInputValue(candidate));
+
+  useEffect(() => {
+    if (isEditing) return;
+    setDraftTitle(candidate.title);
+    setDraftCategory(candidate.category);
+    setDraftDueDate(toDateInputValue(candidate.dueAt));
+    setDraftAmount(amountInputValue(candidate));
+  }, [candidate, isEditing]);
+
+  const saveEdit = async () => {
+    const title = draftTitle.trim();
+    if (!title) {
+      toast.error("Add a short title before saving.");
+      return;
+    }
+
+    const amountValue = parseAmountInput(draftAmount);
+    if (amountValue === undefined) {
+      toast.error("Use a simple amount, like 16 or 16.99.");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      await onEdit(candidate.id, {
+        title,
+        category: draftCategory,
+        dueAt: dateInputToIso(draftDueDate, candidate.dueAt),
+        amountValue,
+        currency: candidate.currency ?? "USD",
+      });
+      toast.success("Suggestion updated.");
+      setIsEditing(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not save those changes.";
+      toast.error(message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   return (
     <article
@@ -954,6 +1042,90 @@ function CandidateCard({
         </p>
       )}
 
+      {isEditing && (
+        <div className="mt-5 rounded-[22px] bg-surface/75 p-4 ring-1 ring-border/50">
+          <label className="block">
+            <span className="mb-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Title
+            </span>
+            <textarea
+              value={draftTitle}
+              onChange={(event) => setDraftTitle(event.target.value)}
+              rows={2}
+              className="w-full resize-none rounded-2xl border-0 bg-card px-3 py-2.5 text-[13px] leading-relaxed text-foreground shadow-soft focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+          </label>
+
+          <div className="mt-4">
+            <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Category
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {autoCategories.map((category) => {
+                const active = draftCategory === category;
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setDraftCategory(category)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-medium transition-colors",
+                      active
+                        ? "bg-foreground text-background"
+                        : "bg-card text-foreground/70 ring-1 ring-border/60",
+                    )}
+                  >
+                    {categoryPlural[category]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Due date
+              </span>
+              <input
+                type="date"
+                value={draftDueDate}
+                onChange={(event) => setDraftDueDate(event.target.value)}
+                className="w-full rounded-2xl border-0 bg-card px-3 py-2.5 text-[12.5px] text-foreground shadow-soft focus:outline-none focus:ring-2 focus:ring-primary/25"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Amount
+              </span>
+              <input
+                value={draftAmount}
+                onChange={(event) => setDraftAmount(event.target.value)}
+                placeholder="optional"
+                inputMode="decimal"
+                className="w-full rounded-2xl border-0 bg-card px-3 py-2.5 text-[12.5px] text-foreground shadow-soft placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/25"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={() => void saveEdit()}
+              disabled={savingEdit}
+              className="inline-flex flex-1 items-center justify-center rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background transition-transform active:scale-[0.98] disabled:opacity-50"
+            >
+              {savingEdit ? "Saving..." : "Save changes"}
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              disabled={savingEdit}
+              className="rounded-full px-4 py-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 flex items-center justify-between gap-3">
         <CategoryBadge category={candidate.category} />
         {candidate.amount && (
@@ -972,6 +1144,7 @@ function CandidateCard({
       <div className="mt-5 flex items-center gap-2">
         <button
           onClick={() => void onKeep()}
+          disabled={isEditing}
           className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[13px] font-medium text-background transition-transform active:scale-[0.98]"
         >
           <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -980,7 +1153,7 @@ function CandidateCard({
         <button
           aria-label="Edit"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
-          onClick={() => toast("You'll be able to fine-tune this from the feed.", { duration: 1600 })}
+          onClick={() => setIsEditing((value) => !value)}
         >
           <Pencil className="h-4 w-4" strokeWidth={1.7} />
         </button>

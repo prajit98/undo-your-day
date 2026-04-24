@@ -2,6 +2,14 @@ import { Category, UndoItem } from "./undo-data";
 
 export type CandidateStatus = "pending" | "kept" | "dismissed";
 
+export interface CandidatePatch {
+  title?: string;
+  category?: Category;
+  dueAt?: string;
+  amountValue?: number | null;
+  currency?: string;
+}
+
 export interface Candidate {
   id: string;
   source?: string;

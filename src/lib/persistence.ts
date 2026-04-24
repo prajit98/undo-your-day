@@ -12,7 +12,7 @@ import {
   UndoUpload,
   createDefaultPreferences,
 } from "./undo-data";
-import type { Candidate, CandidateStatus } from "./candidates";
+import type { Candidate, CandidatePatch, CandidateStatus } from "./candidates";
 import { appConfig, backendSetupError, type AppBackendMode } from "./app-config";
 import { urgencyFor } from "./urgency";
 
@@ -61,6 +61,7 @@ export interface AppRepository {
     getAuthorizationUrl: (input: { returnTo: "/onboarding" | "/settings" }) => Promise<string>;
     syncCandidates: () => Promise<Candidate[]>;
     listPendingCandidates: () => Promise<Candidate[]>;
+    updateCandidate: (candidateId: string, patch: CandidatePatch) => Promise<Candidate>;
     updateCandidateStatus: (candidateId: string, status: CandidateStatus) => Promise<void>;
     disconnect: () => Promise<void>;
   };
@@ -397,6 +398,9 @@ function buildLocalRepository(): AppRepository {
       },
       async listPendingCandidates() {
         return [];
+      },
+      async updateCandidate() {
+        throw new Error("Real Gmail review editing needs Supabase.");
       },
       async updateCandidateStatus() {
         return undefined;
@@ -1043,6 +1047,35 @@ function buildSupabaseRepository(): AppRepository {
 
         return (data ?? []).map((candidate) => toSupabaseCandidate(candidate as Record<string, unknown>));
       },
+      async updateCandidate(candidateId, patch) {
+        if (!supabase) {
+          throw new Error("Supabase is not configured.");
+        }
+
+        const updatePayload: Record<string, unknown> = {
+          updated_at: new Date().toISOString(),
+        };
+
+        if ("title" in patch) updatePayload.title = patch.title;
+        if ("category" in patch) updatePayload.category = patch.category;
+        if ("dueAt" in patch) updatePayload.due_at = patch.dueAt;
+        if ("amountValue" in patch) updatePayload.amount = patch.amountValue ?? null;
+        if ("currency" in patch) updatePayload.currency = patch.currency ?? "USD";
+
+        const { data, error } = await supabase
+          .from("candidate_items")
+          .update(updatePayload)
+          .eq("id", candidateId)
+          .eq("status", "pending")
+          .select("id, source, source_message_id, category, title, description, merchant, amount, currency, due_at, status")
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return toSupabaseCandidate(data as Record<string, unknown>);
+      },
       async updateCandidateStatus(candidateId, status) {
         if (!supabase) {
           throw new Error("Supabase is not configured.");
@@ -1117,6 +1150,9 @@ function buildUnconfiguredRepository(): AppRepository {
         return fail();
       },
       async listPendingCandidates() {
+        return fail();
+      },
+      async updateCandidate() {
         return fail();
       },
       async updateCandidateStatus() {
