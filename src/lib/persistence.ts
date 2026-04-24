@@ -449,6 +449,59 @@ function isAbortError(error: unknown) {
     : error instanceof Error && error.name === "AbortError";
 }
 
+function errorMessage(error: unknown) {
+  return error instanceof Error && error.message.trim().length > 0
+    ? error.message
+    : "Unexpected error";
+}
+
+function errorStack(error: unknown) {
+  return error instanceof Error && error.stack ? error.stack : undefined;
+}
+
+function isCallStackOverflow(error: unknown) {
+  const normalized = errorMessage(error).toLowerCase();
+  return normalized.includes("maximum call stack")
+    || normalized.includes("call stack size")
+    || normalized.includes("too much recursion");
+}
+
+function readStoredSupabaseAccessToken() {
+  if (typeof window === "undefined" || !supabaseUrl) return undefined;
+
+  let storage: Storage;
+  try {
+    storage = window.localStorage;
+  } catch {
+    return undefined;
+  }
+
+  const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+  const likelyKeys = [
+    `sb-${projectRef}-auth-token`,
+    ...Array.from({ length: storage.length }, (_, index) => storage.key(index) ?? "")
+      .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token")),
+  ];
+
+  for (const key of Array.from(new Set(likelyKeys))) {
+    const raw = storage.getItem(key);
+    if (!raw) continue;
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        access_token?: string;
+        currentSession?: { access_token?: string };
+      };
+      const accessToken = parsed.access_token ?? parsed.currentSession?.access_token;
+      if (accessToken) return accessToken;
+    } catch {
+      // Ignore unrelated or stale Supabase storage entries.
+    }
+  }
+
+  return undefined;
+}
+
 async function invokeSupabaseFunction<TResponse>(
   name: string,
   body?: Record<string, unknown>,
@@ -461,18 +514,40 @@ async function invokeSupabaseFunction<TResponse>(
     throw new Error("Supabase is not configured.");
   }
 
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) {
-    throw new Error(sessionError.message);
-  }
+  let accessToken = readStoredSupabaseAccessToken();
+  let usedStoredTokenFallback = false;
 
-  let accessToken = sessionData.session?.access_token;
-  if (!accessToken) {
-    const { data: refreshedData, error: refreshedError } = await supabase.auth.refreshSession();
-    if (refreshedError) {
-      throw new Error(refreshedError.message);
+  try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      throw sessionError;
     }
-    accessToken = refreshedData.session?.access_token;
+
+    accessToken = sessionData.session?.access_token ?? accessToken;
+
+    if (!accessToken) {
+      const { data: refreshedData, error: refreshedError } = await supabase.auth.refreshSession();
+      if (refreshedError) {
+        throw refreshedError;
+      }
+      accessToken = refreshedData.session?.access_token;
+    }
+  } catch (error) {
+    if (accessToken && isCallStackOverflow(error)) {
+      usedStoredTokenFallback = true;
+    } else {
+      throw new AppFunctionError("Undo could not prepare the secure request.", {
+        code: "function_session_failed",
+        stage: "function_session",
+        status: 0,
+        details: {
+          functionName: name,
+          originalMessage: errorMessage(error),
+          stack: errorStack(error),
+          usedStoredTokenFallback: false,
+        },
+      });
+    }
   }
 
   if (!accessToken) {
@@ -530,7 +605,12 @@ async function invokeSupabaseFunction<TResponse>(
       stage: typeof payload.stage === "string" ? payload.stage : undefined,
       status: typeof payload.status === "number" ? payload.status : response.status,
       details: typeof payload.details === "object" && payload.details
-        ? payload.details as Record<string, unknown>
+        ? {
+            ...(payload.details as Record<string, unknown>),
+            usedStoredTokenFallback,
+          }
+        : usedStoredTokenFallback
+          ? { usedStoredTokenFallback }
         : undefined,
     });
   }

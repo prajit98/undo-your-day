@@ -19,7 +19,7 @@ import {
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
 import { autoCategories } from "@/lib/onboarding";
-import { appRepository, type GmailDiagnosticResult } from "@/lib/persistence";
+import { AppFunctionError, appRepository, type GmailDiagnosticResult } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
@@ -211,14 +211,15 @@ const Settings = () => {
         toast.error(`Gmail diagnostic stopped at ${result.stage}.`);
       }
     } catch (error) {
+      const appError = error instanceof AppFunctionError ? error : null;
       const errorMessage = error instanceof Error ? error.message : "Unknown diagnostic error.";
       const result: GmailDiagnosticResult = {
         diagnostic: true,
         success: false,
-        stage: "frontend",
-        code: "diagnostic_request_failed",
-        message: "Undo could not run the Gmail diagnostic.",
-        requestId: "local",
+        stage: appError?.stage ?? "frontend",
+        code: appError?.code ?? "diagnostic_request_failed",
+        message: appError?.message ?? "Undo could not run the Gmail diagnostic.",
+        requestId: typeof appError?.details?.requestId === "string" ? appError.details.requestId : "local",
         requestCountUsed: 0,
         tokenRefreshSucceeded: false,
         gmailListSucceeded: false,
@@ -234,7 +235,11 @@ const Settings = () => {
           gmailMessageFetchSucceeded: false,
           parsingSucceeded: false,
         },
-        details: { errorMessage },
+        details: {
+          errorMessage,
+          status: appError?.status,
+          ...(appError?.details ?? {}),
+        },
         timestamp: new Date().toISOString(),
       };
       setGmailDiagnostic(result);
