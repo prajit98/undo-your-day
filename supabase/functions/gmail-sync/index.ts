@@ -110,6 +110,8 @@ type GmailDiagnosticResult = {
   timestamp: string;
 };
 
+type DiagnosticPhase = "list" | "message";
+
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, {
     status,
@@ -366,6 +368,7 @@ function safeMessage(error: unknown, fallback: string) {
 async function runGmailDiagnostic(input: {
   requestId: string;
   userId: string;
+  phase: DiagnosticPhase;
   connection: Record<string, unknown> | null;
   connectionError: unknown;
   tokenRow: StoredTokenRow | null;
@@ -408,6 +411,7 @@ async function runGmailDiagnostic(input: {
     details: {
       userId: input.userId,
       gmailEmail,
+      diagnosticPhase: input.phase,
       diagnosticQuery: DIAGNOSTIC_QUERY,
       maxListResults: DIAGNOSTIC_MAX_RESULTS,
       maxMessageFetches: DIAGNOSTIC_MAX_FETCHES,
@@ -421,6 +425,7 @@ async function runGmailDiagnostic(input: {
     requestId: input.requestId,
     userId: input.userId,
     gmailEmail,
+    phase: input.phase,
   });
 
   try {
@@ -469,6 +474,25 @@ async function runGmailDiagnostic(input: {
     const messageIds = await listMessageIds(tokenResult.accessToken, DIAGNOSTIC_QUERY, DIAGNOSTIC_MAX_RESULTS);
     checks.gmailListSucceeded = true;
 
+    if (input.phase === "list") {
+      const result = finish({
+        success: true,
+        stage: "gmail_list",
+        code: "diagnostic_list_completed",
+        message: "Diagnostic completed connection, token, and Gmail list only.",
+        details: {
+          accessTokenWasFresh: tokenResult.accessTokenWasFresh,
+          listedMessageCount: messageIds.length,
+          fetchedMessageCount: 0,
+          messageFetchSkipped: true,
+          parsingSkipped: true,
+          nextPhase: "message",
+        },
+      });
+      logSyncEvent("log", "diagnostic_completed", result);
+      return result;
+    }
+
     if (messageIds.length === 0) {
       const result = finish({
         success: true,
@@ -479,6 +503,7 @@ async function runGmailDiagnostic(input: {
           accessTokenWasFresh: tokenResult.accessTokenWasFresh,
           listedMessageCount: 0,
           fetchedMessageCount: 0,
+          parsingSkipped: true,
         },
       });
       logSyncEvent("log", "diagnostic_completed", result);
@@ -774,6 +799,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const diagnosticMode = body.mode === "diagnostic" || body.diagnostic === true;
+    const diagnosticPhase: DiagnosticPhase = body.phase === "message" || body.includeMessage === true
+      ? "message"
+      : "list";
     const user = await requireUser(req);
     userId = user.id;
     const admin = createAdminClient();
@@ -787,6 +815,7 @@ Deno.serve(async (req) => {
       return jsonResponse(await runGmailDiagnostic({
         requestId,
         userId: user.id,
+        phase: diagnosticPhase,
         connection: connection as Record<string, unknown> | null,
         connectionError,
         tokenRow: tokenRow as StoredTokenRow | null,
