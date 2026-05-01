@@ -33,6 +33,12 @@ const categoryPlural: Record<Category, string> = {
   followup: "Follow-ups",
 };
 
+type GmailPingResult = Record<string, unknown> & {
+  success?: boolean;
+  stage?: string;
+  message?: string;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -228,6 +234,99 @@ async function runDirectGmailDiagnostic() {
   }
 }
 
+async function runDirectGmailPing() {
+  const tokenResult = readDiagnosticAccessToken();
+  if (!tokenResult.accessToken) {
+    return {
+      success: false,
+      stage: "frontend",
+      code: "gmail_ping_access_token_missing",
+      message: "Undo could not find the current browser access token.",
+      requestId: "local",
+      details: {
+        directFetch: true,
+        ...tokenResult.details,
+      },
+      timestamp: new Date().toISOString(),
+    } satisfies GmailPingResult;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 12_000);
+
+  try {
+    const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/gmail-ping`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${tokenResult.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let payload: unknown = {};
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = { error: text };
+      }
+    }
+
+    if (isRecord(payload)) {
+      return {
+        ...payload,
+        details: {
+          ...(isRecord(payload.details) ? payload.details : {}),
+          directFetch: true,
+          responseOk: response.ok,
+          ...tokenResult.details,
+        },
+      } satisfies GmailPingResult;
+    }
+
+    return {
+      success: false,
+      stage: "function_response",
+      code: "gmail_ping_unstructured_response",
+      message: "Gmail ping returned an unreadable response.",
+      requestId: "local",
+      details: {
+        directFetch: true,
+        responseOk: response.ok,
+        status: response.status,
+        rawPayload: payload,
+        ...tokenResult.details,
+      },
+      timestamp: new Date().toISOString(),
+    } satisfies GmailPingResult;
+  } catch (error) {
+    const aborted = error instanceof DOMException
+      ? error.name === "AbortError"
+      : error instanceof Error && error.name === "AbortError";
+
+    return {
+      success: false,
+      stage: "frontend",
+      code: aborted ? "gmail_ping_timeout" : "gmail_ping_direct_fetch_failed",
+      message: aborted
+        ? "Undo could not finish Gmail ping in time."
+        : "Undo could not run Gmail ping.",
+      requestId: "local",
+      details: {
+        directFetch: true,
+        errorMessage: error instanceof Error ? error.message : "Unknown ping error.",
+        ...tokenResult.details,
+      },
+      timestamp: new Date().toISOString(),
+    } satisfies GmailPingResult;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 const Settings = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -237,6 +336,8 @@ const Settings = () => {
   const [scanningGmail, setScanningGmail] = useState(false);
   const [runningGmailDiagnostic, setRunningGmailDiagnostic] = useState(false);
   const [gmailDiagnostic, setGmailDiagnostic] = useState<GmailDiagnosticResult | null>(null);
+  const [runningGmailPing, setRunningGmailPing] = useState(false);
+  const [gmailPing, setGmailPing] = useState<GmailPingResult | null>(null);
   const [gmailActionError, setGmailActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -329,6 +430,7 @@ const Settings = () => {
       await refresh();
       setGmailActionError(null);
       setGmailDiagnostic(null);
+      setGmailPing(null);
       clearGmailRetryAfter();
       toast.success("Gmail turned off.", {
         duration: 2400,
@@ -343,6 +445,7 @@ const Settings = () => {
     try {
       setGmailActionError(null);
       setGmailDiagnostic(null);
+      setGmailPing(null);
       clearGmailRetryAfter();
       const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/settings" });
       window.location.assign(url);
@@ -365,6 +468,7 @@ const Settings = () => {
     setScanningGmail(true);
     setGmailActionError(null);
     setGmailDiagnostic(null);
+    setGmailPing(null);
 
     try {
       const nextCandidates = await appRepository.gmail.syncCandidates();
@@ -396,6 +500,7 @@ const Settings = () => {
     setRunningGmailDiagnostic(true);
     setGmailActionError(null);
     setGmailDiagnostic(null);
+    setGmailPing(null);
 
     try {
       const result = await runDirectGmailDiagnostic();
@@ -440,6 +545,37 @@ const Settings = () => {
       toast.error("Undo could not run the Gmail diagnostic right now.");
     } finally {
       setRunningGmailDiagnostic(false);
+    }
+  };
+
+  const runGmailPing = async () => {
+    setRunningGmailPing(true);
+    setGmailActionError(null);
+    setGmailDiagnostic(null);
+    setGmailPing(null);
+
+    try {
+      const result = await runDirectGmailPing();
+      setGmailPing(result);
+      if (result.success) {
+        toast.success("Gmail ping reached the isolated function.");
+      } else {
+        toast.error(`Gmail ping stopped at ${result.stage ?? "unknown"}.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not run Gmail ping.";
+      setGmailPing({
+        success: false,
+        stage: "frontend",
+        code: "gmail_ping_failed",
+        message,
+        requestId: "local",
+        details: { directFetch: true },
+        timestamp: new Date().toISOString(),
+      });
+      toast.error("Undo could not run Gmail ping.");
+    } finally {
+      setRunningGmailPing(false);
     }
   };
 
@@ -554,12 +690,36 @@ const Settings = () => {
                   </pre>
                 </div>
               )}
+
+              {gmailPing && (
+                <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Internal ping
+                    </p>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      gmailPing.success
+                        ? "bg-primary-soft text-primary"
+                        : "bg-critical-soft text-critical"
+                    }`}
+                    >
+                      {gmailPing.success ? "Reached" : "Stopped"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
+                    {gmailPing.message ?? "Gmail ping returned a response."}
+                  </p>
+                  <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap rounded-xl bg-background/70 p-2 text-[10px] leading-relaxed text-muted-foreground">
+                    {JSON.stringify(gmailPing, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
 
           <button
             onClick={() => void (gmailConnection ? runGmailScan() : connectGmail())}
-            disabled={scanningGmail || runningGmailDiagnostic}
+            disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
             {scanningGmail ? "Scanning Gmail..." : gmailActionLabel}
@@ -568,10 +728,17 @@ const Settings = () => {
             <>
               <button
                 onClick={() => void runGmailDiagnostic()}
-                disabled={scanningGmail || runningGmailDiagnostic}
+                disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
                 className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
               >
                 {runningGmailDiagnostic ? "Running diagnostic..." : "Run Gmail diagnostic"}
+              </button>
+              <button
+                onClick={() => void runGmailPing()}
+                disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
+                className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
+              >
+                {runningGmailPing ? "Running ping..." : "Run Gmail ping"}
               </button>
               <button
                 onClick={() => void disconnectGmail()}
