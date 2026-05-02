@@ -70,7 +70,11 @@ const SEARCH_TERMS: Record<GmailCategory, { query: string; newerThanDays: number
   ],
   bill: [
     {
-      query: `{"invoice" "invoice due" "bill due" "payment due" "statement ready" "amount due" "due date" "balance due" "due on" "past due"}`,
+      query: "invoice",
+      newerThanDays: 120,
+    },
+    {
+      query: `{"bill due" "payment due" "statement ready" "amount due" "due date" "balance due" "due on" "past due"}`,
       newerThanDays: 120,
     },
   ],
@@ -276,19 +280,27 @@ function getSenderLabel(rawFrom: string) {
   return rawFrom;
 }
 
-function extractAmountValue(text: string) {
-  const matches = [...text.matchAll(/\$ ?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/g)];
+function extractAmount(text: string) {
+  const matches = [...text.matchAll(/([$£€]) ?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/g)];
   if (matches.length === 0) return undefined;
 
-  const value = Number(matches[0][1].replace(/,/g, ""));
-  return Number.isFinite(value) ? value : undefined;
+  const value = Number(matches[0][2].replace(/,/g, ""));
+  if (!Number.isFinite(value)) return undefined;
+
+  const currency = matches[0][1] === "£"
+    ? "GBP"
+    : matches[0][1] === "€"
+      ? "EUR"
+      : "USD";
+
+  return { value, currency };
 }
 
-function formatAmount(value?: number) {
+function formatAmount(value?: number, currency = "USD") {
   if (typeof value !== "number") return undefined;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency,
     maximumFractionDigits: value % 1 === 0 ? 0 : 2,
   }).format(value);
 }
@@ -511,12 +523,11 @@ export function buildSearchQueries(categories: GmailCategory[]) {
   const queries: { category: GmailCategory; q: string }[] = [];
 
   for (const category of allowed) {
-    const primaryRule = SEARCH_TERMS[category][0];
-    if (!primaryRule) continue;
-
-    queries.push({
-      category,
-      q: `${primaryRule.query} newer_than:${primaryRule.newerThanDays}d`,
+    SEARCH_TERMS[category].forEach((rule) => {
+      queries.push({
+        category,
+        q: `${rule.query} newer_than:${rule.newerThanDays}d`,
+      });
     });
   }
 
@@ -541,8 +552,10 @@ export function messageToCandidate(message: GmailMessage, hint: GmailCategory, a
   }
 
   const dueAt = extractDueDate(`${subject} ${snippet} ${bodyText}`, message.internalDate, category);
-  const amountValue = extractAmountValue(`${subject} ${snippet} ${bodyText}`);
-  const amount = formatAmount(amountValue);
+  const parsedAmount = extractAmount(`${subject} ${snippet} ${bodyText}`);
+  const amountValue = parsedAmount?.value;
+  const amountCurrency = parsedAmount?.currency;
+  const amount = formatAmount(amountValue, amountCurrency);
   const title = buildTitle(category, source, dueAt, amount);
   const detail = buildDetail(subject, snippet || bodyText.slice(0, 120), source);
   const daysUntilDue = Math.round((new Date(dueAt).getTime() - Date.now()) / 86400000);
@@ -558,7 +571,7 @@ export function messageToCandidate(message: GmailMessage, hint: GmailCategory, a
     amountValue,
     amount,
     merchant: source,
-    currency: amountValue ? "USD" : undefined,
+    currency: amountCurrency,
     urgent: daysUntilDue <= 2,
   } satisfies Candidate;
 }

@@ -13,7 +13,7 @@ import {
 const GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const AUTO_CATEGORIES = new Set(["trial", "renewal", "return", "bill"]);
 const GMAIL_FETCH_TIMEOUT_MS = 10_000;
-const MAX_LIST_QUERIES_PER_RUN = 4;
+const MAX_LIST_QUERIES_PER_RUN = 5;
 const MAX_RESULTS_PER_QUERY = 2;
 const MAX_MESSAGE_IDS_TO_SCAN = 6;
 const MAX_CANDIDATES_TO_RETURN = 4;
