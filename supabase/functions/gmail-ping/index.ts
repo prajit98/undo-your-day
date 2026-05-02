@@ -21,6 +21,27 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function readPingPhase(body: Record<string, unknown>): PingPhase {
+  if (body.phase === "refresh" || body.mode === "refresh" || body.includeRefresh === true) {
+    return "refresh";
+  }
+
+  if (body.phase === "token" || body.mode === "token" || body.includeTokenLookup === true) {
+    return "token";
+  }
+
+  return "auth";
+}
+
+function readRequestShape(body: Record<string, unknown>) {
+  return {
+    requestedPhase: typeof body.phase === "string" ? body.phase : null,
+    requestedMode: typeof body.mode === "string" ? body.mode : null,
+    includeTokenLookup: body.includeTokenLookup === true,
+    includeRefresh: body.includeRefresh === true,
+  };
+}
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
@@ -30,11 +51,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-    const phase: PingPhase = body.phase === "refresh"
-      ? "refresh"
-      : body.includeTokenLookup === true || body.phase === "token"
-        ? "token"
-        : "auth";
+    const phase = readPingPhase(body);
+    const requestShape = readRequestShape(body);
     const user = await requireUser(req);
     const timestamp = new Date().toISOString();
 
@@ -47,6 +65,7 @@ Deno.serve(async (req) => {
         userId: user.id,
         requestId,
         phase,
+        requestShape,
         tokenLookupSkipped: true,
         timestamp,
       });
@@ -78,6 +97,7 @@ Deno.serve(async (req) => {
         userId: user.id,
         requestId,
         phase,
+        requestShape,
         connectionLookupSucceeded: false,
         tokenLookupSucceeded: false,
         refreshAttempted: false,
@@ -95,6 +115,7 @@ Deno.serve(async (req) => {
         userId: user.id,
         requestId,
         phase,
+        requestShape,
         connectionLookupSucceeded: true,
         tokenLookupSucceeded: false,
         hasConnectionRow: Boolean(connectionRow),
@@ -113,6 +134,7 @@ Deno.serve(async (req) => {
       userId: user.id,
       requestId,
       phase,
+      requestShape,
       tokenLookupSkipped: false,
       connectionLookupSucceeded: true,
       tokenLookupSucceeded: true,

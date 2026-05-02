@@ -256,6 +256,14 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 12_000);
+  const requestBody = mode === "auth"
+    ? {}
+    : {
+      phase: mode,
+      mode,
+      includeTokenLookup: true,
+      includeRefresh: mode === "refresh",
+    };
 
   try {
     const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/gmail-ping`, {
@@ -264,7 +272,7 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
         Authorization: `Bearer ${tokenResult.accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(mode === "auth" ? {} : { phase: mode }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
 
