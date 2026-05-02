@@ -265,13 +265,18 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
       includeRefresh: mode === "refresh",
       includeList: mode === "list",
     };
+  const pingUrl = new URL(`${appConfig.supabaseUrl}/functions/v1/gmail-ping`);
+  if (mode !== "auth") {
+    pingUrl.searchParams.set("phase", mode);
+  }
 
   try {
-    const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/gmail-ping`, {
+    const response = await fetch(pingUrl.toString(), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${tokenResult.accessToken}`,
         "Content-Type": "application/json",
+        "X-Gmail-Ping-Phase": mode,
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,

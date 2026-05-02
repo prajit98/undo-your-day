@@ -7,8 +7,10 @@ import { createAdminClient, requireUser } from "../_shared/supabase.ts";
 const GMAIL_LIST_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const GMAIL_LIST_MAX_RESULTS = 2;
 const GMAIL_LIST_QUERY = "newer_than:14d";
+const DIAGNOSTIC_VERSION = "gmail-ping-routing-v2";
 
 type PingPhase = "auth" | "token" | "refresh" | "list";
+type RequestShape = ReturnType<typeof readRequestShape>;
 type TokenRow = {
   access_token?: string | null;
   refresh_token?: string | null;
@@ -25,19 +27,43 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function readPingPhase(body: Record<string, unknown>): PingPhase {
-  if (body.phase === "list" || body.mode === "list" || body.includeList === true) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizePhase(value: unknown): PingPhase | null {
+  return value === "auth" || value === "token" || value === "refresh" || value === "list"
+    ? value
+    : null;
+}
+
+function readPingPhase(requestShape: RequestShape): PingPhase {
+  if (
+    requestShape.requestedPhase === "list" ||
+    requestShape.requestedMode === "list" ||
+    requestShape.queryPhase === "list" ||
+    requestShape.headerPhase === "list" ||
+    requestShape.includeList
+  ) {
     return "list";
   }
 
-  if (body.phase === "refresh" || body.mode === "refresh" || body.includeRefresh === true) {
+  if (
+    requestShape.requestedPhase === "refresh" ||
+    requestShape.requestedMode === "refresh" ||
+    requestShape.queryPhase === "refresh" ||
+    requestShape.headerPhase === "refresh" ||
+    requestShape.includeRefresh
+  ) {
     return "refresh";
   }
 
   if (
-    body.phase === "token" ||
-    body.mode === "token" ||
-    (body.includeTokenLookup === true && body.includeList !== true)
+    requestShape.requestedPhase === "token" ||
+    requestShape.requestedMode === "token" ||
+    requestShape.queryPhase === "token" ||
+    requestShape.headerPhase === "token" ||
+    (requestShape.includeTokenLookup && !requestShape.includeList)
   ) {
     return "token";
   }
@@ -45,10 +71,16 @@ function readPingPhase(body: Record<string, unknown>): PingPhase {
   return "auth";
 }
 
-function readRequestShape(body: Record<string, unknown>) {
+function readRequestShape(body: Record<string, unknown>, req: Request, bodyPresent: boolean) {
+  const url = new URL(req.url);
+
   return {
-    requestedPhase: typeof body.phase === "string" ? body.phase : null,
-    requestedMode: typeof body.mode === "string" ? body.mode : null,
+    bodyPresent,
+    contentType: req.headers.get("content-type"),
+    requestedPhase: normalizePhase(body.phase),
+    requestedMode: normalizePhase(body.mode),
+    queryPhase: normalizePhase(url.searchParams.get("phase")),
+    headerPhase: normalizePhase(req.headers.get("x-gmail-ping-phase")),
     includeTokenLookup: body.includeTokenLookup === true,
     includeRefresh: body.includeRefresh === true,
     includeList: body.includeList === true,
@@ -63,9 +95,53 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-    const phase = readPingPhase(body);
-    const requestShape = readRequestShape(body);
+    const bodyText = await req.text();
+    let body: Record<string, unknown> = {};
+
+    if (bodyText.trim()) {
+      try {
+        const parsedBody = JSON.parse(bodyText) as unknown;
+        if (!isRecord(parsedBody)) {
+          console.error("gmail-ping body parse failed", {
+            requestId,
+            reason: "body_not_object",
+            bodyPreview: bodyText.slice(0, 160),
+          });
+
+          return jsonResponse({
+            success: false,
+            stage: "body_parse",
+            code: "gmail_ping_body_parse_failed",
+            message: "Gmail ping expected a JSON object request body.",
+            requestId,
+            diagnosticVersion: DIAGNOSTIC_VERSION,
+            timestamp: new Date().toISOString(),
+          }, 400);
+        }
+
+        body = parsedBody;
+      } catch (error) {
+        console.error("gmail-ping body parse failed", {
+          requestId,
+          reason: "invalid_json",
+          message: error instanceof Error ? error.message : "Invalid JSON body.",
+          bodyPreview: bodyText.slice(0, 160),
+        });
+
+        return jsonResponse({
+          success: false,
+          stage: "body_parse",
+          code: "gmail_ping_body_parse_failed",
+          message: error instanceof Error ? error.message : "Gmail ping could not parse the request body.",
+          requestId,
+          diagnosticVersion: DIAGNOSTIC_VERSION,
+          timestamp: new Date().toISOString(),
+        }, 400);
+      }
+    }
+
+    const requestShape = readRequestShape(body, req, bodyText.trim().length > 0);
+    const phase = readPingPhase(requestShape);
     const user = await requireUser(req);
     const timestamp = new Date().toISOString();
 
@@ -79,6 +155,7 @@ Deno.serve(async (req) => {
         requestId,
         phase,
         requestShape,
+        diagnosticVersion: DIAGNOSTIC_VERSION,
         tokenLookupSkipped: true,
         timestamp,
       });
@@ -111,6 +188,7 @@ Deno.serve(async (req) => {
         requestId,
         phase,
         requestShape,
+        diagnosticVersion: DIAGNOSTIC_VERSION,
         connectionLookupSucceeded: false,
         tokenLookupSucceeded: false,
         refreshAttempted: false,
@@ -129,6 +207,7 @@ Deno.serve(async (req) => {
         requestId,
         phase,
         requestShape,
+        diagnosticVersion: DIAGNOSTIC_VERSION,
         connectionLookupSucceeded: true,
         tokenLookupSucceeded: false,
         hasConnectionRow: Boolean(connectionRow),
@@ -148,6 +227,7 @@ Deno.serve(async (req) => {
       requestId,
       phase,
       requestShape,
+      diagnosticVersion: DIAGNOSTIC_VERSION,
       tokenLookupSkipped: false,
       connectionLookupSucceeded: true,
       tokenLookupSucceeded: true,
