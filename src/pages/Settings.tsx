@@ -234,7 +234,7 @@ async function runDirectGmailDiagnostic() {
   }
 }
 
-async function runDirectGmailPing() {
+async function runDirectGmailPing(includeTokenLookup = false) {
   const tokenResult = readDiagnosticAccessToken();
   if (!tokenResult.accessToken) {
     return {
@@ -245,6 +245,7 @@ async function runDirectGmailPing() {
       requestId: "local",
       details: {
         directFetch: true,
+        includeTokenLookup,
         ...tokenResult.details,
       },
       timestamp: new Date().toISOString(),
@@ -261,7 +262,7 @@ async function runDirectGmailPing() {
         Authorization: `Bearer ${tokenResult.accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify(includeTokenLookup ? { includeTokenLookup: true } : {}),
       signal: controller.signal,
     });
 
@@ -281,6 +282,7 @@ async function runDirectGmailPing() {
         details: {
           ...(isRecord(payload.details) ? payload.details : {}),
           directFetch: true,
+          includeTokenLookup,
           responseOk: response.ok,
           ...tokenResult.details,
         },
@@ -295,6 +297,7 @@ async function runDirectGmailPing() {
       requestId: "local",
       details: {
         directFetch: true,
+        includeTokenLookup,
         responseOk: response.ok,
         status: response.status,
         rawPayload: payload,
@@ -317,6 +320,7 @@ async function runDirectGmailPing() {
       requestId: "local",
       details: {
         directFetch: true,
+        includeTokenLookup,
         errorMessage: error instanceof Error ? error.message : "Unknown ping error.",
         ...tokenResult.details,
       },
@@ -337,6 +341,7 @@ const Settings = () => {
   const [runningGmailDiagnostic, setRunningGmailDiagnostic] = useState(false);
   const [gmailDiagnostic, setGmailDiagnostic] = useState<GmailDiagnosticResult | null>(null);
   const [runningGmailPing, setRunningGmailPing] = useState(false);
+  const [gmailPingMode, setGmailPingMode] = useState<"auth" | "token" | null>(null);
   const [gmailPing, setGmailPing] = useState<GmailPingResult | null>(null);
   const [gmailActionError, setGmailActionError] = useState<string | null>(null);
 
@@ -548,17 +553,20 @@ const Settings = () => {
     }
   };
 
-  const runGmailPing = async () => {
+  const runGmailPing = async (includeTokenLookup = false) => {
     setRunningGmailPing(true);
+    setGmailPingMode(includeTokenLookup ? "token" : "auth");
     setGmailActionError(null);
     setGmailDiagnostic(null);
     setGmailPing(null);
 
     try {
-      const result = await runDirectGmailPing();
+      const result = await runDirectGmailPing(includeTokenLookup);
       setGmailPing(result);
       if (result.success) {
-        toast.success("Gmail ping reached the isolated function.");
+        toast.success(includeTokenLookup
+          ? "Gmail token check finished."
+          : "Gmail ping reached the isolated function.");
       } else {
         toast.error(`Gmail ping stopped at ${result.stage ?? "unknown"}.`);
       }
@@ -570,12 +578,13 @@ const Settings = () => {
         code: "gmail_ping_failed",
         message,
         requestId: "local",
-        details: { directFetch: true },
+        details: { directFetch: true, includeTokenLookup },
         timestamp: new Date().toISOString(),
       });
       toast.error("Undo could not run Gmail ping.");
     } finally {
       setRunningGmailPing(false);
+      setGmailPingMode(null);
     }
   };
 
@@ -738,7 +747,14 @@ const Settings = () => {
                 disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
                 className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
               >
-                {runningGmailPing ? "Running ping..." : "Run Gmail ping"}
+                {runningGmailPing && gmailPingMode === "auth" ? "Running ping..." : "Run Gmail ping"}
+              </button>
+              <button
+                onClick={() => void runGmailPing(true)}
+                disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
+                className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
+              >
+                {runningGmailPing && gmailPingMode === "token" ? "Checking token..." : "Run Gmail token check"}
               </button>
               <button
                 onClick={() => void disconnectGmail()}
