@@ -77,7 +77,7 @@ function reminderInputsForItem(item: UndoItem, planTier: UndoPreferences["planTi
   const remindTimes = offsets
     .map((offset, index) => ({
       remindAt: new Date(dueAtMs - offset * 36e5).toISOString(),
-      reminderType: index === 0 ? "default" : "premium",
+      reminderType: (index === 0 ? "default" : "premium") as "default" | "premium",
       status: "scheduled" as const,
       channel: "in_app" as const,
     }))
@@ -92,7 +92,7 @@ function reminderInputsForItem(item: UndoItem, planTier: UndoPreferences["planTi
   return [
     {
       remindAt: new Date(Math.max(Date.now() + 36e5, dueAtMs - 36e5)).toISOString(),
-      reminderType: "default",
+      reminderType: "default" as const,
       status: "scheduled",
       channel: "in_app",
     },
@@ -352,7 +352,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       savePrefs: async (cats: Category[]) => {
         if (!preferences) return;
         const followupEnabled = preferences.enabledCategories.includes("followup");
-        const enabledCategories = followupEnabled ? [...cats, "followup"] : cats;
+        const enabledCategories: Category[] = followupEnabled ? [...cats, "followup"] : cats;
         await updatePreferences({ enabledCategories });
       },
       setGmailConnected: async (value: boolean) => {
