@@ -30,6 +30,7 @@ const DIAGNOSTIC_QUERY = "newer_than:30d";
 const DIAGNOSTIC_MAX_RESULTS = 2;
 const DIAGNOSTIC_MAX_FETCHES = 1;
 const DIAGNOSTIC_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
+const DEPLOYMENT_TRACE_VERSION = "gmail-sync-deploy-check-2026-05-02-v1";
 const BILL_TRACE_VERSION = "bill-trace-2026-05-02-v2";
 
 type StoredTokenRow = {
@@ -127,7 +128,17 @@ type GmailDiagnosticResult = {
 type DiagnosticPhase = "list" | "message";
 
 function jsonResponse(body: unknown, status = 200) {
-  return Response.json(body, {
+  const markedBody = body && typeof body === "object" && !Array.isArray(body)
+    ? {
+        ...(body as Record<string, unknown>),
+        traceVersion: DEPLOYMENT_TRACE_VERSION,
+      }
+    : {
+        value: body,
+        traceVersion: DEPLOYMENT_TRACE_VERSION,
+      };
+
+  return Response.json(markedBody, {
     status,
     headers: withCorsHeaders({
       "Content-Type": "application/json",
@@ -924,6 +935,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  console.log("GMAIL_SYNC_DEPLOYMENT_MARKER", {
+    requestId,
+    traceVersion: DEPLOYMENT_TRACE_VERSION,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
 
   try {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
