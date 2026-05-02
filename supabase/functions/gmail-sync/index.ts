@@ -30,6 +30,7 @@ const DIAGNOSTIC_QUERY = "newer_than:30d";
 const DIAGNOSTIC_MAX_RESULTS = 2;
 const DIAGNOSTIC_MAX_FETCHES = 1;
 const DIAGNOSTIC_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
+const BILL_TRACE_VERSION = "bill-trace-2026-05-02-v2";
 
 type StoredTokenRow = {
   access_token?: string | null;
@@ -136,6 +137,13 @@ function jsonResponse(body: unknown, status = 200) {
 
 function logSyncEvent(level: "log" | "warn" | "error", event: string, details?: Record<string, unknown>) {
   console[level](`[Undo Gmail Sync] ${event}`, details ?? {});
+}
+
+function logBillTraceMarker(marker: "BILL_TRACE_START" | "BILL_TRACE_END", details: Record<string, unknown>) {
+  console.log(marker, {
+    traceVersion: BILL_TRACE_VERSION,
+    ...details,
+  });
 }
 
 function shouldTraceInvoiceMessage(trace: GmailCandidateTrace) {
@@ -998,11 +1006,24 @@ Deno.serve(async (req) => {
     const listedMessageIds = new Set<string>();
     const listFailures: Array<Record<string, unknown>> = [];
     const invoiceTrace: Record<string, unknown> = {
+      marker: "BILL_TRACE_RESPONSE",
+      traceVersion: BILL_TRACE_VERSION,
       requestId,
       billQueries: [],
       selectedBillMessageIds: [],
       billMessageTraces: [],
     };
+    logBillTraceMarker("BILL_TRACE_START", {
+      requestId,
+      userId: user.id,
+      categories,
+      billQueries: searchQueries
+        .filter((query) => query.category === "bill")
+        .map((query) => ({
+          query: query.q,
+          maxResults: query.maxResults ?? MAX_RESULTS_PER_QUERY,
+        })),
+    });
 
     for (const { category, q, maxResults } of searchQueries) {
       try {
@@ -1153,6 +1174,9 @@ Deno.serve(async (req) => {
     logSyncEvent("log", "bill_invoice_candidate_trace", invoiceTrace);
 
     const pendingCandidates = await persistCandidateItems(user.id, deduped, admin, { requestId });
+    invoiceTrace.pendingBillCandidateIds = pendingCandidates
+      .filter((candidate) => candidate.category === "bill")
+      .map((candidate) => candidate.sourceMessageId);
 
     const { error: updateError } = await admin.from("gmail_connections").update({
       last_synced_at: new Date().toISOString(),
@@ -1178,8 +1202,18 @@ Deno.serve(async (req) => {
       listFailureCount: listFailures.length,
       messageFailureCount: messageFailures.length,
     });
+    logBillTraceMarker("BILL_TRACE_END", {
+      requestId,
+      billQueryCount: (invoiceTrace.billQueries as unknown[]).length,
+      selectedBillMessageIds: invoiceTrace.selectedBillMessageIds,
+      billMessageTraceCount: (invoiceTrace.billMessageTraces as unknown[]).length,
+      detectedBillCandidateIds: invoiceTrace.detectedBillCandidateIds,
+      returnedBillCandidateIds: invoiceTrace.returnedBillCandidateIds,
+      pendingBillCandidateIds: invoiceTrace.pendingBillCandidateIds,
+      responseCandidateCount: pendingCandidates.length,
+    });
 
-    return jsonResponse({ candidates: pendingCandidates, invoiceTrace });
+    return jsonResponse({ candidates: pendingCandidates, billTrace: invoiceTrace });
   } catch (error) {
     const failure = buildFailurePayload(error, { requestId, userId, gmailEmail });
     logSyncEvent("error", "sync_failed", failure);
