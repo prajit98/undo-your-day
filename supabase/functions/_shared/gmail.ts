@@ -45,33 +45,34 @@ const MAX_MIME_PART_DEPTH = 12;
 const MAX_MIME_PARTS_TO_SCAN = 80;
 const MAX_BODY_DATA_CHARS = 120_000;
 const MAX_BODY_TEXT_CHARS = 12_000;
+const ROLL_FORWARD_PAST_DATE_MS = 30 * 86400000;
 
 // TODO: Replace these general keyword rules with merchant-specific parsing once
 // we have real inbox samples from early testers.
 const SEARCH_TERMS: Record<GmailCategory, { query: string; newerThanDays: number }[]> = {
   trial: [
-    { query: "\"trial\"", newerThanDays: 180 },
-    { query: "\"free trial\"", newerThanDays: 180 },
-    { query: "\"trial ends\"", newerThanDays: 180 },
-    { query: "\"trial ending\"", newerThanDays: 180 },
+    {
+      query: `{"free trial" "trial ends" "trial ending" "trial expires" "trial period" "cancel before" "before you are charged" "before you're charged"}`,
+      newerThanDays: 180,
+    },
   ],
   renewal: [
-    { query: "\"renews\"", newerThanDays: 365 },
-    { query: "\"renewal\"", newerThanDays: 365 },
-    { query: "\"auto-renew\"", newerThanDays: 365 },
-    { query: "\"subscription\"", newerThanDays: 365 },
+    {
+      query: `{"renews" "renewal" "auto-renew" "auto renew" "subscription renews" "subscription renewal" "membership renews" "next payment"}`,
+      newerThanDays: 365,
+    },
   ],
   return: [
-    { query: "\"return\"", newerThanDays: 120 },
-    { query: "\"return window\"", newerThanDays: 120 },
-    { query: "\"refund\"", newerThanDays: 120 },
-    { query: "\"drop off\"", newerThanDays: 120 },
+    {
+      query: `{"return window" "return by" "eligible for return" "refund" "exchange" "drop off" "return label" "returns accepted"}`,
+      newerThanDays: 120,
+    },
   ],
   bill: [
-    { query: "\"bill due\"", newerThanDays: 120 },
-    { query: "\"payment due\"", newerThanDays: 120 },
-    { query: "\"invoice\"", newerThanDays: 120 },
-    { query: "\"statement\"", newerThanDays: 120 },
+    {
+      query: `{"payment due" "bill due" "invoice" "statement" "amount due" "due date" "balance due" "past due"}`,
+      newerThanDays: 120,
+    },
   ],
 };
 
@@ -81,8 +82,12 @@ const CATEGORY_KEYWORDS: Record<GmailCategory, string[]> = {
     "free trial",
     "trial ends",
     "trial ending",
+    "trial expires",
+    "trial period",
     "convert",
     "before you are charged",
+    "before you're charged",
+    "charged after",
     "cancel before",
   ],
   renewal: [
@@ -92,8 +97,13 @@ const CATEGORY_KEYWORDS: Record<GmailCategory, string[]> = {
     "auto-renew",
     "auto renew",
     "subscription",
+    "subscription renews",
+    "subscription renewal",
     "membership",
+    "membership renews",
     "next payment",
+    "billing date",
+    "recurring",
   ],
   return: [
     "return",
@@ -103,6 +113,10 @@ const CATEGORY_KEYWORDS: Record<GmailCategory, string[]> = {
     "drop off",
     "eligible for return",
     "return by",
+    "return label",
+    "return deadline",
+    "returns accepted",
+    "send it back",
   ],
   bill: [
     "bill",
@@ -111,6 +125,13 @@ const CATEGORY_KEYWORDS: Record<GmailCategory, string[]> = {
     "due date",
     "late fee",
     "invoice",
+    "invoice due",
+    "amount due",
+    "balance due",
+    "past due",
+    "minimum payment",
+    "pay by",
+    "due on",
     "autopay",
     "auto-pay",
   ],
@@ -292,7 +313,7 @@ function parseMonthDate(match: RegExpMatchArray) {
   if (monthIndex === undefined || !day) return undefined;
 
   const date = withTime(new Date(year, monthIndex, day));
-  if (!match[3] && date.getTime() < Date.now() - 36e5) {
+  if (!match[3] && date.getTime() < Date.now() - ROLL_FORWARD_PAST_DATE_MS) {
     date.setFullYear(date.getFullYear() + 1);
   }
   return date;
@@ -306,10 +327,31 @@ function parseNumericDate(match: RegExpMatchArray) {
 
   const normalizedYear = year < 100 ? 2000 + year : year;
   const date = withTime(new Date(normalizedYear, month, day));
-  if (!match[3] && date.getTime() < Date.now() - 36e5) {
+  if (!match[3] && date.getTime() < Date.now() - ROLL_FORWARD_PAST_DATE_MS) {
     date.setFullYear(date.getFullYear() + 1);
   }
   return date;
+}
+
+function parseIsoDate(match: RegExpMatchArray) {
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (!year || month < 0 || day <= 0) return undefined;
+
+  const date = withTime(new Date(year, month, day));
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function baseEmailDate(internalDate: string | undefined) {
+  const date = internalDate ? new Date(Number(internalDate)) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function dateFromBaseDays(internalDate: string | undefined, days: number) {
+  const date = baseEmailDate(internalDate);
+  date.setDate(date.getDate() + days);
+  return withTime(date);
 }
 
 function extractDueDate(text: string, internalDate: string | undefined, category: GmailCategory) {
@@ -336,9 +378,25 @@ function extractDueDate(text: string, internalDate: string | undefined, category
     return withTime(next).toISOString();
   }
 
-  const monthMatch = lower.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:,?\s+(\d{4}))?\b/);
+  const daysLeftMatch = lower.match(/\b(\d{1,3})\s+days?\s+(?:left|remaining)\b/);
+  if (daysLeftMatch) {
+    return dateFromBaseDays(internalDate, Number(daysLeftMatch[1])).toISOString();
+  }
+
+  const withinDaysMatch = lower.match(/\bwithin\s+(\d{1,3})\s+days?\b/);
+  if (withinDaysMatch && category === "return") {
+    return dateFromBaseDays(internalDate, Number(withinDaysMatch[1])).toISOString();
+  }
+
+  const monthMatch = lower.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b/);
   if (monthMatch) {
     const date = parseMonthDate(monthMatch);
+    if (date) return date.toISOString();
+  }
+
+  const isoMatch = lower.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (isoMatch) {
+    const date = parseIsoDate(isoMatch);
     if (date) return date.toISOString();
   }
 
@@ -354,7 +412,7 @@ function extractDueDate(text: string, internalDate: string | undefined, category
     return date.toISOString();
   }
 
-  const base = internalDate ? new Date(Number(internalDate)) : new Date();
+  const base = baseEmailDate(internalDate);
   const fallback = new Date(base);
   fallback.setHours(17, 0, 0, 0);
 
