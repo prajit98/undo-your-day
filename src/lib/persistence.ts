@@ -510,7 +510,7 @@ async function invokeSupabaseFunction<TResponse>(
     timeoutMessage?: string;
   },
 ): Promise<TResponse> {
-  if (!supabase || !supabaseUrl) {
+  if (!supabase || !supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase is not configured.");
   }
 
@@ -550,7 +550,8 @@ async function invokeSupabaseFunction<TResponse>(
     }
   }
 
-  if (!accessToken) {
+  const bearerToken = accessToken?.trim();
+  if (!bearerToken) {
     throw new Error("Please sign in again to continue.");
   }
 
@@ -564,7 +565,8 @@ async function invokeSupabaseFunction<TResponse>(
     response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${bearerToken}`,
+        apikey: supabaseAnonKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body ?? {}),
