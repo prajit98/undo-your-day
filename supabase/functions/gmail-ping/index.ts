@@ -3,6 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import { refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
+import { decryptGmailRefreshToken, encryptGmailRefreshToken } from "../_shared/token-crypto.ts";
 
 const GMAIL_LIST_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const GMAIL_LIST_MAX_RESULTS = 2;
@@ -287,7 +288,9 @@ async function handleGmailPing(req: Request, requestId: string) {
         });
       }
 
-      if (!typedTokenRow.refresh_token) {
+      const refreshToken = await decryptGmailRefreshToken(typedTokenRow.refresh_token);
+
+      if (!refreshToken) {
         return jsonResponse({
           success: false,
           stage: "token_refresh",
@@ -303,7 +306,7 @@ async function handleGmailPing(req: Request, requestId: string) {
 
       let refreshed;
       try {
-        refreshed = await refreshAccessToken(typedTokenRow.refresh_token);
+        refreshed = await refreshAccessToken(refreshToken);
       } catch (error) {
         return jsonResponse({
           success: false,
@@ -337,6 +340,7 @@ async function handleGmailPing(req: Request, requestId: string) {
         : null;
       const { error: updateError } = await admin.from("gmail_tokens").update({
         access_token: refreshed.access_token,
+        refresh_token: await encryptGmailRefreshToken(refreshToken),
         token_type: refreshed.token_type ?? "Bearer",
         scope: refreshed.scope?.split(/\s+/).filter(Boolean) ?? [],
         expires_at: nextExpiresAt,
@@ -397,7 +401,9 @@ async function handleGmailPing(req: Request, requestId: string) {
       let refreshedExpiresAtPresent = false;
 
       if (!accessTokenStillFresh) {
-        if (!typedTokenRow.refresh_token) {
+        const refreshToken = await decryptGmailRefreshToken(typedTokenRow.refresh_token);
+
+        if (!refreshToken) {
           return jsonResponse({
             success: false,
             stage: "token_refresh",
@@ -418,7 +424,7 @@ async function handleGmailPing(req: Request, requestId: string) {
 
         let refreshed;
         try {
-          refreshed = await refreshAccessToken(typedTokenRow.refresh_token);
+          refreshed = await refreshAccessToken(refreshToken);
         } catch (error) {
           return jsonResponse({
             success: false,
@@ -460,6 +466,7 @@ async function handleGmailPing(req: Request, requestId: string) {
         refreshedExpiresAtPresent = Boolean(nextExpiresAt);
         const { error: updateError } = await admin.from("gmail_tokens").update({
           access_token: refreshed.access_token,
+          refresh_token: await encryptGmailRefreshToken(refreshToken),
           token_type: refreshed.token_type ?? "Bearer",
           scope: refreshed.scope?.split(/\s+/).filter(Boolean) ?? [],
           expires_at: nextExpiresAt,

@@ -66,11 +66,15 @@ Undo's Gmail MVP uses Supabase Edge Functions so OAuth tokens stay off the clien
    - `GOOGLE_OAUTH_CLIENT_SECRET`
    - `GOOGLE_OAUTH_REDIRECT_URI`
    - `APP_PUBLIC_URL`
+   - `GMAIL_TOKEN_ENCRYPTION_KEY`
 5. Deploy these functions:
    - `gmail-authorize`
    - `gmail-callback`
    - `gmail-sync`
    - `gmail-disconnect`
+
+`GMAIL_TOKEN_ENCRYPTION_KEY` must be a server-only 32-byte key, base64/base64url or 64-character hex.
+Generate one with `openssl rand -base64 32` and store it as a Supabase Edge Function secret.
 
 The Gmail scope for this MVP is read-only and Undo still sends every match through review before anything is kept.
 

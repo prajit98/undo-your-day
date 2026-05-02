@@ -3,6 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
 import { revokeGoogleToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
+import { decryptGmailRefreshToken } from "../_shared/token-crypto.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -23,7 +24,14 @@ Deno.serve(async (req) => {
       throw new Error(tokenError.message);
     }
 
-    const tokenToRevoke = tokenRow?.refresh_token ?? tokenRow?.access_token;
+    let refreshTokenToRevoke: string | null = null;
+    try {
+      refreshTokenToRevoke = await decryptGmailRefreshToken(tokenRow?.refresh_token);
+    } catch {
+      // Disconnect should still remove local state even if token decryption is unavailable.
+    }
+
+    const tokenToRevoke = refreshTokenToRevoke ?? tokenRow?.access_token;
     if (tokenToRevoke) {
       try {
         await revokeGoogleToken(tokenToRevoke);

@@ -4,6 +4,11 @@ import { buildSearchQueries, messageToCandidate, type Candidate, type GmailCateg
 import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
 import { refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
+import {
+  decryptGmailRefreshToken,
+  encryptGmailRefreshToken,
+  isEncryptedGmailRefreshToken,
+} from "../_shared/token-crypto.ts";
 
 const GMAIL_API_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const AUTO_CATEGORIES = new Set(["trial", "renewal", "return", "bill"]);
@@ -277,6 +282,23 @@ async function getMessage(accessToken: string, messageId: string) {
 async function resolveAccessToken(userId: string, tokenRow: StoredTokenRow, admin = createAdminClient()): Promise<AccessTokenResult> {
   const expiresAt = tokenRow.expires_at ? new Date(tokenRow.expires_at).getTime() : 0;
 
+  if (tokenRow.refresh_token && !isEncryptedGmailRefreshToken(tokenRow.refresh_token)) {
+    const { error } = await admin.from("gmail_tokens").update({
+      refresh_token: await encryptGmailRefreshToken(tokenRow.refresh_token),
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId);
+
+    if (error) {
+      throw new SyncError({
+        message: error.message,
+        stage: "token_security",
+        code: "gmail_refresh_token_encrypt_failed",
+        status: 500,
+        details: { userId },
+      });
+    }
+  }
+
   if (tokenRow.access_token && expiresAt > Date.now() + 60_000) {
     logSyncEvent("log", "using_stored_access_token", { userId, expiresAt: tokenRow.expires_at });
     return {
@@ -287,7 +309,9 @@ async function resolveAccessToken(userId: string, tokenRow: StoredTokenRow, admi
     };
   }
 
-  if (!tokenRow.refresh_token) {
+  const refreshToken = await decryptGmailRefreshToken(tokenRow.refresh_token);
+
+  if (!refreshToken) {
     throw new SyncError({
       message: "Reconnect Gmail to keep importing real matches.",
       stage: "token_refresh",
@@ -301,7 +325,7 @@ async function resolveAccessToken(userId: string, tokenRow: StoredTokenRow, admi
 
   let refreshed;
   try {
-    refreshed = await refreshAccessToken(tokenRow.refresh_token);
+    refreshed = await refreshAccessToken(refreshToken);
   } catch (error) {
     throw new SyncError({
       message: error instanceof Error ? error.message : "Could not refresh Gmail access.",
@@ -328,6 +352,7 @@ async function resolveAccessToken(userId: string, tokenRow: StoredTokenRow, admi
 
   const { error } = await admin.from("gmail_tokens").update({
     access_token: refreshed.access_token,
+    refresh_token: await encryptGmailRefreshToken(refreshToken),
     token_type: refreshed.token_type ?? "Bearer",
     scope: refreshed.scope?.split(/\s+/).filter(Boolean) ?? [],
     expires_at: nextExpiresAt,

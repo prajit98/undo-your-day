@@ -6,6 +6,7 @@ import {
   getGoogleOAuthConfig,
 } from "../_shared/google.ts";
 import { createAdminClient } from "../_shared/supabase.ts";
+import { decryptGmailRefreshToken, encryptGmailRefreshToken } from "../_shared/token-crypto.ts";
 
 function redirectTo(path: string, params?: Record<string, string>) {
   const { publicAppUrl } = getGoogleOAuthConfig();
@@ -70,7 +71,10 @@ Deno.serve(async (req) => {
   try {
     const tokens = await exchangeCodeForTokens(code);
     const accessToken = tokens.access_token;
-    const refreshToken = tokens.refresh_token ?? pendingState.refresh_token ?? null;
+    const existingRefreshToken = await decryptGmailRefreshToken(
+      typeof pendingState.refresh_token === "string" ? pendingState.refresh_token : null,
+    );
+    const refreshToken = tokens.refresh_token ?? existingRefreshToken;
 
     if (!accessToken) {
       throw new Error("Google did not return an access token.");
@@ -101,11 +105,10 @@ Deno.serve(async (req) => {
       throw new Error(connectionError.message);
     }
 
-    // TODO: Encrypt stored Gmail refresh tokens at rest before broader rollout.
     const { error: tokenError } = await admin.from("gmail_tokens").upsert({
       user_id: pendingState.user_id,
       access_token: accessToken,
-      refresh_token: refreshToken,
+      refresh_token: await encryptGmailRefreshToken(refreshToken),
       scope,
       token_type: tokens.token_type ?? "Bearer",
       expires_at: expiresAtIso,

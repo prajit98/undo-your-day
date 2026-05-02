@@ -13,6 +13,7 @@ Before launch:
 - enable email/password auth
 - set the production environment variables from `.env.example`
 - set the production Edge Function secrets from `supabase/functions/.env.example`
+- set `GMAIL_TOKEN_ENCRYPTION_KEY` before deploying Gmail functions
 - verify RLS policies in production
 - turn on database backups
 
@@ -20,6 +21,10 @@ Do not ship with:
 
 - `VITE_USE_LOCAL_ADAPTER=true`
 - missing Supabase keys
+- missing `GMAIL_TOKEN_ENCRYPTION_KEY` once Gmail is enabled
+
+Generate `GMAIL_TOKEN_ENCRYPTION_KEY` with `openssl rand -base64 32`.
+Existing plaintext Gmail refresh tokens are still readable for rollout safety, but new OAuth writes and successful refreshes store the encrypted `enc:v1:` format.
 
 ## 2. Native shell
 
