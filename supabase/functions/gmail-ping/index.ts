@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 import { refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
 
@@ -8,6 +8,10 @@ const GMAIL_LIST_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
 const GMAIL_LIST_MAX_RESULTS = 2;
 const GMAIL_LIST_QUERY = "newer_than:14d";
 const DIAGNOSTIC_VERSION = "gmail-ping-routing-v2";
+const gmailPingCorsHeaders = {
+  ...corsHeaders,
+  "Access-Control-Allow-Headers": `${corsHeaders["Access-Control-Allow-Headers"]}, x-gmail-ping-phase`,
+};
 
 type PingPhase = "auth" | "token" | "refresh" | "list";
 type RequestShape = ReturnType<typeof readRequestShape>;
@@ -21,9 +25,10 @@ type TokenRow = {
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, {
     status,
-    headers: withCorsHeaders({
+    headers: {
+      ...gmailPingCorsHeaders,
       "Content-Type": "application/json",
-    }),
+    },
   });
 }
 
@@ -91,7 +96,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: gmailPingCorsHeaders });
   }
 
   try {
