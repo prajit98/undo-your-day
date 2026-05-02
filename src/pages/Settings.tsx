@@ -39,6 +39,8 @@ type GmailPingResult = Record<string, unknown> & {
   message?: string;
 };
 
+type GmailPingMode = "auth" | "token" | "refresh";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -234,7 +236,7 @@ async function runDirectGmailDiagnostic() {
   }
 }
 
-async function runDirectGmailPing(includeTokenLookup = false) {
+async function runDirectGmailPing(mode: GmailPingMode = "auth") {
   const tokenResult = readDiagnosticAccessToken();
   if (!tokenResult.accessToken) {
     return {
@@ -245,7 +247,7 @@ async function runDirectGmailPing(includeTokenLookup = false) {
       requestId: "local",
       details: {
         directFetch: true,
-        includeTokenLookup,
+        mode,
         ...tokenResult.details,
       },
       timestamp: new Date().toISOString(),
@@ -262,7 +264,7 @@ async function runDirectGmailPing(includeTokenLookup = false) {
         Authorization: `Bearer ${tokenResult.accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(includeTokenLookup ? { includeTokenLookup: true } : {}),
+      body: JSON.stringify(mode === "auth" ? {} : { phase: mode }),
       signal: controller.signal,
     });
 
@@ -282,7 +284,7 @@ async function runDirectGmailPing(includeTokenLookup = false) {
         details: {
           ...(isRecord(payload.details) ? payload.details : {}),
           directFetch: true,
-          includeTokenLookup,
+          mode,
           responseOk: response.ok,
           ...tokenResult.details,
         },
@@ -297,7 +299,7 @@ async function runDirectGmailPing(includeTokenLookup = false) {
       requestId: "local",
       details: {
         directFetch: true,
-        includeTokenLookup,
+        mode,
         responseOk: response.ok,
         status: response.status,
         rawPayload: payload,
@@ -320,7 +322,7 @@ async function runDirectGmailPing(includeTokenLookup = false) {
       requestId: "local",
       details: {
         directFetch: true,
-        includeTokenLookup,
+        mode,
         errorMessage: error instanceof Error ? error.message : "Unknown ping error.",
         ...tokenResult.details,
       },
@@ -341,7 +343,7 @@ const Settings = () => {
   const [runningGmailDiagnostic, setRunningGmailDiagnostic] = useState(false);
   const [gmailDiagnostic, setGmailDiagnostic] = useState<GmailDiagnosticResult | null>(null);
   const [runningGmailPing, setRunningGmailPing] = useState(false);
-  const [gmailPingMode, setGmailPingMode] = useState<"auth" | "token" | null>(null);
+  const [gmailPingMode, setGmailPingMode] = useState<GmailPingMode | null>(null);
   const [gmailPing, setGmailPing] = useState<GmailPingResult | null>(null);
   const [gmailActionError, setGmailActionError] = useState<string | null>(null);
 
@@ -553,20 +555,24 @@ const Settings = () => {
     }
   };
 
-  const runGmailPing = async (includeTokenLookup = false) => {
+  const runGmailPing = async (mode: GmailPingMode = "auth") => {
     setRunningGmailPing(true);
-    setGmailPingMode(includeTokenLookup ? "token" : "auth");
+    setGmailPingMode(mode);
     setGmailActionError(null);
     setGmailDiagnostic(null);
     setGmailPing(null);
 
     try {
-      const result = await runDirectGmailPing(includeTokenLookup);
+      const result = await runDirectGmailPing(mode);
       setGmailPing(result);
       if (result.success) {
-        toast.success(includeTokenLookup
-          ? "Gmail token check finished."
-          : "Gmail ping reached the isolated function.");
+        toast.success(
+          mode === "refresh"
+            ? "Gmail refresh check finished."
+            : mode === "token"
+              ? "Gmail token check finished."
+              : "Gmail ping reached the isolated function.",
+        );
       } else {
         toast.error(`Gmail ping stopped at ${result.stage ?? "unknown"}.`);
       }
@@ -578,7 +584,7 @@ const Settings = () => {
         code: "gmail_ping_failed",
         message,
         requestId: "local",
-        details: { directFetch: true, includeTokenLookup },
+        details: { directFetch: true, mode },
         timestamp: new Date().toISOString(),
       });
       toast.error("Undo could not run Gmail ping.");
@@ -750,11 +756,18 @@ const Settings = () => {
                 {runningGmailPing && gmailPingMode === "auth" ? "Running ping..." : "Run Gmail ping"}
               </button>
               <button
-                onClick={() => void runGmailPing(true)}
+                onClick={() => void runGmailPing("token")}
                 disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
                 className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
               >
                 {runningGmailPing && gmailPingMode === "token" ? "Checking token..." : "Run Gmail token check"}
+              </button>
+              <button
+                onClick={() => void runGmailPing("refresh")}
+                disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
+                className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
+              >
+                {runningGmailPing && gmailPingMode === "refresh" ? "Checking refresh..." : "Run Gmail refresh check"}
               </button>
               <button
                 onClick={() => void disconnectGmail()}
