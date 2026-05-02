@@ -5,7 +5,7 @@ import { UndoItem } from "@/lib/undo-data";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "./CategoryBadge";
-import { urgencyFor, shortDue } from "@/lib/urgency";
+import { feedTimingFor, urgencyFor, shortDue } from "@/lib/urgency";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -21,11 +21,12 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
   const { isPremium, registerReminder } = usePremium();
   const [exiting, setExiting] = useState(false);
   const urgency = urgencyFor(item.category, item.dueAt);
-  const isCritical = emphasis === "auto" && urgency.level === "critical";
-  const isFixToday = emphasis === "auto" && urgency.level === "today";
-  const showReminderPlan = emphasis === "auto" && urgency.level !== "coming";
-  const primaryActionLabel = isCritical ? "Fix now" : isFixToday ? "Fix today" : "Undo now";
-  const urgencyChipLabel = isCritical ? "Critical" : isFixToday ? "Fix today" : urgency.label;
+  const timing = feedTimingFor(item.dueAt);
+  const isCritical = emphasis === "auto" && (urgency.level === "critical" || timing.level === "overdue");
+  const isDueToday = emphasis === "auto" && timing.level === "today";
+  const showReminderPlan = emphasis === "auto" && timing.level !== "later";
+  const primaryActionLabel = "Mark handled";
+  const urgencyChipLabel = timing.chipLabel;
 
   const handle = (action: () => Promise<void>, label: string) => {
     setExiting(true);
@@ -48,7 +49,7 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
         aria-hidden
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
-          isCritical ? "from-critical/8" : isFixToday ? "from-primary/8" : "from-primary/5",
+          isCritical ? "from-critical/8" : isDueToday ? "from-primary/8" : "from-primary/5",
         )}
       />
       <div className="flex items-center justify-between gap-3">
@@ -58,7 +59,7 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
               isCritical
                 ? "bg-critical-soft text-critical"
-                : isFixToday
+                : isDueToday
                   ? "bg-primary-soft text-primary"
                   : "bg-surface text-foreground/65",
             )}
@@ -160,8 +161,8 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
           <Clock className="h-4 w-4" strokeWidth={1.7} />
         </button>
         <button
-          onClick={() => handle(() => setStatus(item.id, "done"), "Marked done")}
-          aria-label="Done"
+          onClick={() => handle(() => setStatus(item.id, "done"), "Marked handled")}
+          aria-label="Mark handled"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
         >
           <Check className="h-4 w-4" strokeWidth={1.7} />

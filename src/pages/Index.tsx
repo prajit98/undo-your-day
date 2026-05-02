@@ -6,7 +6,7 @@ import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
 import { FeedSummary } from "@/components/FeedSummary";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
-import { urgencyFor } from "@/lib/urgency";
+import { feedTimingFor } from "@/lib/urgency";
 
 const Index = () => {
   const { items, active, onboarding } = useUndo();
@@ -14,9 +14,9 @@ const Index = () => {
 
   const { critical, fixToday, upcoming } = useMemo(() => {
     const sorted = [...active].sort((a, b) => +new Date(a.dueAt) - +new Date(b.dueAt));
-    const critical = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "critical");
-    const fixToday = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "today");
-    const upcoming = sorted.filter((i) => urgencyFor(i.category, i.dueAt).level === "coming");
+    const critical = sorted.filter((i) => feedTimingFor(i.dueAt).level === "overdue");
+    const fixToday = sorted.filter((i) => feedTimingFor(i.dueAt).level === "today");
+    const upcoming = sorted.filter((i) => !["overdue", "today"].includes(feedTimingFor(i.dueAt).level));
     return { critical, fixToday, upcoming };
   }, [active]);
 
@@ -31,7 +31,7 @@ const Index = () => {
 
   const headline =
     todayCount > 0
-      ? `${todayCount} thing${todayCount > 1 ? "s still have" : " still has"} an easy fix today.`
+      ? `${todayCount} thing${todayCount > 1 ? "s need" : " needs"} attention today.`
       : "Nothing urgent. Undo is keeping a quiet eye on things.";
 
   return (
@@ -52,7 +52,7 @@ const Index = () => {
           </span>
         </div>
         <h1 className="mt-4 max-w-[11ch] whitespace-pre-line font-display text-[40px] leading-[1.03] tracking-snug text-foreground">
-          {todayCount > 0 ? "A few things\nto fix today." : "Quiet today.\nNicely done."}
+          {todayCount > 0 ? "A few things\nneed attention." : "Quiet today.\nNicely done."}
         </h1>
         <p className="mt-3 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           {headline}
@@ -65,11 +65,11 @@ const Index = () => {
       {fixTodayItems.length > 0 && (
         <section className="mt-6 px-5">
           <SectionHeader
-            kicker="Fix today"
+            kicker="Needs attention"
             sub={
               critical.length > 0
-                ? "A few windows are getting tight. Handle these today while there is still an easy fix."
-                : "Still enough time to fix these today before they turn expensive or awkward."
+                ? "Some deadlines have already arrived. Review these first."
+                : "Due today. Review these before the window closes."
             }
           />
           <div className="mt-3 space-y-3">
