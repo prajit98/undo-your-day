@@ -64,6 +64,55 @@ const MAX_MIME_PARTS_TO_SCAN = 80;
 const MAX_BODY_DATA_CHARS = 120_000;
 const MAX_BODY_TEXT_CHARS = 12_000;
 const ROLL_FORWARD_PAST_DATE_MS = 30 * 86400000;
+const GENERIC_MERCHANT_WORDS = new Set([
+  "account",
+  "accounts",
+  "automated",
+  "bill",
+  "billing",
+  "customer",
+  "donotreply",
+  "email",
+  "free",
+  "hello",
+  "help",
+  "hi",
+  "info",
+  "invoice",
+  "mail",
+  "membership",
+  "notification",
+  "notifications",
+  "noreply",
+  "no reply",
+  "order",
+  "payment",
+  "receipt",
+  "reminder",
+  "return",
+  "returns",
+  "statement",
+  "subscription",
+  "support",
+  "team",
+  "trial",
+  "update",
+  "your",
+]);
+const CONSUMER_EMAIL_DOMAINS = new Set([
+  "aol",
+  "gmail",
+  "googlemail",
+  "hotmail",
+  "icloud",
+  "live",
+  "me",
+  "msn",
+  "outlook",
+  "proton",
+  "protonmail",
+  "yahoo",
+]);
 
 // TODO: Replace these general keyword rules with merchant-specific parsing once
 // we have real inbox samples from early testers.
@@ -299,6 +348,88 @@ function getSenderLabel(rawFrom: string) {
   return rawFrom;
 }
 
+function getSenderDomainLabel(rawFrom: string) {
+  const emailMatch = rawFrom.match(/<?([^<>\s]+@[^<>\s]+)>?/);
+  const domain = emailMatch?.[1]?.split("@")[1]?.toLowerCase();
+  if (!domain) return "";
+
+  const domainParts = domain.split(".").filter(Boolean);
+  const domainLabel = domainParts.length >= 2 ? domainParts[domainParts.length - 2] : domainParts[0];
+  if (!domainLabel || CONSUMER_EMAIL_DOMAINS.has(domainLabel)) return "";
+
+  return domainLabel;
+}
+
+function toDisplayLabel(value: string) {
+  const normalized = value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+(?:via|from)\s+.+$/i, "")
+    .replace(/\b(?:inc|llc|ltd|limited|corp|corporation|co)\.?$/i, "")
+    .replace(/[^\p{L}\p{N}&+'. ]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return "";
+
+  const lower = normalized.toLowerCase();
+  const words = lower.split(/\s+/);
+  if (GENERIC_MERCHANT_WORDS.has(lower) || words.some((word) => GENERIC_MERCHANT_WORDS.has(word))) {
+    return "";
+  }
+
+  if (/^[a-z0-9 ]+$/.test(normalized) || /^[A-Z0-9 ]+$/.test(normalized)) {
+    return normalized
+      .split(" ")
+      .map((word) => (word.length <= 2 ? word.toUpperCase() : `${word[0].toUpperCase()}${word.slice(1).toLowerCase()}`))
+      .join(" ");
+  }
+
+  return normalized;
+}
+
+function extractMerchantFromText(text: string) {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return "";
+
+  const merchantPattern = String.raw`([A-Z][\p{L}\p{N}&+'.+-]*(?:\s+[A-Z][\p{L}\p{N}&+'.+-]*){0,2})`;
+  const patterns = [
+    new RegExp(String.raw`\b(?:[Yy]our\s+)?${merchantPattern}\s+(?:free\s+trial|trial|subscription|membership|renewal|invoice|bill|statement|return)\b`, "u"),
+    new RegExp(String.raw`\b(?:invoice|bill|statement|payment|amount)\s+(?:from|for)\s+${merchantPattern}\b`, "u"),
+    new RegExp(String.raw`\b(?:return|refund)\s+(?:from|for|to)\s+${merchantPattern}\b`, "u"),
+    new RegExp(String.raw`\b${merchantPattern}\s+(?:renews|will\s+renew|auto-renews|trial\s+ends|trial\s+converts|is\s+due|payment\s+is\s+due)\b`, "u"),
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    const label = toDisplayLabel(match?.[1] ?? "");
+    if (label) return label;
+  }
+
+  return "";
+}
+
+function chooseMerchantLabel(input: {
+  bodyText: string;
+  rawFrom: string;
+  senderLabel: string;
+  snippet: string;
+  subject: string;
+}) {
+  const fromSubject = extractMerchantFromText(input.subject);
+  if (fromSubject) return fromSubject;
+
+  const fromSnippet = extractMerchantFromText(input.snippet);
+  if (fromSnippet) return fromSnippet;
+
+  const fromDomain = toDisplayLabel(getSenderDomainLabel(input.rawFrom));
+  const fromSender = fromDomain ? toDisplayLabel(input.senderLabel) : "";
+  if (fromSender) return fromSender;
+
+  if (fromDomain) return fromDomain;
+
+  return extractMerchantFromText(input.bodyText);
+}
+
 function extractAmount(text: string) {
   const matches = [...text.matchAll(/([$£€]) ?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/g)];
   if (matches.length === 0) return undefined;
@@ -498,57 +629,83 @@ function shortDue(dateIso: string) {
   });
 }
 
-function buildTitle(category: GmailCategory, source: string, dueAt: string, amount?: string) {
-  const dueText = shortDue(dueAt);
+function duePhrase(dateIso: string) {
+  const dueText = shortDue(dateIso);
+  return /^(today|tomorrow|in )/.test(dueText) ? dueText : `on ${dueText}`;
+}
+
+function buildTitle(category: GmailCategory, merchant: string, dueAt: string) {
+  const timing = duePhrase(dueAt);
 
   if (category === "trial") {
-    return amount
-      ? `Cancel ${dueText} to avoid ${amount}`
-      : `A trial may convert ${dueText}`;
+    return merchant
+      ? `${merchant} trial may convert ${timing}`
+      : `A trial may convert ${timing}`;
   }
 
   if (category === "renewal") {
-    return source
-      ? `${source} may renew ${dueText}`
-      : `A renewal may be close ${dueText}`;
+    return merchant
+      ? `${merchant} may renew ${timing}`
+      : `A renewal may be due ${timing}`;
+  }
+
+  if (category === "return") {
+    return merchant
+      ? `${merchant} return window may close ${timing}`
+      : `A return window may close ${timing}`;
+  }
+
+  return merchant
+    ? `${merchant} may be due ${timing}`
+    : `A bill may be due ${timing}`;
+}
+
+function buildDetail(category: GmailCategory, amount?: string) {
+  if (category === "trial") {
+    return amount
+      ? `Review before it turns into a ${amount} charge.`
+      : "Review before it turns into a charge.";
+  }
+
+  if (category === "renewal") {
+    return amount
+      ? `Review before another ${amount} payment goes through.`
+      : "Review before another payment goes through.";
   }
 
   if (category === "return") {
     return amount
-      ? `A return window may close ${dueText} for ${amount}`
-      : `A return window may close ${dueText}`;
+      ? `Keep this if you still have time to send it back and protect ${amount}.`
+      : "Keep this if you still have time to send it back.";
   }
 
   return amount
-    ? `A bill may be due ${dueText} for ${amount}`
-    : `A bill may be due ${dueText}`;
-}
-
-function buildDetail(subject: string, snippet: string, source: string) {
-  const parts = [subject, snippet]
-    .map((value) => normalizeWhitespace(value))
-    .filter(Boolean);
-
-  const joined = parts.join(" · ");
-  if (joined) {
-    return joined.length > 140 ? `${joined.slice(0, 137)}...` : joined;
-  }
-
-  return source ? `From ${source}` : undefined;
+    ? `Review before the ${amount} payment is missed.`
+    : "Review before a payment is missed.";
 }
 
 function buildMessageContext(message: GmailMessage) {
   const subject = getHeader(message.payload, "Subject");
   const from = getHeader(message.payload, "From");
-  const source = getSenderLabel(from);
+  const senderLabel = getSenderLabel(from);
   const snippet = normalizeWhitespace(message.snippet ?? "");
   const bodyText = normalizeWhitespace(extractBodyText(message.payload));
+  const domainLabel = toDisplayLabel(getSenderDomainLabel(from));
+  const safeSenderLabel = (domainLabel ? toDisplayLabel(senderLabel) : "") || domainLabel;
+  const merchant = chooseMerchantLabel({
+    bodyText,
+    rawFrom: from,
+    senderLabel,
+    snippet,
+    subject,
+  });
   const rawText = `${subject} ${snippet} ${bodyText}`;
   const searchableText = normalizeWhitespace(rawText.toLowerCase());
 
   return {
     subject,
-    source,
+    merchant,
+    source: merchant || safeSenderLabel || "Gmail",
     snippet,
     bodyText,
     rawText,
@@ -575,10 +732,8 @@ export function buildSearchQueries(categories: GmailCategory[]) {
 
 export function messageToCandidateWithTrace(message: GmailMessage, hint: GmailCategory, allowed: GmailCategory[]) {
   const {
-    subject,
+    merchant,
     source,
-    snippet,
-    bodyText,
     rawText,
     searchableText,
   } = buildMessageContext(message);
@@ -593,8 +748,8 @@ export function messageToCandidateWithTrace(message: GmailMessage, hint: GmailCa
       const amountValue = parsedAmount?.value;
       const amountCurrency = parsedAmount?.currency;
       const amount = formatAmount(amountValue, amountCurrency);
-      const title = buildTitle(category, source, dueAt, amount);
-      const detail = buildDetail(subject, snippet || bodyText.slice(0, 120), source);
+      const title = buildTitle(category, merchant, dueAt);
+      const detail = buildDetail(category, amount);
       const daysUntilDue = Math.round((new Date(dueAt).getTime() - Date.now()) / 86400000);
 
       candidate = {
@@ -607,7 +762,7 @@ export function messageToCandidateWithTrace(message: GmailMessage, hint: GmailCa
         dueAt,
         amountValue,
         amount,
-        merchant: source,
+        merchant: merchant || source,
         currency: amountCurrency,
         urgent: daysUntilDue <= 2,
       } satisfies Candidate;
