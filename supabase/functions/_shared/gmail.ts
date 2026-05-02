@@ -40,6 +40,24 @@ export interface GmailMessage {
   payload?: GmailMessagePart;
 }
 
+export interface GmailCandidateTrace {
+  sourceMessageId: string;
+  hint: GmailCategory;
+  candidateCreated: boolean;
+  candidateCategory?: GmailCategory;
+  candidateDueAt?: string;
+  candidateAmount?: string;
+  candidateCurrency?: string;
+  searchableTextLength: number;
+  flags: {
+    containsBrightNet: boolean;
+    containsInvoice: boolean;
+    containsDueOn: boolean;
+    containsPoundAmount: boolean;
+    containsBillKeyword: boolean;
+  };
+}
+
 const AUTO_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
 const MAX_MIME_PART_DEPTH = 12;
 const MAX_MIME_PARTS_TO_SCAN = 80;
@@ -519,6 +537,25 @@ function buildDetail(subject: string, snippet: string, source: string) {
   return source ? `From ${source}` : undefined;
 }
 
+function buildMessageContext(message: GmailMessage) {
+  const subject = getHeader(message.payload, "Subject");
+  const from = getHeader(message.payload, "From");
+  const source = getSenderLabel(from);
+  const snippet = normalizeWhitespace(message.snippet ?? "");
+  const bodyText = normalizeWhitespace(extractBodyText(message.payload));
+  const rawText = `${subject} ${snippet} ${bodyText}`;
+  const searchableText = normalizeWhitespace(rawText.toLowerCase());
+
+  return {
+    subject,
+    source,
+    snippet,
+    bodyText,
+    rawText,
+    searchableText,
+  };
+}
+
 export function buildSearchQueries(categories: GmailCategory[]) {
   const allowed = categories.filter((category): category is GmailCategory => AUTO_CATEGORIES.includes(category));
   const queries: { category: GmailCategory; q: string; maxResults?: number }[] = [];
@@ -536,44 +573,68 @@ export function buildSearchQueries(categories: GmailCategory[]) {
   return queries;
 }
 
-export function messageToCandidate(message: GmailMessage, hint: GmailCategory, allowed: GmailCategory[]) {
-  const subject = getHeader(message.payload, "Subject");
-  const from = getHeader(message.payload, "From");
-  const source = getSenderLabel(from);
-  const snippet = normalizeWhitespace(message.snippet ?? "");
-  const bodyText = normalizeWhitespace(extractBodyText(message.payload));
-  const searchableText = normalizeWhitespace(`${subject} ${snippet} ${bodyText}`.toLowerCase());
+export function messageToCandidateWithTrace(message: GmailMessage, hint: GmailCategory, allowed: GmailCategory[]) {
+  const {
+    subject,
+    source,
+    snippet,
+    bodyText,
+    rawText,
+    searchableText,
+  } = buildMessageContext(message);
+  let candidate: Candidate | null = null;
 
-  if (!searchableText) {
-    return null;
+  if (searchableText) {
+    const category = chooseCategory(searchableText, hint, allowed);
+
+    if (category) {
+      const dueAt = extractDueDate(rawText, message.internalDate, category);
+      const parsedAmount = extractAmount(rawText);
+      const amountValue = parsedAmount?.value;
+      const amountCurrency = parsedAmount?.currency;
+      const amount = formatAmount(amountValue, amountCurrency);
+      const title = buildTitle(category, source, dueAt, amount);
+      const detail = buildDetail(subject, snippet || bodyText.slice(0, 120), source);
+      const daysUntilDue = Math.round((new Date(dueAt).getTime() - Date.now()) / 86400000);
+
+      candidate = {
+        id: `gmail:${message.id}`,
+        source: "gmail",
+        sourceMessageId: message.id,
+        title,
+        detail,
+        category,
+        dueAt,
+        amountValue,
+        amount,
+        merchant: source,
+        currency: amountCurrency,
+        urgent: daysUntilDue <= 2,
+      } satisfies Candidate;
+    }
   }
 
-  const category = chooseCategory(searchableText, hint, allowed);
-  if (!category) {
-    return null;
-  }
-
-  const dueAt = extractDueDate(`${subject} ${snippet} ${bodyText}`, message.internalDate, category);
-  const parsedAmount = extractAmount(`${subject} ${snippet} ${bodyText}`);
-  const amountValue = parsedAmount?.value;
-  const amountCurrency = parsedAmount?.currency;
-  const amount = formatAmount(amountValue, amountCurrency);
-  const title = buildTitle(category, source, dueAt, amount);
-  const detail = buildDetail(subject, snippet || bodyText.slice(0, 120), source);
-  const daysUntilDue = Math.round((new Date(dueAt).getTime() - Date.now()) / 86400000);
-
-  return {
-    id: `gmail:${message.id}`,
-    source: "gmail",
+  const trace: GmailCandidateTrace = {
     sourceMessageId: message.id,
-    title,
-    detail,
-    category,
-    dueAt,
-    amountValue,
-    amount,
-    merchant: source,
-    currency: amountCurrency,
-    urgent: daysUntilDue <= 2,
-  } satisfies Candidate;
+    hint,
+    candidateCreated: Boolean(candidate),
+    candidateCategory: candidate?.category,
+    candidateDueAt: candidate?.dueAt,
+    candidateAmount: candidate?.amount,
+    candidateCurrency: candidate?.currency,
+    searchableTextLength: searchableText.length,
+    flags: {
+      containsBrightNet: searchableText.includes("brightnet"),
+      containsInvoice: searchableText.includes("invoice"),
+      containsDueOn: searchableText.includes("due on"),
+      containsPoundAmount: /£\s?\d/.test(rawText),
+      containsBillKeyword: CATEGORY_KEYWORDS.bill.some((keyword) => searchableText.includes(keyword)),
+    },
+  };
+
+  return { candidate, trace };
+}
+
+export function messageToCandidate(message: GmailMessage, hint: GmailCategory, allowed: GmailCategory[]) {
+  return messageToCandidateWithTrace(message, hint, allowed).candidate;
 }

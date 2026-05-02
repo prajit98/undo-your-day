@@ -1,6 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import { buildSearchQueries, messageToCandidate, type Candidate, type GmailCategory, type GmailMessage } from "../_shared/gmail.ts";
+import {
+  buildSearchQueries,
+  messageToCandidate,
+  messageToCandidateWithTrace,
+  type Candidate,
+  type GmailCandidateTrace,
+  type GmailCategory,
+  type GmailMessage,
+} from "../_shared/gmail.ts";
 import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
 import { refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
@@ -128,6 +136,13 @@ function jsonResponse(body: unknown, status = 200) {
 
 function logSyncEvent(level: "log" | "warn" | "error", event: string, details?: Record<string, unknown>) {
   console[level](`[Undo Gmail Sync] ${event}`, details ?? {});
+}
+
+function shouldTraceInvoiceMessage(trace: GmailCandidateTrace) {
+  return trace.hint === "bill"
+    || trace.candidateCategory === "bill"
+    || trace.flags.containsBrightNet
+    || trace.flags.containsInvoice;
 }
 
 function selectMessageIdsForFirstPass(
@@ -754,7 +769,12 @@ async function fetchPendingCandidateItems(userId: string, admin = createAdminCli
   return (data ?? []).map((row) => candidateItemToCandidate(row as CandidateItemRow));
 }
 
-async function persistCandidateItems(userId: string, candidates: Candidate[], admin = createAdminClient()) {
+async function persistCandidateItems(
+  userId: string,
+  candidates: Candidate[],
+  admin = createAdminClient(),
+  traceContext?: { requestId: string },
+) {
   const sourceMessageIds = Array.from(
     new Set(
       candidates
@@ -793,6 +813,19 @@ async function persistCandidateItems(userId: string, candidates: Candidate[], ad
       },
     ]),
   );
+  const suppressedByStatus = candidates
+    .filter((candidate) => {
+      const sourceMessageId = candidate.sourceMessageId;
+      if (!sourceMessageId) return false;
+      const existing = existingByMessage.get(sourceMessageId);
+      return Boolean(existing && existing.status !== "pending");
+    })
+    .map((candidate) => ({
+      sourceMessageId: candidate.sourceMessageId,
+      category: candidate.category,
+      status: existingByMessage.get(candidate.sourceMessageId ?? "")?.status,
+    }));
+
   const now = new Date().toISOString();
   const upsertRows = candidates
     .filter((candidate) => {
@@ -822,6 +855,23 @@ async function persistCandidateItems(userId: string, candidates: Candidate[], ad
       };
     });
 
+  if (traceContext && candidates.some((candidate) => candidate.category === "bill")) {
+    logSyncEvent("log", "bill_invoice_persistence_trace", {
+      requestId: traceContext.requestId,
+      detectedBillCandidateIds: candidates
+        .filter((candidate) => candidate.category === "bill")
+        .map((candidate) => candidate.sourceMessageId),
+      existingStatuses: Array.from(existingByMessage.entries()).map(([sourceMessageId, existing]) => ({
+        sourceMessageId,
+        status: existing.status,
+      })),
+      upsertBillCandidateIds: upsertRows
+        .filter((row) => row.category === "bill")
+        .map((row) => row.source_message_id),
+      suppressedByStatus,
+    });
+  }
+
   if (upsertRows.length > 0) {
     const { error } = await admin
       .from("candidate_items")
@@ -843,7 +893,19 @@ async function persistCandidateItems(userId: string, candidates: Candidate[], ad
     }
   }
 
-  return fetchPendingCandidateItems(userId, admin);
+  const pendingCandidates = await fetchPendingCandidateItems(userId, admin);
+
+  if (traceContext && candidates.some((candidate) => candidate.category === "bill")) {
+    logSyncEvent("log", "bill_invoice_pending_output_trace", {
+      requestId: traceContext.requestId,
+      pendingBillCandidateIds: pendingCandidates
+        .filter((candidate) => candidate.category === "bill")
+        .map((candidate) => candidate.sourceMessageId),
+      returnedCandidateCount: pendingCandidates.length,
+    });
+  }
+
+  return pendingCandidates;
 }
 
 Deno.serve(async (req) => {
@@ -935,6 +997,12 @@ Deno.serve(async (req) => {
     const listedMessages: Array<{ id: string; category: GmailCategory }> = [];
     const listedMessageIds = new Set<string>();
     const listFailures: Array<Record<string, unknown>> = [];
+    const invoiceTrace: Record<string, unknown> = {
+      requestId,
+      billQueries: [],
+      selectedBillMessageIds: [],
+      billMessageTraces: [],
+    };
 
     for (const { category, q, maxResults } of searchQueries) {
       try {
@@ -946,6 +1014,15 @@ Deno.serve(async (req) => {
           maxResults: maxResults ?? MAX_RESULTS_PER_QUERY,
           count: ids.length,
         });
+
+        if (category === "bill") {
+          (invoiceTrace.billQueries as Array<Record<string, unknown>>).push({
+            query: q,
+            maxResults: maxResults ?? MAX_RESULTS_PER_QUERY,
+            count: ids.length,
+            messageIds: ids,
+          });
+        }
 
         ids.forEach((id) => {
           if (!listedMessageIds.has(id)) {
@@ -971,6 +1048,10 @@ Deno.serve(async (req) => {
       listedMessages,
       searchQueries.map((query) => query.category),
     );
+    invoiceTrace.selectedBillMessageIds = Array.from(messageIdsByHint.entries())
+      .filter(([, category]) => category === "bill")
+      .map(([messageId]) => messageId);
+    logSyncEvent("log", "bill_invoice_selection_trace", invoiceTrace);
 
     if (messageIdsByHint.size === 0 && listFailures.some((failure) => failure.code === "gmail_rate_limited")) {
       throw new SyncError({
@@ -1004,7 +1085,16 @@ Deno.serve(async (req) => {
     for (const [messageId, hint] of messageIdsByHint.entries()) {
       try {
         const message = await getMessage(accessToken, messageId);
-        const candidate = messageToCandidate(message, hint, categories);
+        const { candidate, trace } = messageToCandidateWithTrace(message, hint, categories);
+
+        if (shouldTraceInvoiceMessage(trace)) {
+          (invoiceTrace.billMessageTraces as GmailCandidateTrace[]).push(trace);
+          logSyncEvent("log", "bill_invoice_message_trace", {
+            requestId,
+            ...trace,
+          });
+        }
+
         if (candidate) {
           candidateResults.push(candidate);
         }
@@ -1052,7 +1142,17 @@ Deno.serve(async (req) => {
       new Map(candidateResults.map((candidate) => [candidate.sourceMessageId, candidate])).values(),
     ).sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
       .slice(0, MAX_CANDIDATES_TO_RETURN);
-    const pendingCandidates = await persistCandidateItems(user.id, deduped, admin);
+    invoiceTrace.detectedBillCandidateIds = candidateResults
+      .filter((candidate) => candidate.category === "bill")
+      .map((candidate) => candidate.sourceMessageId);
+    invoiceTrace.returnedBillCandidateIds = deduped
+      .filter((candidate) => candidate.category === "bill")
+      .map((candidate) => candidate.sourceMessageId);
+    invoiceTrace.detectedCandidateCount = candidateResults.length;
+    invoiceTrace.returnedCandidateCount = deduped.length;
+    logSyncEvent("log", "bill_invoice_candidate_trace", invoiceTrace);
+
+    const pendingCandidates = await persistCandidateItems(user.id, deduped, admin, { requestId });
 
     const { error: updateError } = await admin.from("gmail_connections").update({
       last_synced_at: new Date().toISOString(),
@@ -1079,7 +1179,7 @@ Deno.serve(async (req) => {
       messageFailureCount: messageFailures.length,
     });
 
-    return jsonResponse({ candidates: pendingCandidates });
+    return jsonResponse({ candidates: pendingCandidates, invoiceTrace });
   } catch (error) {
     const failure = buildFailurePayload(error, { requestId, userId, gmailEmail });
     logSyncEvent("error", "sync_failed", failure);
