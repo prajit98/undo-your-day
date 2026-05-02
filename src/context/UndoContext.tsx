@@ -324,7 +324,12 @@ export function UndoProvider({ children }: { children: ReactNode }) {
             status: reminder.status,
             channel: reminder.channel,
           }))
-          .concat(nextReminder),
+          .concat({
+            remindAt: nextReminder.remindAt,
+            reminderType: nextReminder.reminderType,
+            status: nextReminder.status ?? "scheduled",
+            channel: nextReminder.channel ?? "in_app",
+          }),
       );
       return true;
     },
