@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   Mail,
+  Loader2,
 } from "lucide-react";
 import {
   Accordion,
@@ -19,6 +21,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useAuth } from "@/context/AuthContext";
+import { useUndo } from "@/context/UndoContext";
+import { appRepository } from "@/lib/persistence";
+import { toast } from "sonner";
 
 const looksFor = [
   {
@@ -103,8 +109,50 @@ const trustChips = [
   { icon: ShieldCheck, label: "Gmail connected securely" },
 ];
 
+const sectionAnchors = [
+  { id: "looks-for", label: "What Undo looks for" },
+  { id: "boundaries", label: "What Undo does not do" },
+  { id: "review-first", label: "Review-first" },
+  { id: "faq", label: "FAQ" },
+];
+
 export default function Trust() {
   const navigate = useNavigate();
+  const { user, ready } = useAuth();
+  const { gmailConnection } = useUndo();
+  const [connecting, setConnecting] = useState(false);
+
+  const alreadyConnected = Boolean(gmailConnection);
+
+  const handleConnect = async () => {
+    if (!ready) return;
+    if (!user) {
+      // Not signed in — go through auth, which then leads into onboarding/Gmail.
+      navigate("/auth");
+      return;
+    }
+    if (alreadyConnected) {
+      navigate("/settings");
+      return;
+    }
+    try {
+      setConnecting(true);
+      const url = await appRepository.gmail.getAuthorizationUrl({ returnTo: "/settings" });
+      window.location.assign(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Undo could not start Gmail connection.";
+      toast.error(message);
+      setConnecting(false);
+    }
+  };
+
+  const ctaLabel = !ready
+    ? "Loading..."
+    : connecting
+      ? "Opening Gmail..."
+      : alreadyConnected
+        ? "Gmail is connected"
+        : "Connect Gmail";
 
   return (
     <div className="min-h-screen bg-mist">
@@ -141,21 +189,30 @@ export default function Trust() {
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to="/auth"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3 text-[14px] font-medium text-background shadow-soft transition-transform hover:-translate-y-[1px]"
+            <button
+              onClick={() => void handleConnect()}
+              disabled={connecting || !ready}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3 text-[14px] font-medium text-background shadow-soft transition-transform hover:-translate-y-[1px] disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              <Mail className="h-4 w-4" />
-              Connect Gmail
-            </Link>
-            <Link
-              to="/"
+              {connecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              {ctaLabel}
+            </button>
+            <button
+              onClick={() => navigate(-1)}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/80 px-6 py-3 text-[14px] font-medium text-foreground transition-colors hover:bg-card"
             >
-              Learn how it works
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+              <ArrowLeft className="h-4 w-4" />
+              Go back
+            </button>
           </div>
+
+          <p className="mt-4 text-[12px] text-muted-foreground">
+            Read-only Gmail access · You review everything first
+          </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
             {trustChips.map(({ icon: Icon, label }) => (
@@ -168,12 +225,26 @@ export default function Trust() {
               </span>
             ))}
           </div>
+
+          {/* In-page anchors */}
+          <nav className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+            {sectionAnchors.map((s) => (
+              <a
+                key={s.id}
+                href={`#${s.id}`}
+                className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                {s.label}
+              </a>
+            ))}
+          </nav>
         </section>
 
         <Divider />
 
         {/* What Undo looks for */}
         <Section
+          id="looks-for"
           eyebrow="What Undo looks for"
           title="Four things, nothing more."
         >
@@ -201,6 +272,7 @@ export default function Trust() {
 
         {/* What Undo does not do */}
         <Section
+          id="boundaries"
           eyebrow="What Undo does not do"
           title="Clear boundaries, by design."
         >
@@ -266,7 +338,11 @@ export default function Trust() {
         <Divider />
 
         {/* Review-first */}
-        <Section eyebrow="Review-first" title="Nothing becomes active without you.">
+        <Section
+          id="review-first"
+          eyebrow="Review-first"
+          title="Nothing becomes active without you."
+        >
           <div className="overflow-hidden rounded-3xl border border-primary/20 bg-primary-soft/60 p-7 shadow-soft">
             <ol className="space-y-4">
               {[
@@ -296,7 +372,7 @@ export default function Trust() {
         <Divider />
 
         {/* FAQ */}
-        <Section eyebrow="FAQ" title="A few honest questions.">
+        <Section id="faq" eyebrow="FAQ" title="A few honest questions.">
           <div className="rounded-3xl border border-border/70 bg-card px-2 shadow-soft">
             <Accordion type="single" collapsible className="w-full">
               {faqs.map(({ q, a }, i) => (
@@ -328,20 +404,28 @@ export default function Trust() {
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to="/auth"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3 text-[14px] font-medium text-background shadow-soft transition-transform hover:-translate-y-[1px]"
+            <button
+              onClick={() => void handleConnect()}
+              disabled={connecting || !ready}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3 text-[14px] font-medium text-background shadow-soft transition-transform hover:-translate-y-[1px] disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              <Mail className="h-4 w-4" />
-              Connect Gmail
-            </Link>
-            <Link
-              to="/"
+              {connecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              {ctaLabel}
+            </button>
+            <button
+              onClick={() => navigate(-1)}
               className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
             >
-              Back to home
-            </Link>
+              Go back
+            </button>
           </div>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            Read-only Gmail access · You review everything first
+          </p>
         </section>
       </main>
     </div>
@@ -349,16 +433,18 @@ export default function Trust() {
 }
 
 function Section({
+  id,
   eyebrow,
   title,
   children,
 }: {
+  id?: string;
   eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-16 sm:mt-20">
+    <section id={id} className="mt-16 scroll-mt-24 sm:mt-20">
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-primary">
         {eyebrow}
       </p>

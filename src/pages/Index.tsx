@@ -125,13 +125,18 @@ const Index = () => {
               : "Connect Gmail to let Undo look for likely trials, renewals, returns, and bills. You still review everything first."}
           </p>
           {!gmailConnected ? (
-            <Link
-              to="/onboarding"
-              className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
-            >
-              <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
-              Connect Gmail
-            </Link>
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <Link
+                to="/trust"
+                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[12.5px] font-medium text-background"
+              >
+                <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
+                Connect Gmail
+              </Link>
+              <p className="text-[10.5px] text-muted-foreground">
+                See how Undo handles Gmail first · Read-only access
+              </p>
+            </div>
           ) : (
             <Link
               to="/add"

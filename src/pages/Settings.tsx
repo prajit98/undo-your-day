@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound,
 } from "lucide-react";
@@ -298,6 +298,13 @@ const Settings = () => {
               Turn off Gmail
             </button>
           )}
+          <Link
+            to="/trust"
+            className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            How Undo handles Gmail
+          </Link>
         </section>
 
         {isPremium ? (
