@@ -70,7 +70,7 @@ const SEARCH_TERMS: Record<GmailCategory, { query: string; newerThanDays: number
   ],
   bill: [
     {
-      query: `{"payment due" "bill due" "invoice" "statement" "amount due" "due date" "balance due" "past due"}`,
+      query: `{"invoice" "invoice due" "bill due" "payment due" "statement ready" "amount due" "due date" "balance due" "due on" "past due"}`,
       newerThanDays: 120,
     },
   ],
@@ -121,6 +121,7 @@ const CATEGORY_KEYWORDS: Record<GmailCategory, string[]> = {
   bill: [
     "bill",
     "statement",
+    "statement ready",
     "payment due",
     "due date",
     "late fee",

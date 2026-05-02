@@ -130,6 +130,32 @@ function logSyncEvent(level: "log" | "warn" | "error", event: string, details?: 
   console[level](`[Undo Gmail Sync] ${event}`, details ?? {});
 }
 
+function selectMessageIdsForFirstPass(
+  listedMessages: Array<{ id: string; category: GmailCategory }>,
+  queryCategories: GmailCategory[],
+) {
+  const selected = new Map<string, GmailCategory>();
+  const uniqueCategories = Array.from(new Set(queryCategories));
+
+  for (const category of uniqueCategories) {
+    const firstForCategory = listedMessages.find((message) => message.category === category);
+    if (firstForCategory && selected.size < MAX_MESSAGE_IDS_TO_SCAN) {
+      selected.set(firstForCategory.id, firstForCategory.category);
+    }
+  }
+
+  for (const message of listedMessages) {
+    if (selected.size >= MAX_MESSAGE_IDS_TO_SCAN) {
+      break;
+    }
+    if (!selected.has(message.id)) {
+      selected.set(message.id, message.category);
+    }
+  }
+
+  return selected;
+}
+
 function normalizeError(error: unknown): SyncError {
   if (error instanceof SyncError) {
     return error;
@@ -898,7 +924,8 @@ Deno.serve(async (req) => {
       searchQueryCount: searchQueries.length,
     });
 
-    const messageIdsByHint = new Map<string, GmailCategory>();
+    const listedMessages: Array<{ id: string; category: GmailCategory }> = [];
+    const listedMessageIds = new Set<string>();
     const listFailures: Array<Record<string, unknown>> = [];
 
     for (const { category, q } of searchQueries) {
@@ -912,14 +939,11 @@ Deno.serve(async (req) => {
         });
 
         ids.forEach((id) => {
-          if (!messageIdsByHint.has(id) && messageIdsByHint.size < MAX_MESSAGE_IDS_TO_SCAN) {
-            messageIdsByHint.set(id, category);
+          if (!listedMessageIds.has(id)) {
+            listedMessageIds.add(id);
+            listedMessages.push({ id, category });
           }
         });
-
-        if (messageIdsByHint.size >= MAX_MESSAGE_IDS_TO_SCAN) {
-          break;
-        }
       } catch (error) {
         const failure = normalizeError(error);
         const details = {
@@ -933,6 +957,11 @@ Deno.serve(async (req) => {
         logSyncEvent("warn", "list_query_failed", details);
       }
     }
+
+    const messageIdsByHint = selectMessageIdsForFirstPass(
+      listedMessages,
+      searchQueries.map((query) => query.category),
+    );
 
     if (messageIdsByHint.size === 0 && listFailures.some((failure) => failure.code === "gmail_rate_limited")) {
       throw new SyncError({
