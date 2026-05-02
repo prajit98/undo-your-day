@@ -286,7 +286,7 @@ const Onboarding = () => {
       await appRepository.gmail.updateCandidateStatus(id, "dismissed");
       setDismissed((current) => new Set(current).add(id));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Undo could not dismiss this suggestion.";
+      const message = error instanceof Error ? error.message : "Undo could not skip this suggestion.";
       toast.error(message);
     }
   };
@@ -549,7 +549,7 @@ function PermissionStep({
             tone="primary"
             bullets={[
               "You review everything first",
-              "Keep, edit, or dismiss in a tap",
+              "Keep, skip, or edit in a tap",
               "Nothing is kept without you",
             ]}
           />
@@ -635,7 +635,7 @@ function ConnectedStep({
             tone="primary"
             bullets={[
               "Keep what matters",
-              "Dismiss anything that does not belong",
+              "Skip anything that does not belong",
               "Nothing goes straight to the feed",
             ]}
           />
@@ -914,7 +914,7 @@ function ReviewStep({
             ? `Continue with ${kept.size} item${kept.size === 1 ? "" : "s"}`
             : remaining.length === 0
               ? "Go to the feed"
-              : "Skip the rest"}
+              : "Skip"}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
       </div>
@@ -1020,7 +1020,8 @@ function CandidateCard({
         </div>
         <button
           onClick={() => void onDismiss()}
-          aria-label="Dismiss"
+          aria-label="Skip"
+          title="Skip"
           className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
         >
           <X className="h-4 w-4" strokeWidth={1.7} />
@@ -1148,10 +1149,11 @@ function CandidateCard({
           className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-[13px] font-medium text-background transition-transform active:scale-[0.98]"
         >
           <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
-          Keep this
+          Keep
         </button>
         <button
           aria-label="Edit"
+          title="Edit"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
           onClick={() => setIsEditing((value) => !value)}
         >
@@ -1159,7 +1161,8 @@ function CandidateCard({
         </button>
         <button
           onClick={() => void onDismiss()}
-          aria-label="Dismiss"
+          aria-label="Skip"
+          title="Skip"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
         >
           <X className="h-4 w-4" strokeWidth={1.7} />
