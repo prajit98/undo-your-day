@@ -4,7 +4,11 @@ import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
 import { refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
 
-type PingPhase = "auth" | "token" | "refresh";
+const GMAIL_LIST_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
+const GMAIL_LIST_MAX_RESULTS = 2;
+const GMAIL_LIST_QUERY = "newer_than:14d";
+
+type PingPhase = "auth" | "token" | "refresh" | "list";
 type TokenRow = {
   access_token?: string | null;
   refresh_token?: string | null;
@@ -22,6 +26,10 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function readPingPhase(body: Record<string, unknown>): PingPhase {
+  if (body.phase === "list" || body.mode === "list" || body.includeList === true) {
+    return "list";
+  }
+
   if (body.phase === "refresh" || body.mode === "refresh" || body.includeRefresh === true) {
     return "refresh";
   }
@@ -39,6 +47,7 @@ function readRequestShape(body: Record<string, unknown>) {
     requestedMode: typeof body.mode === "string" ? body.mode : null,
     includeTokenLookup: body.includeTokenLookup === true,
     includeRefresh: body.includeRefresh === true,
+    includeList: body.includeList === true,
   };
 }
 
@@ -260,6 +269,210 @@ Deno.serve(async (req) => {
         tokenUpdateSucceeded: true,
         refreshedExpiresAtPresent: Boolean(nextExpiresAt),
         refreshedScopeCount: refreshed.scope?.split(/\s+/).filter(Boolean).length ?? 0,
+        timestamp,
+      });
+    }
+
+    if (phase === "list") {
+      if (!typedTokenRow) {
+        return jsonResponse({
+          success: false,
+          stage: "token_lookup",
+          code: "gmail_ping_token_missing",
+          message: "Gmail token row was not found.",
+          ...baseTokenPayload,
+          refreshAttempted: false,
+          refreshSucceeded: false,
+          gmailListSucceeded: false,
+          listedMessageCount: 0,
+          requestCountUsed: 0,
+          timestamp,
+        }, 409);
+      }
+
+      let accessToken = typedTokenRow.access_token ?? "";
+      let refreshAttempted = false;
+      let refreshSucceeded = false;
+      let requestCountUsed = 0;
+      let refreshedExpiresAtPresent = false;
+
+      if (!accessTokenStillFresh) {
+        if (!typedTokenRow.refresh_token) {
+          return jsonResponse({
+            success: false,
+            stage: "token_refresh",
+            code: "gmail_ping_refresh_token_missing",
+            message: "Gmail refresh token is missing.",
+            ...baseTokenPayload,
+            refreshAttempted: false,
+            refreshSucceeded: false,
+            gmailListSucceeded: false,
+            listedMessageCount: 0,
+            requestCountUsed,
+            timestamp,
+          }, 409);
+        }
+
+        refreshAttempted = true;
+        requestCountUsed += 1;
+
+        let refreshed;
+        try {
+          refreshed = await refreshAccessToken(typedTokenRow.refresh_token);
+        } catch (error) {
+          return jsonResponse({
+            success: false,
+            stage: "token_refresh",
+            code: "gmail_ping_refresh_failed",
+            message: error instanceof Error ? error.message : "Could not refresh Gmail access.",
+            ...baseTokenPayload,
+            refreshAttempted,
+            refreshSucceeded: false,
+            gmailListSucceeded: false,
+            listedMessageCount: 0,
+            requestCountUsed,
+            timestamp,
+          }, 502);
+        }
+
+        if (!refreshed.access_token) {
+          return jsonResponse({
+            success: false,
+            stage: "token_refresh",
+            code: "gmail_ping_refresh_missing_access_token",
+            message: "Google did not return a refreshed access token.",
+            ...baseTokenPayload,
+            refreshAttempted,
+            refreshSucceeded: false,
+            gmailListSucceeded: false,
+            listedMessageCount: 0,
+            requestCountUsed,
+            timestamp,
+          }, 502);
+        }
+
+        accessToken = refreshed.access_token;
+        refreshSucceeded = true;
+
+        const nextExpiresAt = refreshed.expires_in
+          ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
+          : null;
+        refreshedExpiresAtPresent = Boolean(nextExpiresAt);
+        const { error: updateError } = await admin.from("gmail_tokens").update({
+          access_token: refreshed.access_token,
+          token_type: refreshed.token_type ?? "Bearer",
+          scope: refreshed.scope?.split(/\s+/).filter(Boolean) ?? [],
+          expires_at: nextExpiresAt,
+          updated_at: new Date().toISOString(),
+        }).eq("user_id", user.id);
+
+        if (updateError) {
+          return jsonResponse({
+            success: false,
+            stage: "token_refresh",
+            code: "gmail_ping_token_update_failed",
+            message: updateError.message,
+            ...baseTokenPayload,
+            refreshAttempted,
+            refreshSucceeded,
+            tokenUpdateSucceeded: false,
+            gmailListSucceeded: false,
+            listedMessageCount: 0,
+            requestCountUsed,
+            refreshedExpiresAtPresent,
+            timestamp,
+          }, 500);
+        }
+      }
+
+      if (!accessToken) {
+        return jsonResponse({
+          success: false,
+          stage: "token_lookup",
+          code: "gmail_ping_access_token_missing",
+          message: "Gmail access token was not available for the list check.",
+          ...baseTokenPayload,
+          refreshAttempted,
+          refreshSucceeded,
+          gmailListSucceeded: false,
+          listedMessageCount: 0,
+          requestCountUsed,
+          timestamp,
+        }, 409);
+      }
+
+      const listUrl = new URL(GMAIL_LIST_URL);
+      listUrl.searchParams.set("maxResults", String(GMAIL_LIST_MAX_RESULTS));
+      listUrl.searchParams.set("q", GMAIL_LIST_QUERY);
+      listUrl.searchParams.set("includeSpamTrash", "false");
+      requestCountUsed += 1;
+
+      const listResponse = await fetch(listUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const responseText = await listResponse.text();
+      let listPayload: Record<string, unknown> = {};
+
+      if (responseText) {
+        try {
+          listPayload = JSON.parse(responseText) as Record<string, unknown>;
+        } catch {
+          listPayload = { rawText: responseText.slice(0, 280) };
+        }
+      }
+
+      if (!listResponse.ok) {
+        return jsonResponse({
+          success: false,
+          stage: "gmail_list",
+          code: "gmail_ping_list_failed",
+          message: typeof listPayload.error === "string"
+            ? listPayload.error
+            : "Gmail list request failed.",
+          ...baseTokenPayload,
+          refreshAttempted,
+          refreshSucceeded,
+          tokenUpdateSucceeded: refreshAttempted ? refreshSucceeded : false,
+          gmailListSucceeded: false,
+          listedMessageCount: 0,
+          requestCountUsed,
+          refreshedExpiresAtPresent,
+          details: {
+            status: listResponse.status,
+            maxResults: GMAIL_LIST_MAX_RESULTS,
+            query: GMAIL_LIST_QUERY,
+            error: listPayload.error,
+          },
+          timestamp,
+        }, listResponse.status >= 500 ? 502 : 409);
+      }
+
+      const messages = Array.isArray(listPayload.messages) ? listPayload.messages : [];
+      return jsonResponse({
+        success: true,
+        stage: "gmail_list",
+        code: "gmail_ping_list_completed",
+        message: "Gmail ping completed one tiny list query without fetching message bodies.",
+        ...baseTokenPayload,
+        refreshAttempted,
+        refreshSucceeded,
+        tokenUpdateSucceeded: refreshAttempted ? refreshSucceeded : false,
+        gmailListSucceeded: true,
+        listedMessageCount: messages.length,
+        requestCountUsed,
+        refreshedExpiresAtPresent,
+        details: {
+          maxResults: GMAIL_LIST_MAX_RESULTS,
+          query: GMAIL_LIST_QUERY,
+          resultSizeEstimate: typeof listPayload.resultSizeEstimate === "number"
+            ? listPayload.resultSizeEstimate
+            : null,
+          firstMessageIdPresent: messages.some((message) => (
+            typeof message === "object" && message !== null && "id" in message
+          )),
+        },
         timestamp,
       });
     }

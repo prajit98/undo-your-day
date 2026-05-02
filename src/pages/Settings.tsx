@@ -39,7 +39,7 @@ type GmailPingResult = Record<string, unknown> & {
   message?: string;
 };
 
-type GmailPingMode = "auth" | "token" | "refresh";
+type GmailPingMode = "auth" | "token" | "refresh" | "list";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -263,6 +263,7 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
       mode,
       includeTokenLookup: true,
       includeRefresh: mode === "refresh",
+      includeList: mode === "list",
     };
 
   try {
@@ -575,7 +576,9 @@ const Settings = () => {
       setGmailPing(result);
       if (result.success) {
         toast.success(
-          mode === "refresh"
+          mode === "list"
+            ? "Gmail list check finished."
+            : mode === "refresh"
             ? "Gmail refresh check finished."
             : mode === "token"
               ? "Gmail token check finished."
@@ -776,6 +779,13 @@ const Settings = () => {
                 className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
               >
                 {runningGmailPing && gmailPingMode === "refresh" ? "Checking refresh..." : "Run Gmail refresh check"}
+              </button>
+              <button
+                onClick={() => void runGmailPing("list")}
+                disabled={scanningGmail || runningGmailDiagnostic || runningGmailPing}
+                className="mt-3 block w-full text-center text-[12.5px] font-medium text-foreground/75 transition-colors hover:text-foreground disabled:text-muted-foreground"
+              >
+                {runningGmailPing && gmailPingMode === "list" ? "Checking Gmail list..." : "Run Gmail list check"}
               </button>
               <button
                 onClick={() => void disconnectGmail()}
