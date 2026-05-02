@@ -275,6 +275,7 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
       method: "POST",
       headers: {
         Authorization: `Bearer ${tokenResult.accessToken}`,
+        apikey: appConfig.supabaseAnonKey ?? "",
         "Content-Type": "application/json",
         "X-Gmail-Ping-Phase": mode,
       },

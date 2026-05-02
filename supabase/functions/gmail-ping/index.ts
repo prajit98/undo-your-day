@@ -32,6 +32,19 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function withGmailPingCors(response: Response) {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(gmailPingCorsHeaders)) {
+    headers.set(key, value);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -92,9 +105,7 @@ function readRequestShape(body: Record<string, unknown>, req: Request, bodyPrese
   };
 }
 
-Deno.serve(async (req) => {
-  const requestId = crypto.randomUUID();
-
+async function handleGmailPing(req: Request, requestId: string) {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: gmailPingCorsHeaders });
   }
@@ -604,7 +615,27 @@ Deno.serve(async (req) => {
       code: message === "Unauthorized" ? "gmail_ping_unauthorized" : "gmail_ping_failed",
       message,
       requestId,
+      diagnosticVersion: DIAGNOSTIC_VERSION,
       timestamp: new Date().toISOString(),
     }, message === "Unauthorized" ? 401 : 500);
+  }
+}
+
+Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID();
+
+  try {
+    return withGmailPingCors(await handleGmailPing(req, requestId));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Gmail ping failed.";
+    return jsonResponse({
+      success: false,
+      stage: "unexpected",
+      code: "gmail_ping_unhandled_failure",
+      message,
+      requestId,
+      diagnosticVersion: DIAGNOSTIC_VERSION,
+      timestamp: new Date().toISOString(),
+    }, 500);
   }
 });
