@@ -49,7 +49,7 @@ const ROLL_FORWARD_PAST_DATE_MS = 30 * 86400000;
 
 // TODO: Replace these general keyword rules with merchant-specific parsing once
 // we have real inbox samples from early testers.
-const SEARCH_TERMS: Record<GmailCategory, { query: string; newerThanDays: number }[]> = {
+const SEARCH_TERMS: Record<GmailCategory, { query: string; newerThanDays: number; maxResults?: number }[]> = {
   trial: [
     {
       query: `{"free trial" "trial ends" "trial ending" "trial expires" "trial period" "cancel before" "before you are charged" "before you're charged"}`,
@@ -72,6 +72,7 @@ const SEARCH_TERMS: Record<GmailCategory, { query: string; newerThanDays: number
     {
       query: "invoice",
       newerThanDays: 120,
+      maxResults: 4,
     },
     {
       query: `{"bill due" "payment due" "statement ready" "amount due" "due date" "balance due" "due on" "past due"}`,
@@ -520,13 +521,14 @@ function buildDetail(subject: string, snippet: string, source: string) {
 
 export function buildSearchQueries(categories: GmailCategory[]) {
   const allowed = categories.filter((category): category is GmailCategory => AUTO_CATEGORIES.includes(category));
-  const queries: { category: GmailCategory; q: string }[] = [];
+  const queries: { category: GmailCategory; q: string; maxResults?: number }[] = [];
 
   for (const category of allowed) {
     SEARCH_TERMS[category].forEach((rule) => {
       queries.push({
         category,
         q: `${rule.query} newer_than:${rule.newerThanDays}d`,
+        maxResults: rule.maxResults,
       });
     });
   }

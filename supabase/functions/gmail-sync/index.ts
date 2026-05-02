@@ -136,21 +136,29 @@ function selectMessageIdsForFirstPass(
 ) {
   const selected = new Map<string, GmailCategory>();
   const uniqueCategories = Array.from(new Set(queryCategories));
+  const addMessage = (message: { id: string; category: GmailCategory }) => {
+    if (selected.size >= MAX_MESSAGE_IDS_TO_SCAN || selected.has(message.id)) {
+      return;
+    }
+    selected.set(message.id, message.category);
+  };
 
   for (const category of uniqueCategories) {
     const firstForCategory = listedMessages.find((message) => message.category === category);
-    if (firstForCategory && selected.size < MAX_MESSAGE_IDS_TO_SCAN) {
-      selected.set(firstForCategory.id, firstForCategory.category);
+    if (firstForCategory) {
+      addMessage(firstForCategory);
     }
   }
+
+  listedMessages
+    .filter((message) => message.category === "bill")
+    .forEach(addMessage);
 
   for (const message of listedMessages) {
     if (selected.size >= MAX_MESSAGE_IDS_TO_SCAN) {
       break;
     }
-    if (!selected.has(message.id)) {
-      selected.set(message.id, message.category);
-    }
+    addMessage(message);
   }
 
   return selected;
@@ -928,13 +936,14 @@ Deno.serve(async (req) => {
     const listedMessageIds = new Set<string>();
     const listFailures: Array<Record<string, unknown>> = [];
 
-    for (const { category, q } of searchQueries) {
+    for (const { category, q, maxResults } of searchQueries) {
       try {
-        const ids = await listMessageIds(accessToken, q);
+        const ids = await listMessageIds(accessToken, q, maxResults);
         logSyncEvent("log", "list_query_succeeded", {
           requestId,
           category,
           query: q,
+          maxResults: maxResults ?? MAX_RESULTS_PER_QUERY,
           count: ids.length,
         });
 
@@ -998,10 +1007,6 @@ Deno.serve(async (req) => {
         const candidate = messageToCandidate(message, hint, categories);
         if (candidate) {
           candidateResults.push(candidate);
-        }
-
-        if (candidateResults.length >= MAX_CANDIDATES_TO_RETURN) {
-          break;
         }
       } catch (error) {
         const failure = normalizeError(error);
