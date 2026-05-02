@@ -298,6 +298,13 @@ const Settings = () => {
               Turn off Gmail
             </button>
           )}
+          <Link
+            to="/trust"
+            className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            How Undo handles Gmail
+          </Link>
         </section>
 
         {isPremium ? (
