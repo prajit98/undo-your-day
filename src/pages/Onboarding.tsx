@@ -1172,41 +1172,62 @@ function CandidateCard({
 function EmptyMatches({ onManual, onSkip }: { onManual: () => Promise<void>; onSkip: () => Promise<void> }) {
   return (
     <div className="flex flex-1 flex-col px-7 pb-10 pt-16 animate-fade-in">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-soft text-primary">
-        <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary-soft text-primary shadow-soft">
+        <Mail className="h-5 w-5" strokeWidth={1.8} />
       </div>
+      <p className="mt-7 text-center text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
+        Gmail connected
+      </p>
       <h1 className="mt-8 text-center font-display text-[32px] leading-[1.08] tracking-snug text-foreground text-balance">
-        Nothing to fix right now.
+        Nothing urgent showed up.
       </h1>
       <p className="mt-3 text-center text-[14px] leading-relaxed text-muted-foreground text-balance">
-        No strong Gmail matches this time. You can still add something yourself.
+        Undo did not find a likely trial, renewal, return, or bill that needs review in this pass.
       </p>
 
-      <div className="mt-9 space-y-3">
-        {[
-          { label: "Add manually", desc: "Type the details yourself" },
-          { label: "Upload screenshot", desc: "Drop in a receipt or order confirmation" },
-          { label: "Paste text", desc: "From an email, chat, or message" },
-        ].map((option) => (
-          <button
-            key={option.label}
-            onClick={() => void onManual()}
-            className="flex w-full items-center justify-between rounded-[24px] bg-card/95 p-4 text-left shadow-soft ring-1 ring-border/40 transition-transform active:scale-[0.99]"
-          >
-            <div>
-              <p className="text-[14px] font-medium text-foreground">{option.label}</p>
-              <p className="mt-0.5 text-[11.5px] text-muted-foreground">{option.desc}</p>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
-          </button>
-        ))}
+      <div className="mt-8 rounded-[28px] bg-card/90 p-5 shadow-soft ring-1 ring-border/45">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface text-primary">
+            <ShieldCheck className="h-4 w-4" strokeWidth={1.8} />
+          </span>
+          <div>
+            <p className="text-[14px] font-medium text-foreground">Undo will stay ready.</p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+              Keep Gmail connected and scan again later when new receipts, renewals, or invoices arrive.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={() => void onSkip()}
+        className="mt-9 flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
+      >
+        Back to Feed
+        <ArrowRight className="h-4 w-4" strokeWidth={2} />
+      </button>
+
+      <div className="mt-7 rounded-[24px] bg-card/50 p-4 ring-1 ring-border/40">
+        <p className="text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Need to add one yourself?
+        </p>
+        <button
+          onClick={() => void onManual()}
+          className="mt-3 flex w-full items-center justify-between rounded-[20px] bg-card/95 p-4 text-left shadow-soft transition-transform active:scale-[0.99]"
+        >
+          <div>
+            <p className="text-[13.5px] font-medium text-foreground">Add manually</p>
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">Use this only when you already know what to track.</p>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
+        </button>
       </div>
 
       <button
         onClick={() => void onSkip()}
         className="mt-auto pt-8 text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
       >
-        Go to the feed
+        Keep Gmail connected
       </button>
     </div>
   );
