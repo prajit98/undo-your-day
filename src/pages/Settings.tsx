@@ -261,7 +261,7 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
     : {
       phase: mode,
       mode,
-      includeTokenLookup: true,
+      includeTokenLookup: mode === "token" || mode === "refresh",
       includeRefresh: mode === "refresh",
       includeList: mode === "list",
     };
@@ -294,6 +294,7 @@ async function runDirectGmailPing(mode: GmailPingMode = "auth") {
           ...(isRecord(payload.details) ? payload.details : {}),
           directFetch: true,
           mode,
+          requestBody,
           responseOk: response.ok,
           ...tokenResult.details,
         },

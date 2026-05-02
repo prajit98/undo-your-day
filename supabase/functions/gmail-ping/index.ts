@@ -34,7 +34,11 @@ function readPingPhase(body: Record<string, unknown>): PingPhase {
     return "refresh";
   }
 
-  if (body.phase === "token" || body.mode === "token" || body.includeTokenLookup === true) {
+  if (
+    body.phase === "token" ||
+    body.mode === "token" ||
+    (body.includeTokenLookup === true && body.includeList !== true)
+  ) {
     return "token";
   }
 
@@ -475,6 +479,26 @@ Deno.serve(async (req) => {
         },
         timestamp,
       });
+    }
+
+    if (
+      requestShape.requestedPhase === "list" ||
+      requestShape.requestedMode === "list" ||
+      requestShape.includeList
+    ) {
+      return jsonResponse({
+        success: false,
+        stage: "phase_routing",
+        code: "gmail_ping_list_routing_failed",
+        message: "List mode was requested, but gmail-ping reached the token-only fallback.",
+        ...baseTokenPayload,
+        refreshAttempted: false,
+        refreshSucceeded: false,
+        gmailListSucceeded: false,
+        listedMessageCount: 0,
+        requestCountUsed: 0,
+        timestamp,
+      }, 500);
     }
 
     return jsonResponse({
