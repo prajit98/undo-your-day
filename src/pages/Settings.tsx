@@ -18,20 +18,11 @@ import {
   isGmailRateLimitError,
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
-import { autoCategories } from "@/lib/onboarding";
-import { appRepository } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
 
 const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
-const categoryPlural: Record<Category, string> = {
-  trial: "Trials",
-  renewal: "Renewals",
-  return: "Returns",
-  bill: "Bills",
-  followup: "Follow-ups",
-};
 
 const Settings = () => {
   const navigate = useNavigate();
