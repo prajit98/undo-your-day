@@ -66,11 +66,7 @@ const Index = () => {
         <section className="mt-6 px-5">
           <SectionHeader
             kicker="Needs attention"
-            sub={
-              critical.length > 0
-                ? "Some deadlines have already arrived. Review these first."
-                : "Due today. Review these before the window closes."
-            }
+            sub={critical.length > 0 ? "Past due — review first." : "Due today."}
           />
           <div className="mt-3 space-y-3">
             {fixTodayItems.map((item) => (
