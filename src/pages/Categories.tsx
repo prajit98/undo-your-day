@@ -17,9 +17,9 @@ const Categories = () => {
     <MobileShell>
       <header className="px-5 pb-2 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Five quiet categories
+          Groups
         </p>
-        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">Where life slips.</h1>
+        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">By category.</h1>
       </header>
 
       <div className="mt-6 space-y-2 px-5">
