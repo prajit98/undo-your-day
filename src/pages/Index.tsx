@@ -31,8 +31,8 @@ const Index = () => {
 
   const headline =
     todayCount > 0
-      ? `${todayCount} thing${todayCount > 1 ? "s need" : " needs"} attention today.`
-      : "Nothing urgent. Undo is keeping a quiet eye on things.";
+      ? `${todayCount} thing${todayCount > 1 ? "s" : ""} to review.`
+      : "Nothing urgent today.";
 
   return (
     <MobileShell>
