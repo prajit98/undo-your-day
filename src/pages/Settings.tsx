@@ -89,12 +89,12 @@ const Settings = () => {
         ? "Connected"
         : "Ready to scan";
   const gmailScanSummary = !gmailConnection
-    ? "Connect Gmail so Undo can look for likely trials, renewals, returns, and bills."
+    ? "Not connected."
     : gmailConnection.lastSyncStatus === "error"
-      ? "Connected. The last scan did not finish."
+      ? "Last scan didn't finish."
       : hasScannedGmail
         ? `Last checked ${formatSyncTime(gmailConnection.lastSyncedAt)}.`
-        : "Connected. First scan not run yet.";
+        : "First scan not run yet.";
   const gmailActionLabel = !gmailConnection
     ? "Connect Gmail"
     : hasScannedGmail
