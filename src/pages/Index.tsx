@@ -78,10 +78,7 @@ const Index = () => {
 
       {upcoming.length > 0 && (
         <section className="mt-7 px-5">
-          <SectionHeader
-            kicker="Coming up"
-            sub="Still plenty of time. Undo keeps a quiet eye on these."
-          />
+          <SectionHeader kicker="Coming up" sub="Plenty of time." />
           <div className="mt-3 space-y-3">
             {upcoming.map((item) => (
               <UndoCard key={item.id} item={item} emphasis="calm" />
