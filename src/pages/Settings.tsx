@@ -237,42 +237,27 @@ const Settings = () => {
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">Gmail</p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                    {onboarding.gmailConnected
-                      ? "Undo stays focused on the categories you picked and keeps review before anything is kept."
-                      : "Connect Gmail so Undo can look for likely trials, renewals, returns, and bills."}
-                  </p>
+                  {gmailConnection?.email ? (
+                    <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">
+                      {gmailConnection.email}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                      Not connected
+                    </p>
+                  )}
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10px] font-medium text-muted-foreground">
                   <Lock className="h-2.5 w-2.5" strokeWidth={2} />
                   {gmailScanLabel}
                 </span>
               </div>
 
-              <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Gmail scope
-                </p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
-                  {formatCategoryList(watchedByGmail)}
-                </p>
-              </div>
-
-              <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Scan status
-                </p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
-                  {gmailScanSummary}
-                </p>
-                {gmailConnection?.email && (
-                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    Connected as {gmailConnection.email}.
-                  </p>
-                )}
-              </div>
+              <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+                {gmailScanSummary}
+              </p>
 
               {(gmailActionError || gmailConnection?.lastSyncStatus === "error") && (
                 <p className="mt-3 rounded-2xl bg-critical-soft/70 px-3 py-2.5 text-[11.5px] leading-relaxed text-critical">
