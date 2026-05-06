@@ -183,8 +183,7 @@ export default function Trust() {
             Your inbox, handled carefully.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[15.5px] leading-[1.6] text-muted-foreground">
-            Undo scans for likely trials, renewals, returns, and bills — so you
-            can review what still matters before it becomes a problem.
+            Read-only Gmail access. You review everything first.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -202,18 +201,13 @@ export default function Trust() {
             </button>
             <button
               onClick={() => navigate(-1)}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/80 px-6 py-3 text-[14px] font-medium text-foreground transition-colors hover:bg-card"
+              className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeft className="h-4 w-4" />
               Go back
             </button>
           </div>
 
-          <p className="mt-4 text-[12px] text-muted-foreground">
-            Read-only Gmail access · You review everything first
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
             {trustChips.map(({ icon: Icon, label }) => (
               <span
                 key={label}
@@ -224,20 +218,20 @@ export default function Trust() {
               </span>
             ))}
           </div>
-
-          {/* In-page anchors */}
-          <nav className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
-            {sectionAnchors.map((s) => (
-              <a
-                key={s.id}
-                href={`#${s.id}`}
-                className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
-              >
-                {s.label}
-              </a>
-            ))}
-          </nav>
         </section>
+
+        {/* Section anchors — calm, after hero */}
+        <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+          {sectionAnchors.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              {s.label}
+            </a>
+          ))}
+        </nav>
 
         <Divider />
 
