@@ -1018,14 +1018,6 @@ function CandidateCard({
             {sourceLabel && ` - ${sourceLabel}`}
           </span>
         </div>
-        <button
-          onClick={() => void onDismiss()}
-          aria-label="Skip"
-          title="Skip"
-          className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
-        >
-          <X className="h-4 w-4" strokeWidth={1.7} />
-        </button>
       </div>
 
       <h3
