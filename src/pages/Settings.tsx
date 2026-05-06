@@ -78,7 +78,6 @@ const Settings = () => {
 
   const accountName = user?.name?.trim() || user?.email?.trim() || "Signed in";
   const accountMeta = user?.name?.trim() ? user?.email?.trim() ?? null : null;
-  const watchedByGmail = onboarding.pickedCategories.length > 0 ? onboarding.pickedCategories : autoCategories;
   const enabledCats = preferences.enabledCategories;
   const hasScannedGmail = Boolean(gmailConnection?.lastSyncedAt) || gmailConnection?.lastSyncStatus === "error";
   const gmailScanLabel = !gmailConnection
