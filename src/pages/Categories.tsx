@@ -31,14 +31,11 @@ const Categories = () => {
             <div key={c} className="overflow-hidden rounded-3xl bg-card shadow-soft">
               <button
                 onClick={() => setOpen(isOpen ? null : c)}
-                className="flex w-full items-center gap-4 p-4 text-left"
+                className="flex min-h-[64px] w-full items-center gap-4 px-4 py-3.5 text-left"
               >
                 <CategoryIconCircle category={c} />
-                <div className="flex-1">
-                  <p className="font-medium">{meta.label}</p>
-                  <p className="text-xs text-muted-foreground">{meta.description}</p>
-                </div>
-                <span className="text-sm font-medium text-muted-foreground">
+                <p className="flex-1 text-[15px] font-medium">{meta.label}</p>
+                <span className="text-sm tabular-nums text-muted-foreground">
                   {items.length}
                 </span>
                 <ChevronRight
