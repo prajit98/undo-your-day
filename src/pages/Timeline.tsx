@@ -24,7 +24,7 @@ const Timeline = () => {
     <MobileShell>
       <header className="px-5 pb-2 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          What's ahead
+          Ahead
         </p>
         <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">Timeline.</h1>
       </header>
@@ -33,7 +33,7 @@ const Timeline = () => {
         <div className="mx-5 mt-10 rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center">
           <p className="font-display text-[20px] leading-tight text-foreground">A clear horizon.</p>
           <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
-            Nothing scheduled. Add an undo and it'll appear here on its day.
+            Nothing scheduled.
           </p>
         </div>
       ) : (

@@ -31,8 +31,8 @@ const Index = () => {
 
   const headline =
     todayCount > 0
-      ? `${todayCount} thing${todayCount > 1 ? "s need" : " needs"} attention today.`
-      : "Nothing urgent. Undo is keeping a quiet eye on things.";
+      ? `${todayCount} thing${todayCount > 1 ? "s" : ""} to review.`
+      : "Nothing urgent today.";
 
   return (
     <MobileShell>
@@ -52,7 +52,7 @@ const Index = () => {
           </span>
         </div>
         <h1 className="mt-4 max-w-[11ch] whitespace-pre-line font-display text-[40px] leading-[1.03] tracking-snug text-foreground">
-          {todayCount > 0 ? "A few things\nneed attention." : "Quiet today.\nNicely done."}
+          {todayCount > 0 ? "A few things\nto review." : "Quiet today."}
         </h1>
         <p className="mt-3 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           {headline}
@@ -66,11 +66,7 @@ const Index = () => {
         <section className="mt-6 px-5">
           <SectionHeader
             kicker="Needs attention"
-            sub={
-              critical.length > 0
-                ? "Some deadlines have already arrived. Review these first."
-                : "Due today. Review these before the window closes."
-            }
+            sub={critical.length > 0 ? "Past due — review first." : "Due today."}
           />
           <div className="mt-3 space-y-3">
             {fixTodayItems.map((item) => (
@@ -82,10 +78,7 @@ const Index = () => {
 
       {upcoming.length > 0 && (
         <section className="mt-7 px-5">
-          <SectionHeader
-            kicker="Coming up"
-            sub="Still plenty of time. Undo keeps a quiet eye on these."
-          />
+          <SectionHeader kicker="Coming up" sub="Plenty of time." />
           <div className="mt-3 space-y-3">
             {upcoming.map((item) => (
               <UndoCard key={item.id} item={item} emphasis="calm" />
@@ -117,12 +110,12 @@ const Index = () => {
             <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
           </div>
           <p className="mt-4 font-display text-[24px] leading-tight text-foreground">
-            Nothing to fix right now.
+            {gmailConnected ? "Nothing urgent showed up." : "Nothing to review yet."}
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
             {gmailConnected
-              ? "Undo keeps review first, and you stay in control."
-              : "Connect Gmail to let Undo look for likely trials, renewals, returns, and bills. You still review everything first."}
+              ? "Check again later."
+              : "Connect Gmail to spot trials, renewals, returns, and bills."}
           </p>
           {!gmailConnected ? (
             <div className="mt-5 flex flex-col items-center gap-2">
@@ -133,9 +126,7 @@ const Index = () => {
                 <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
                 Connect Gmail
               </Link>
-              <p className="text-[10.5px] text-muted-foreground">
-                See how Undo handles Gmail first · Read-only access
-              </p>
+              <p className="text-[10.5px] text-muted-foreground">Read-only · You review first</p>
             </div>
           ) : (
             <Link

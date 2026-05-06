@@ -821,10 +821,10 @@ function ReviewStep({
           Gmail
         </p>
         <h1 className="mt-3 max-w-[14ch] font-display text-[34px] leading-[1.05] tracking-snug text-foreground text-balance">
-          Undo surfaced a few things still worth catching.
+          A few things to review.
         </h1>
         <p className="mt-3 max-w-[31rem] text-[13.5px] leading-relaxed text-muted-foreground text-balance">
-          Keep what matters. Nothing is kept automatically.
+          Keep what matters. Skip the rest.
         </p>
 
         <div className="mt-5 flex items-center justify-between rounded-[22px] bg-card/80 px-4 py-3.5 shadow-soft ring-1 ring-border/60">
@@ -1018,14 +1018,6 @@ function CandidateCard({
             {sourceLabel && ` - ${sourceLabel}`}
           </span>
         </div>
-        <button
-          onClick={() => void onDismiss()}
-          aria-label="Skip"
-          title="Skip"
-          className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
-        >
-          <X className="h-4 w-4" strokeWidth={1.7} />
-        </button>
       </div>
 
       <h3

@@ -17,9 +17,9 @@ const Categories = () => {
     <MobileShell>
       <header className="px-5 pb-2 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Five quiet categories
+          Groups
         </p>
-        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">Where life slips.</h1>
+        <h1 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug">By category.</h1>
       </header>
 
       <div className="mt-6 space-y-2 px-5">
@@ -31,14 +31,11 @@ const Categories = () => {
             <div key={c} className="overflow-hidden rounded-3xl bg-card shadow-soft">
               <button
                 onClick={() => setOpen(isOpen ? null : c)}
-                className="flex w-full items-center gap-4 p-4 text-left"
+                className="flex min-h-[64px] w-full items-center gap-4 px-4 py-3.5 text-left"
               >
                 <CategoryIconCircle category={c} />
-                <div className="flex-1">
-                  <p className="font-medium">{meta.label}</p>
-                  <p className="text-xs text-muted-foreground">{meta.description}</p>
-                </div>
-                <span className="text-sm font-medium text-muted-foreground">
+                <p className="flex-1 text-[15px] font-medium">{meta.label}</p>
+                <span className="text-sm tabular-nums text-muted-foreground">
                   {items.length}
                 </span>
                 <ChevronRight
@@ -49,7 +46,7 @@ const Categories = () => {
                 <div className="space-y-2 border-t border-border/60 bg-background/60 p-3">
                   {items.length === 0 ? (
                     <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                      Nothing here. Quiet is good.
+                      Nothing here.
                     </p>
                   ) : (
                     items.map((i) => <UndoCard key={i.id} item={i} />)
