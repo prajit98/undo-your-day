@@ -484,12 +484,6 @@ const Settings = () => {
   );
 };
 
-function formatCategoryList(categories: Category[]) {
-  const labels = categories.map((category) => categoryPlural[category]);
-  if (labels.length <= 1) return labels[0] ?? "";
-  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
-}
 
 function formatSyncTime(value?: string) {
   if (!value) {
