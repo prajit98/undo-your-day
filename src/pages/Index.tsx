@@ -52,7 +52,7 @@ const Index = () => {
           </span>
         </div>
         <h1 className="mt-4 max-w-[11ch] whitespace-pre-line font-display text-[40px] leading-[1.03] tracking-snug text-foreground">
-          {todayCount > 0 ? "A few things\nneed attention." : "Quiet today.\nNicely done."}
+          {todayCount > 0 ? "A few things\nto review." : "Quiet today."}
         </h1>
         <p className="mt-3 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           {headline}
