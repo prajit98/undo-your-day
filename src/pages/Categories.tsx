@@ -46,7 +46,7 @@ const Categories = () => {
                 <div className="space-y-2 border-t border-border/60 bg-background/60 p-3">
                   {items.length === 0 ? (
                     <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                      Nothing here. Quiet is good.
+                      Nothing here.
                     </p>
                   ) : (
                     items.map((i) => <UndoCard key={i.id} item={i} />)
