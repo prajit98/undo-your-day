@@ -50,11 +50,10 @@ const looksFor = [
 ];
 
 const doesNotDo = [
-  "Undo does not send emails",
-  "Undo does not delete or move emails",
-  "Undo does not change anything in your inbox",
-  "Undo does not add anything to your feed without your review",
-  "Undo is read-only when scanning Gmail",
+  "Send, delete, or move emails",
+  "Change anything in your inbox",
+  "Add anything without your review",
+  "Read beyond what's needed to spot a candidate",
 ];
 
 const stored = [
