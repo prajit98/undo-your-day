@@ -110,12 +110,12 @@ const Index = () => {
             <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
           </div>
           <p className="mt-4 font-display text-[24px] leading-tight text-foreground">
-            Nothing to fix right now.
+            {gmailConnected ? "Nothing urgent showed up." : "Nothing to review yet."}
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground text-balance">
             {gmailConnected
-              ? "Undo keeps review first, and you stay in control."
-              : "Connect Gmail to let Undo look for likely trials, renewals, returns, and bills. You still review everything first."}
+              ? "Check again later."
+              : "Connect Gmail to spot trials, renewals, returns, and bills."}
           </p>
           {!gmailConnected ? (
             <div className="mt-5 flex flex-col items-center gap-2">
@@ -126,9 +126,7 @@ const Index = () => {
                 <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
                 Connect Gmail
               </Link>
-              <p className="text-[10.5px] text-muted-foreground">
-                See how Undo handles Gmail first · Read-only access
-              </p>
+              <p className="text-[10.5px] text-muted-foreground">Read-only · You review first</p>
             </div>
           ) : (
             <Link
