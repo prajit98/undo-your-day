@@ -18,6 +18,7 @@ import {
   isGmailRateLimitError,
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
+import { appRepository } from "@/lib/persistence";
 import { reminderPolicy } from "@/lib/reminders";
 import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
