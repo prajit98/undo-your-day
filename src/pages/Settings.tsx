@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
 import { appConfig } from "@/lib/app-config";
+import { dedupeObligations } from "@/lib/obligations";
 import {
   clearGmailRetryAfter,
   formatGmailSyncError,
@@ -27,6 +28,7 @@ const Settings = () => {
   const { active, preferences, gmailConnection, refresh } = useUndo();
   const [scanningGmail, setScanningGmail] = useState(false);
   const [gmailActionError, setGmailActionError] = useState<string | null>(null);
+  const [skippedSuggestionCount, setSkippedSuggestionCount] = useState(0);
 
   useEffect(() => {
     const gmailStatus = searchParams.get("gmail");
@@ -57,6 +59,32 @@ const Settings = () => {
       navigate("/settings", { replace: true });
     }
   }, [searchParams, refresh, navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!gmailConnection) {
+      setSkippedSuggestionCount(0);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    appRepository.gmail.listSkippedCandidates()
+      .then((candidates) => {
+        if (cancelled) return;
+        setSkippedSuggestionCount(dedupeObligations(candidates).length);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSkippedSuggestionCount(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gmailConnection]);
 
   if (!preferences) {
     return null;
@@ -234,6 +262,18 @@ const Settings = () => {
               <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
                 {gmailScanSummary}
               </p>
+
+              {skippedSuggestionCount > 0 && (
+                <Link
+                  to="/settings/skipped-suggestions"
+                  className="mt-3 flex items-center justify-between rounded-2xl bg-surface/70 px-3 py-2.5 text-[12px] font-medium text-foreground/80 transition-colors hover:bg-surface"
+                >
+                  <span>Skipped suggestions · {skippedSuggestionCount}</span>
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.8} />
+                  </span>
+                </Link>
+              )}
 
               {(gmailActionError || gmailConnection?.lastSyncStatus === "error") && (
                 <p className="mt-3 rounded-2xl bg-critical-soft/70 px-3 py-2.5 text-[11.5px] leading-relaxed text-critical">

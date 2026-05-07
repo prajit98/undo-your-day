@@ -81,6 +81,7 @@ export interface AppRepository {
     syncCandidates: () => Promise<Candidate[]>;
     runDiagnostic: () => Promise<GmailDiagnosticResult>;
     listPendingCandidates: () => Promise<Candidate[]>;
+    listSkippedCandidates: () => Promise<Candidate[]>;
     updateCandidate: (candidateId: string, patch: CandidatePatch) => Promise<Candidate>;
     updateCandidateStatus: (candidateId: string, status: CandidateStatus) => Promise<void>;
     disconnect: () => Promise<void>;
@@ -431,6 +432,9 @@ function buildLocalRepository(): AppRepository {
         throw new Error("Real Gmail diagnostic needs Supabase.");
       },
       async listPendingCandidates() {
+        return [];
+      },
+      async listSkippedCandidates() {
         return [];
       },
       async updateCandidate() {
@@ -1191,6 +1195,25 @@ function buildSupabaseRepository(): AppRepository {
 
         return (data ?? []).map((candidate) => toSupabaseCandidate(candidate as Record<string, unknown>));
       },
+      async listSkippedCandidates() {
+        if (!supabase) {
+          throw new Error("Supabase is not configured.");
+        }
+
+        const { data, error } = await supabase
+          .from("candidate_items")
+          .select("id, source, source_message_id, category, title, description, merchant, amount, currency, due_at, status")
+          .eq("source", "gmail")
+          .eq("status", "dismissed")
+          .order("updated_at", { ascending: false })
+          .limit(50);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return (data ?? []).map((candidate) => toSupabaseCandidate(candidate as Record<string, unknown>));
+      },
       async updateCandidate(candidateId, patch) {
         if (!supabase) {
           throw new Error("Supabase is not configured.");
@@ -1297,6 +1320,9 @@ function buildUnconfiguredRepository(): AppRepository {
         return fail();
       },
       async listPendingCandidates() {
+        return fail();
+      },
+      async listSkippedCandidates() {
         return fail();
       },
       async updateCandidate() {

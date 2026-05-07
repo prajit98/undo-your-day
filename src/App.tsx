@@ -12,6 +12,7 @@ import AddItem from "./pages/AddItem.tsx";
 import Categories from "./pages/Categories.tsx";
 import Timeline from "./pages/Timeline.tsx";
 import Settings from "./pages/Settings.tsx";
+import SkippedSuggestions from "./pages/SkippedSuggestions.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Landing from "./pages/Landing.tsx";
 import EarlyAccessConfirmed from "./pages/EarlyAccessConfirmed.tsx";
@@ -45,6 +46,7 @@ const App = () => (
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/timeline" element={<Timeline />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/settings/skipped-suggestions" element={<SkippedSuggestions />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <UpgradeSheet />
