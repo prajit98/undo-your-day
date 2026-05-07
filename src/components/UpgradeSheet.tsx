@@ -5,32 +5,32 @@ import { toast } from "sonner";
 
 const COPY: Record<Exclude<UpgradeReason, null>, { kicker: string; title: string; body: string }> = {
   limit: {
-    kicker: "5 things protected right now",
-    title: "You're using Undo like it's meant to be used. Upgrade for unlimited protection.",
-    body: "Keep watching every trial, renewal, return, and bill without having to choose what to drop.",
+    kicker: "Free limit",
+    title: "Upgrade for stronger protection.",
+    body: "More room for everything Undo is watching.",
   },
   reminders: {
-    kicker: "More than one reminder",
-    title: "Get stronger reminders for things you really don't want to miss.",
-    body: "Multiple reminders, smarter timing by category, and a last-chance nudge before each window closes.",
+    kicker: "Reminders",
+    title: "Upgrade for stronger protection.",
+    body: "Smarter timing and last-chance nudges.",
   },
   recap: {
-    kicker: "Richer weekly recap",
-    title: "See everything you caught in time with Undo Premium.",
-    body: "Look back on what you caught in time, what it protected, and what Undo is already watching next.",
+    kicker: "Recap",
+    title: "Upgrade for stronger protection.",
+    body: "A fuller history of what Undo helped you catch.",
   },
   history: {
-    kicker: "Caught-in-time history",
-    title: "See everything you caught in time with Undo Premium.",
-    body: "Keep the full protection story close: every trial cancelled, return made, and bill handled in time.",
+    kicker: "History",
+    title: "Upgrade for stronger protection.",
+    body: "See more of what Undo helped you catch.",
   },
 };
 
 const INCLUDED = [
-  { icon: ShieldCheck, label: "Unlimited active protection" },
-  { icon: Bell, label: "Multiple reminders per item" },
-  { icon: Clock4, label: "Smarter timing + last-chance nudges" },
-  { icon: Sparkles, label: "Richer recap and caught-in-time history" },
+  { icon: ShieldCheck, label: "Unlimited active items" },
+  { icon: Bell, label: "More reminders" },
+  { icon: Clock4, label: "Last-chance nudges" },
+  { icon: Sparkles, label: "Fuller history" },
 ];
 
 export function UpgradeSheet() {
@@ -73,7 +73,7 @@ export function UpgradeSheet() {
 
           <div className="mt-6 rounded-[28px] bg-primary-soft/55 p-4 ring-1 ring-primary/10">
             <p className="text-[12.5px] leading-relaxed text-foreground/80">
-              Stronger protection, still calm: more room, smarter reminders, and a fuller record of what Undo caught in time.
+              More room, smarter reminders, and a fuller history of what Undo helped you catch.
             </p>
           </div>
 

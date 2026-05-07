@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound, Eye,
+  Bell, Mail, ChevronRight, ShieldCheck, Check, Lock, LogOut, UserRound,
 } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
-import { Switch } from "@/components/ui/switch";
-import { CategoryIconCircle } from "@/components/CategoryBadge";
 import { useAuth } from "@/context/AuthContext";
 import { usePremium, FREE_ITEM_LIMIT } from "@/context/PremiumContext";
 import { useUndo } from "@/context/UndoContext";
@@ -19,18 +17,14 @@ import {
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
 import { appRepository } from "@/lib/persistence";
-import { reminderPolicy } from "@/lib/reminders";
-import { categoryMeta, Category } from "@/lib/undo-data";
 import { toast } from "sonner";
-
-const cats: Category[] = ["trial", "renewal", "return", "bill", "followup"];
 
 const Settings = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, signOut } = useAuth();
-  const { isPremium } = usePremium();
-  const { active, preferences, onboarding, updatePreferences, gmailConnection, refresh } = useUndo();
+  const { isPremium, showUpgrade } = usePremium();
+  const { active, preferences, gmailConnection, refresh } = useUndo();
   const [scanningGmail, setScanningGmail] = useState(false);
   const [gmailActionError, setGmailActionError] = useState<string | null>(null);
 
@@ -70,7 +64,6 @@ const Settings = () => {
 
   const accountName = user?.name?.trim() || user?.email?.trim() || "Signed in";
   const accountMeta = user?.name?.trim() ? user?.email?.trim() ?? null : null;
-  const enabledCats = preferences.enabledCategories;
   const hasScannedGmail = Boolean(gmailConnection?.lastSyncedAt) || gmailConnection?.lastSyncStatus === "error";
   const gmailScanLabel = !gmailConnection
     ? "Off"
@@ -108,14 +101,6 @@ const Settings = () => {
       detail: "Open the secure account deletion page.",
     } : null,
   ].filter((link): link is { href: string; label: string; detail: string } => Boolean(link));
-
-  const toggleCategory = async (category: Category, enabled: boolean) => {
-    const next = enabled
-      ? Array.from(new Set([...enabledCats, category]))
-      : enabledCats.filter((entry) => entry !== category);
-
-    await updatePreferences({ enabledCategories: next });
-  };
 
   const disconnectGmail = async () => {
     try {
@@ -266,22 +251,6 @@ const Settings = () => {
           >
             {scanningGmail ? "Scanning Gmail..." : gmailActionLabel}
           </button>
-          {!gmailConnection && (
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
-                <Lock className="h-2.5 w-2.5" strokeWidth={2} />
-                Read-only
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
-                <Eye className="h-2.5 w-2.5" strokeWidth={2} />
-                You review first
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
-                <ShieldCheck className="h-2.5 w-2.5" strokeWidth={2} />
-                Disconnect anytime
-              </span>
-            </div>
-          )}
           {gmailConnection && (
             <button
               onClick={() => void disconnectGmail()}
@@ -308,7 +277,7 @@ const Settings = () => {
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">Undo Premium</p>
                 <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                  Unlimited protection. Stronger reminders. Richer recap.
+                  Stronger protection is on.
                 </p>
               </div>
               <Check className="h-4 w-4 text-primary" strokeWidth={2.2} />
@@ -323,7 +292,7 @@ const Settings = () => {
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">Undo Free</p>
                 <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                  Up to 5 active items, with one calm reminder per item.
+                  5 active items. One reminder each.
                 </p>
               </div>
             </div>
@@ -333,6 +302,12 @@ const Settings = () => {
                 {active.length} / {FREE_ITEM_LIMIT}
               </span>
             </div>
+            <button
+              onClick={() => showUpgrade("limit")}
+              className="mt-3 w-full rounded-full bg-foreground py-3 text-[12.5px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
+            >
+              Upgrade
+            </button>
           </section>
         )}
 
@@ -348,112 +323,16 @@ const Settings = () => {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">In-app reminders</p>
                 <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                  Undo keeps reminder timing calm and category-aware in the app.
+                  Undo times reminders by category and deadline.
                 </p>
 
-                <div className="mt-3 rounded-2xl bg-surface/70 px-3 py-2.5">
-                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Delivery channels
-                  </p>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/80">
-                    Push and email delivery are not live yet.
-                  </p>
-                </div>
+                <p className="mt-2 rounded-2xl bg-surface/70 px-3 py-2 text-[11.5px] text-foreground/75">
+                  Push and email reminders are coming later.
+                </p>
               </div>
             </div>
           </div>
         </section>
-
-        <section>
-          <div className="mb-2 flex items-end justify-between px-1">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Reminder rhythm
-            </h2>
-            <span className="text-[10.5px] text-muted-foreground">
-              {isPremium ? "Premium" : "Free"}
-            </span>
-          </div>
-          <div className="divide-y divide-border/60 rounded-[28px] bg-card/95 shadow-soft ring-1 ring-border/40">
-            {cats.map((category) => {
-              const policy = reminderPolicy[category];
-              const schedule = isPremium ? policy.premium : policy.free;
-
-              return (
-                <div key={category} className="flex items-start gap-3 p-3.5">
-                  <CategoryIconCircle category={category} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-medium leading-tight text-foreground">
-                      {categoryMeta[category].label}
-                    </p>
-                    <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">
-                      {policy.principle}
-                    </p>
-                    <p className="mt-1 text-[10.5px] text-muted-foreground/80">
-                      {schedule.cadence}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-3 px-1 text-[11px] leading-relaxed text-muted-foreground">
-            {isPremium
-              ? "Undo times reminders by category and keeps a last-chance in-app nudge for tighter deadlines."
-              : "Undo picks one calm in-app reminder by category. Premium adds earlier nudges and a last-chance reminder when timing gets tight."}
-          </p>
-        </section>
-
-        <section>
-          <div className="mb-2 px-1">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              What you want to catch
-            </h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Gmail stays focused on Trials, Renewals, Returns, and Bills. Follow-ups stay manual for now.
-            </p>
-          </div>
-          <div className="divide-y divide-border/60 rounded-[28px] bg-card/95 shadow-soft ring-1 ring-border/40">
-            {cats.map((category) => (
-              <div key={category} className="flex items-center gap-3 p-3">
-                <CategoryIconCircle category={category} />
-                <span className="flex-1 text-sm font-medium">{categoryMeta[category].label}</span>
-                <Switch
-                  checked={enabledCats.includes(category)}
-                  onCheckedChange={(value) => void toggleCategory(category, value)}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[28px] bg-primary-soft p-5 ring-1 ring-primary/10">
-          <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
-            <div>
-              <p className="font-display text-base text-foreground">Undo, calmly</p>
-              <p className="mt-1 text-xs text-foreground/70">
-                Undo only surfaces reminders when there is still time to fix something. Never just to prove it's paying attention.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <button
-          onClick={async () => {
-            await onboarding.reset();
-            navigate("/onboarding");
-          }}
-          className="flex w-full items-center gap-3 rounded-[28px] bg-card/95 p-4 text-left shadow-soft ring-1 ring-border/40 transition-all active:scale-[0.99]"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground/70">
-            <PlayCircle className="h-4 w-4" />
-          </span>
-          <div className="flex-1">
-            <p className="text-sm font-medium">Replay the intro</p>
-            <p className="text-[11.5px] text-muted-foreground">See how Undo works again, in 30 seconds.</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
 
         {resourceLinks.length > 0 && (
           <section>
@@ -483,10 +362,6 @@ const Settings = () => {
             </div>
           </section>
         )}
-
-        <p className="pt-2 text-center text-[11px] text-muted-foreground">
-          Undo protects the small things that matter.
-        </p>
       </div>
     </MobileShell>
   );
