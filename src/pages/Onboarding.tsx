@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   Sparkles, RefreshCw, PackageOpen, Receipt, Check, ChevronLeft,
   ShieldCheck, Eye, Mail, Pencil, X, ArrowRight, Lock,
@@ -571,6 +571,27 @@ function PermissionStep({
           <Mail className="h-4 w-4" strokeWidth={1.9} />
           {isConnecting ? "Opening Gmail..." : isConnected ? "Reconnect Gmail" : "Connect Gmail"}
         </button>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+            <Lock className="h-2.5 w-2.5" strokeWidth={2} />
+            Read-only
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+            <Eye className="h-2.5 w-2.5" strokeWidth={2} />
+            You review first
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+            <ShieldCheck className="h-2.5 w-2.5" strokeWidth={2} />
+            Disconnect anytime
+          </span>
+        </div>
+        <Link
+          to="/trust"
+          className="mt-2 flex items-center justify-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ShieldCheck className="h-3 w-3" strokeWidth={1.8} />
+          How Undo handles Gmail
+        </Link>
         <button
           onClick={() => void onSkip()}
           className="mt-4 block w-full text-center text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"

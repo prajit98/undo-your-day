@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Plus, Mail, ShieldCheck, Eye, Lock } from "lucide-react";
 import { useUndo } from "@/context/UndoContext";
 import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
@@ -126,7 +126,27 @@ const Index = () => {
                 <Mail className="h-3.5 w-3.5" strokeWidth={1.9} />
                 Connect Gmail
               </Link>
-              <p className="text-[10.5px] text-muted-foreground">Read-only · You review first</p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+                  <Lock className="h-2.5 w-2.5" strokeWidth={2} />
+                  Read-only
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+                  <Eye className="h-2.5 w-2.5" strokeWidth={2} />
+                  You review first
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+                  <ShieldCheck className="h-2.5 w-2.5" strokeWidth={2} />
+                  Disconnect anytime
+                </span>
+              </div>
+              <Link
+                to="/trust"
+                className="flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ShieldCheck className="h-3 w-3" strokeWidth={1.8} />
+                How Undo handles Gmail
+              </Link>
             </div>
           ) : (
             <Link

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound,
+  Bell, Mail, ChevronRight, Sparkles, PlayCircle, ShieldCheck, Check, Lock, LogOut, UserRound, Eye,
 } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
 import { Switch } from "@/components/ui/switch";
@@ -266,6 +266,22 @@ const Settings = () => {
           >
             {scanningGmail ? "Scanning Gmail..." : gmailActionLabel}
           </button>
+          {!gmailConnection && (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+                <Lock className="h-2.5 w-2.5" strokeWidth={2} />
+                Read-only
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+                <Eye className="h-2.5 w-2.5" strokeWidth={2} />
+                You review first
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[10.5px] font-medium text-muted-foreground">
+                <ShieldCheck className="h-2.5 w-2.5" strokeWidth={2} />
+                Disconnect anytime
+              </span>
+            </div>
+          )}
           {gmailConnection && (
             <button
               onClick={() => void disconnectGmail()}
