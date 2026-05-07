@@ -29,95 +29,63 @@ export function WeeklyRecap() {
 
   if (caughtCount === 0 && comingNext === 0) return null;
 
-  const summary =
-    caughtValue.hasAmount
-      ? `Caught in time, decisions made, and ${comingNext > 0 ? "a few more items already in view." : "nothing urgent building next."}`
-      : comingNext > 0
-        ? "Nothing slipped this week, and a few more items are already in view."
-        : "Nothing slipped this week. Undo will keep watch in the background.";
+  const forwardLine = comingNext > 0
+    ? `${comingNext} coming next.`
+    : "Nothing urgent next week.";
 
   return (
-    <section className="relative mx-5 mt-6 overflow-hidden rounded-[30px] border border-border/60 bg-card/95 p-6 shadow-card">
+    <section className="relative mx-5 mt-6 overflow-hidden rounded-[24px] border border-border/55 bg-card/70 p-4 shadow-soft">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/7 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-primary/5 to-transparent"
       />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-primary shadow-soft">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-primary">
             <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.9} />
           </span>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             This week
           </p>
         </div>
-        <span className="inline-flex rounded-full bg-surface/85 px-2.5 py-1 text-[10px] font-medium text-muted-foreground ring-1 ring-border/40">
-          Weekly recap
-        </span>
+        {!isPremium && (
+          <button
+            onClick={() => showUpgrade("history")}
+            className="inline-flex items-center gap-1 text-[11.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Recap
+            <ArrowRight className="h-3 w-3" strokeWidth={2} />
+          </button>
+        )}
       </div>
 
-      <h3 className="mt-4 font-display text-[24px] leading-[1.08] text-foreground text-balance">
-        {caughtCount > 0 ? (
-          <>
-            Undo helped you catch{" "}
-            <em className="text-primary not-italic italic">a few things in time.</em>
-          </>
-        ) : (
-          <>
-            Quiet week. A few more items are{" "}
-            <em className="text-primary not-italic italic">already in view.</em>
-          </>
-        )}
-      </h3>
-
-      <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
-        {summary}
-      </p>
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <Stat value={String(caughtCount)} label="caught in time" />
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Stat value={String(caughtCount)} label="caught" />
         <Stat
-          value={caughtValue.value}
-          label="caught value"
+          value={caughtValue.hasAmount ? caughtValue.value : String(comingNext)}
+          label={caughtValue.hasAmount ? "value" : "next"}
           accent
         />
       </div>
 
-      <div className="mt-4 rounded-[22px] bg-surface/70 p-4 ring-1 ring-border/50">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Coming next
-        </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-foreground/80 text-balance">
-          {comingNext > 0
-            ? `${comingNext} item${comingNext === 1 ? "" : "s"} ${comingNext === 1 ? "is" : "are"} already in view for next week. Undo will keep an eye on ${comingNext === 1 ? "it" : "them"}.`
-            : "Nothing urgent is building next week. Undo will keep watch in the background."}
-        </p>
-      </div>
-
-      {!isPremium && (
-        <button
-          onClick={() => showUpgrade("history")}
-          className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/75 transition-colors hover:text-foreground"
-        >
-          See full recap
-          <ArrowRight className="h-3 w-3" strokeWidth={2} />
-        </button>
-      )}
+      <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+        {forwardLine}
+      </p>
     </section>
   );
 }
 
 function Stat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
   return (
-    <div className="rounded-[20px] bg-surface/70 p-4 ring-1 ring-border/40">
+    <div className="rounded-[18px] bg-surface/60 px-3 py-3 ring-1 ring-border/35">
       <p
-        className={`font-display text-[26px] leading-none tabular-nums ${
+        className={`font-display text-[22px] leading-none tabular-nums ${
           accent ? "text-primary" : "text-foreground"
         }`}
       >
         {value}
       </p>
-      <p className="mt-1.5 text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+      <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
     </div>

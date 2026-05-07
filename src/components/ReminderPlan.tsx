@@ -1,4 +1,4 @@
-import { Bell, Sparkles } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Category } from "@/lib/undo-data";
 import { reminderPreviewFor } from "@/lib/reminders";
 import { usePremium } from "@/context/PremiumContext";
@@ -19,37 +19,18 @@ export function ReminderPlan({ category, dueAt, remindAt, compact = true }: Prop
   return (
     <div
       className={cn(
-        "rounded-2xl bg-surface/70 px-3.5 py-3 ring-1 ring-border/40",
+        "rounded-2xl bg-surface/65 px-3.5 py-2.5 ring-1 ring-border/35",
         compact ? "text-[11.5px]" : "text-[12.5px]",
       )}
     >
       <div className="flex items-center gap-2 text-foreground/80">
-        <Bell className="h-3 w-3 text-primary" strokeWidth={2} />
-        <span className="font-medium">{snoozed ? "Reminder snoozed" : "In-app reminder"}</span>
+        <Bell className="h-3 w-3 shrink-0 text-primary" strokeWidth={2} />
+        <span className="font-medium">{snoozed ? "Snoozed" : "Reminder"}</span>
         <span className="text-muted-foreground">/</span>
         <span className="min-w-0 flex-1 truncate text-muted-foreground">
-          {snoozed ? "Until tomorrow" : preview.schedule.cadence}
+          {snoozed ? "Tomorrow" : preview.schedule.cadence}
         </span>
-        {isPremium && (
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary-soft px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-primary">
-            <Sparkles className="h-2 w-2" strokeWidth={2.4} />
-            Premium
-          </span>
-        )}
       </div>
-
-      <p className="mt-1.5 text-[10.75px] leading-relaxed text-foreground/80">
-        {snoozed
-          ? "Undo will surface this again tomorrow in the app, as long as there is still time."
-          : preview.detail}
-      </p>
-
-      {!snoozed && preview.support && (
-        <p className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-          <Sparkles className="h-2.5 w-2.5 text-primary" strokeWidth={2} />
-          {preview.support}
-        </p>
-      )}
     </div>
   );
 }

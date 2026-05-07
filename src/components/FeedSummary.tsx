@@ -26,19 +26,15 @@ export function FeedSummary({ items }: Props) {
   }).length;
 
   return (
-    <section className="mx-5 mt-6 rounded-[28px] bg-card p-5 shadow-card">
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Right now
-      </p>
-
-      <div className="mt-4 grid grid-cols-3 gap-1">
+    <section className="mx-5 mt-5 rounded-[24px] bg-card/90 px-4 py-4 shadow-soft ring-1 ring-border/35">
+      <div className="grid grid-cols-3 gap-1">
         <Stat
           value={atRisk.value}
           label="at risk"
           accent
         />
         <Divider />
-        <Stat value={String(expiringThisWeek)} label="this week" />
+        <Stat value={String(expiringThisWeek)} label="week" />
         <Divider />
         <Stat value={String(caughtInTime)} label="caught" saved />
       </div>
@@ -60,13 +56,13 @@ function Stat({
   return (
     <div className="flex flex-col items-center text-center">
       <p
-        className={`font-display text-[28px] leading-none tabular-nums ${
+        className={`font-display text-[24px] leading-none tabular-nums ${
           accent ? "text-critical" : saved ? "text-saved" : "text-foreground"
         }`}
       >
         {value}
       </p>
-      <p className="mt-1.5 text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+      <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
     </div>
@@ -74,5 +70,5 @@ function Stat({
 }
 
 function Divider() {
-  return <span className="mx-auto h-8 w-px self-center bg-border" />;
+  return <span className="mx-auto h-7 w-px self-center bg-border/70" />;
 }

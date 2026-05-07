@@ -62,7 +62,6 @@ const Index = () => {
       </header>
 
       {active.length > 0 && <FeedSummary items={items} />}
-      <WeeklyRecap />
 
       {fixTodayItems.length > 0 && (
         <section className="mt-6 px-5">
@@ -79,7 +78,7 @@ const Index = () => {
       )}
 
       {upcoming.length > 0 && (
-        <section className="mt-7 px-5">
+        <section className="mt-6 px-5">
           <SectionHeader kicker="Coming up" sub="Plenty of time." />
           <div className="mt-3 space-y-3">
             {upcoming.map((item) => (
@@ -89,18 +88,20 @@ const Index = () => {
         </section>
       )}
 
+      <WeeklyRecap />
+
       {/* Manual backup - secondary to the automatic-first story */}
       {active.length > 0 && (
         <Link
           to="/add"
-          className="group mx-5 mt-7 flex items-center gap-3 rounded-[24px] border border-border/70 bg-card/55 p-4 shadow-soft transition-colors hover:bg-card active:scale-[0.99]"
+          className="group mx-5 mt-6 flex items-center gap-3 rounded-[22px] border border-border/60 bg-card/40 p-3.5 shadow-soft transition-colors hover:bg-card active:scale-[0.99]"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-foreground/65">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface text-foreground/60">
             <Plus className="h-4 w-4" strokeWidth={1.8} />
           </span>
           <div className="flex-1">
-            <p className="text-[13px] font-medium text-foreground/85">Add something Undo missed</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Paste, screenshot, or type it</p>
+            <p className="text-[13px] font-medium text-foreground/80">Add manually</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Paste, type, or screenshot</p>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={1.8} />
         </Link>
@@ -169,7 +170,7 @@ function SectionHeader({ kicker, sub }: { kicker: string; sub: string }) {
   return (
     <div className="px-1">
       <h2 className="font-display text-[23px] leading-tight text-foreground">{kicker}</h2>
-      <p className="mt-1.5 max-w-[28rem] text-[12.5px] leading-relaxed text-muted-foreground">{sub}</p>
+      <p className="mt-1 max-w-[28rem] text-[12px] leading-relaxed text-muted-foreground">{sub}</p>
     </div>
   );
 }
