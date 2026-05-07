@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   Sparkles, RefreshCw, PackageOpen, Receipt, Check, ChevronLeft,
   ShieldCheck, Eye, Mail, Pencil, X, ArrowRight, Lock,
