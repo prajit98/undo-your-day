@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Plus, Mail, ShieldCheck, Eye, Lock } from "lucide-react";
 import { useUndo } from "@/context/UndoContext";
 import { UndoCard } from "@/components/UndoCard";
 import { MobileShell } from "@/components/MobileShell";
