@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { MobileShell } from "@/components/MobileShell";
 import { useUndo } from "@/context/UndoContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
+import { titleWithCurrentTiming } from "@/lib/item-copy";
 import { dayKey, formatDay } from "@/lib/utils-time";
 
 const Timeline = () => {
@@ -58,9 +59,13 @@ const Timeline = () => {
                         <div className="mb-2">
                           <CategoryBadge category={i.category} />
                         </div>
-                        <p className="font-display text-[15px] leading-snug">{i.title}</p>
+                        <p className="font-display text-[15px] leading-snug">
+                          {titleWithCurrentTiming(i.title, i.dueAt)}
+                        </p>
                         {i.amount && (
-                          <p className="mt-1 text-xs text-muted-foreground">{i.amount} · {i.source}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {[i.amount, i.source].filter(Boolean).join(" / ")}
+                          </p>
                         )}
                       </li>
                     ))}

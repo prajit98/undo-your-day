@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useAuth } from "@/context/AuthContext";
 import { appRepository } from "@/lib/persistence";
 import { autoCategories } from "@/lib/onboarding";
+import { dedupeActiveObligations } from "@/lib/obligations";
 import { policyFor } from "@/lib/reminders";
 import {
   Category,
@@ -195,11 +196,11 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     [storedItems, reminders],
   );
 
-  const active = useMemo(() => items.filter(isActiveUndoItem), [items]);
+  const active = useMemo(() => dedupeActiveObligations(items.filter(isActiveUndoItem)), [items]);
 
   const byCategory = useCallback(
-    (category: Category) => items.filter((item) => item.category === category && isActiveUndoItem(item)),
-    [items],
+    (category: Category) => active.filter((item) => item.category === category),
+    [active],
   );
 
   const updatePreferences = useCallback(
@@ -281,7 +282,11 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       if (!user || !preferences) return null;
 
       const createdItem = await appRepository.createUndoItem(user.id, input);
-      setStoredItems((current) => [createdItem, ...current]);
+      setStoredItems((current) => (
+        current.some((item) => item.id === createdItem.id)
+          ? current.map((item) => (item.id === createdItem.id ? createdItem : item))
+          : [createdItem, ...current]
+      ));
       const reminderInputs = input.remindAt
         ? [{
             remindAt: input.remindAt,
@@ -314,22 +319,18 @@ export function UndoProvider({ children }: { children: ReactNode }) {
 
       const existing = reminders.filter((reminder) => reminder.undoItemId === itemId);
       const nextReminder = nextExtraReminderForItem(item, existing);
+      const scheduledReminders: CreateReminderInput[] = existing
+        .filter((reminder) => reminder.status === "scheduled")
+        .map((reminder) => ({
+          remindAt: reminder.remindAt,
+          reminderType: reminder.reminderType,
+          status: reminder.status,
+          channel: reminder.channel,
+        }));
+
       await replaceItemReminders(
         itemId,
-        existing
-          .filter((reminder) => reminder.status === "scheduled")
-          .map((reminder) => ({
-            remindAt: reminder.remindAt,
-            reminderType: reminder.reminderType,
-            status: reminder.status,
-            channel: reminder.channel,
-          }))
-          .concat({
-            remindAt: nextReminder.remindAt,
-            reminderType: nextReminder.reminderType,
-            status: nextReminder.status ?? "scheduled",
-            channel: nextReminder.channel ?? "in_app",
-          }),
+        [...scheduledReminders, nextReminder],
       );
       return true;
     },

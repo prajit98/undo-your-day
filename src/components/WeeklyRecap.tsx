@@ -2,6 +2,8 @@ import { ShieldCheck, ArrowRight } from "lucide-react";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { isActiveUndoItem } from "@/lib/undo-data";
+import { summarizeItemAmounts } from "@/lib/money";
+import { dedupeActiveObligations } from "@/lib/obligations";
 
 const HOUR = 36e5;
 
@@ -17,21 +19,19 @@ export function WeeklyRecap() {
   });
 
   const caughtCount = caughtThisWeek.length;
-  const protectedAmount = caughtThisWeek.reduce((sum, item) => sum + (item.amountValue ?? 0), 0);
+  const caughtValue = summarizeItemAmounts(caughtThisWeek, "--");
 
-  const comingNext = items.filter((item) => {
+  const comingNext = dedupeActiveObligations(items.filter((item) => {
     if (!isActiveUndoItem(item)) return false;
     const hoursUntilDue = (new Date(item.dueAt).getTime() - now) / HOUR;
     return hoursUntilDue > 24 * 7 && hoursUntilDue <= 24 * 14;
-  }).length;
+  })).length;
 
   if (caughtCount === 0 && comingNext === 0) return null;
 
-  const fmt = (n: number) => (n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(0)}`);
-
   const summary =
-    protectedAmount > 0
-      ? `Money protected, decisions made, and ${comingNext > 0 ? "a few more items already in view." : "nothing urgent building next."}`
+    caughtValue.hasAmount
+      ? `Caught in time, decisions made, and ${comingNext > 0 ? "a few more items already in view." : "nothing urgent building next."}`
       : comingNext > 0
         ? "Nothing slipped this week, and a few more items are already in view."
         : "Nothing slipped this week. Undo will keep watch in the background.";
@@ -77,8 +77,8 @@ export function WeeklyRecap() {
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Stat value={String(caughtCount)} label="caught in time" />
         <Stat
-          value={protectedAmount > 0 ? fmt(protectedAmount) : "--"}
-          label="money protected"
+          value={caughtValue.value}
+          label="caught value"
           accent
         />
       </div>

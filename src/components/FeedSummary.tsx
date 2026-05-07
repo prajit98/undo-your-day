@@ -1,4 +1,6 @@
 import { UndoItem, isActiveUndoItem } from "@/lib/undo-data";
+import { summarizeItemAmounts } from "@/lib/money";
+import { dedupeActiveObligations } from "@/lib/obligations";
 
 interface Props {
   items: UndoItem[];
@@ -8,9 +10,9 @@ const HOUR = 36e5;
 
 export function FeedSummary({ items }: Props) {
   const now = Date.now();
-  const active = items.filter(isActiveUndoItem);
+  const active = dedupeActiveObligations(items.filter(isActiveUndoItem));
 
-  const moneyAtRisk = active.reduce((sum, i) => sum + (i.amountValue ?? 0), 0);
+  const atRisk = summarizeItemAmounts(active);
 
   const expiringThisWeek = active.filter((i) => {
     const h = (new Date(i.dueAt).getTime() - now) / HOUR;
@@ -23,8 +25,6 @@ export function FeedSummary({ items }: Props) {
     return h <= 24 * 14;
   }).length;
 
-  const fmt = (n: number) => (n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(0)}`);
-
   return (
     <section className="mx-5 mt-6 rounded-[28px] bg-card p-5 shadow-card">
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -33,7 +33,7 @@ export function FeedSummary({ items }: Props) {
 
       <div className="mt-4 grid grid-cols-3 gap-1">
         <Stat
-          value={moneyAtRisk > 0 ? fmt(moneyAtRisk) : "—"}
+          value={atRisk.value}
           label="at risk"
           accent
         />

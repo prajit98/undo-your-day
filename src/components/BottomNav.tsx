@@ -13,7 +13,7 @@ const tabs = [
 export function BottomNav() {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background via-background/85 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-background via-background/85 to-transparent" />
       <ul className="relative mx-auto flex max-w-md items-end justify-between px-4 pb-2 pt-3">
         {tabs.map(({ to, label, icon: Icon, end, primary }) => (
           <li key={to} className="flex-1">

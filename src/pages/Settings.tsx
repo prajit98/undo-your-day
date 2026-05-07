@@ -168,7 +168,7 @@ const Settings = () => {
         return;
       }
 
-      toast.success("Nothing to review right now.");
+      toast.success("Gmail is connected. Nothing urgent showed up.");
     } catch (error) {
       const isRateLimited = isGmailRateLimitError(error);
       const message = formatGmailSyncError(error);

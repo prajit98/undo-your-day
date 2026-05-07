@@ -30,9 +30,11 @@ const Index = () => {
   });
 
   const headline =
-    todayCount > 0
-      ? `${todayCount} thing${todayCount > 1 ? "s" : ""} to review.`
-      : "Nothing urgent today.";
+    critical.length > 0
+      ? `${critical.length} thing${critical.length > 1 ? "s may" : " may"} be overdue.`
+      : todayCount > 0
+        ? `${todayCount} thing${todayCount > 1 ? "s" : ""} to review.`
+        : "Nothing urgent today.";
 
   return (
     <MobileShell>
@@ -52,7 +54,7 @@ const Index = () => {
           </span>
         </div>
         <h1 className="mt-4 max-w-[11ch] whitespace-pre-line font-display text-[40px] leading-[1.03] tracking-snug text-foreground">
-          {todayCount > 0 ? "A few things\nto review." : "Quiet today."}
+          {todayCount > 0 ? "A few things\nto review." : "Nothing urgent\ntoday."}
         </h1>
         <p className="mt-3 max-w-[31rem] text-[14px] leading-relaxed text-muted-foreground text-balance">
           {headline}
@@ -66,7 +68,7 @@ const Index = () => {
         <section className="mt-6 px-5">
           <SectionHeader
             kicker="Needs attention"
-            sub={critical.length > 0 ? "Past due — review first." : "Due today."}
+            sub={critical.length > 0 ? "Past due. Review first." : "Due today."}
           />
           <div className="mt-3 space-y-3">
             {fixTodayItems.map((item) => (

@@ -1,4 +1,5 @@
 import { Category, UndoItem } from "./undo-data";
+import { detailForDisplay, titleForDisplay } from "./item-copy";
 
 export type CandidateStatus = "pending" | "kept" | "dismissed";
 
@@ -28,8 +29,8 @@ export interface Candidate {
 
 export function candidateToItem(c: Candidate): Omit<UndoItem, "id" | "status"> {
   return {
-    title: c.title,
-    detail: c.detail,
+    title: titleForDisplay(c),
+    detail: detailForDisplay(c),
     category: c.category,
     sourceType: "auto",
     dueAt: c.dueAt,

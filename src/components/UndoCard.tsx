@@ -5,7 +5,8 @@ import { UndoItem } from "@/lib/undo-data";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "./CategoryBadge";
-import { feedTimingFor, urgencyFor, shortDue } from "@/lib/urgency";
+import { detailForDisplay, titleForDisplay } from "@/lib/item-copy";
+import { feedTimingFor } from "@/lib/urgency";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -20,13 +21,33 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
   const { setStatus, snooze } = useUndo();
   const { isPremium, registerReminder } = usePremium();
   const [exiting, setExiting] = useState(false);
-  const urgency = urgencyFor(item.category, item.dueAt);
   const timing = feedTimingFor(item.dueAt);
-  const isCritical = emphasis === "auto" && (urgency.level === "critical" || timing.level === "overdue");
+  const isCritical = emphasis === "auto" && timing.level === "overdue";
   const isDueToday = emphasis === "auto" && timing.level === "today";
   const showReminderPlan = emphasis === "auto" && timing.level !== "later";
-  const primaryActionLabel = "Mark handled";
+  const displayTitle = titleForDisplay({
+    title: item.title,
+    detail: item.detail,
+    category: item.category,
+    dueAt: item.dueAt,
+    amount: item.amount,
+    merchant: item.merchantName,
+    source: item.source,
+  });
+  const displayDetail = detailForDisplay({
+    title: item.title,
+    detail: item.detail,
+    category: item.category,
+    dueAt: item.dueAt,
+    amount: item.amount,
+    merchant: item.merchantName,
+    source: item.source,
+  });
+  const primaryActionLabel = "Review";
   const urgencyChipLabel = timing.chipLabel;
+  const reviewItem = () => {
+    toast("Review this outside Undo. Mark it handled when it is done.", { duration: 2400 });
+  };
 
   const handle = (action: () => Promise<void>, label: string) => {
     setExiting(true);
@@ -72,9 +93,6 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
             )}
             {urgencyChipLabel}
           </span>
-          <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {shortDue(item.dueAt)}
-          </span>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full p-1 text-muted-foreground/70 hover:text-foreground">
@@ -110,12 +128,12 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
           isCritical ? "text-[24px]" : "text-[21px]",
         )}
       >
-        {item.title}
+        {displayTitle}
       </h3>
 
-      {item.detail && (
+      {displayDetail && (
         <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-          {item.detail}
+          {displayDetail}
         </p>
       )}
 
@@ -128,7 +146,6 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
               isCritical ? "bg-critical-soft text-critical" : "bg-surface text-foreground/60",
             )}
           >
-            {isCritical ? "Save " : ""}
             {item.amount}
           </span>
         )}
@@ -142,7 +159,7 @@ export function UndoCard({ item, emphasis = "auto" }: { item: UndoItem; emphasis
 
       <div className="mt-5 flex items-center gap-2">
         <button
-          onClick={() => handle(() => setStatus(item.id, "done"), "Caught in time.")}
+          onClick={reviewItem}
           className={cn(
             "group inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-medium transition-all active:scale-[0.98]",
             isCritical

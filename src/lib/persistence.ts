@@ -14,6 +14,7 @@ import {
 } from "./undo-data";
 import type { Candidate, CandidatePatch, CandidateStatus } from "./candidates";
 import { appConfig, backendSetupError, type AppBackendMode } from "./app-config";
+import { sameRealWorldObligation } from "./obligations";
 import { urgencyFor } from "./urgency";
 
 const LOCAL_DB_KEY = "undo.app.db.v1";
@@ -326,6 +327,18 @@ function buildLocalRepository(): AppRepository {
     },
     async createUndoItem(userId, input) {
       const now = new Date().toISOString();
+      const db = readLocalDb();
+      const duplicate = db.undoItems.find((item) =>
+        item.userId === userId
+        && item.status !== "done"
+        && item.status !== "archived"
+        && sameRealWorldObligation(item, input)
+      );
+
+      if (duplicate) {
+        return duplicate;
+      }
+
       const item: UndoItem = mapItem({
         id: crypto.randomUUID(),
         userId,
@@ -346,7 +359,6 @@ function buildLocalRepository(): AppRepository {
         updatedAt: now,
       });
 
-      const db = readLocalDb();
       db.undoItems.unshift(item);
       writeLocalDb(db);
       return item;
@@ -960,6 +972,24 @@ function buildSupabaseRepository(): AppRepository {
     async createUndoItem(userId, input) {
       if (!supabase) {
         throw new Error("Supabase is not configured.");
+      }
+
+      const { data: existingItems, error: existingError } = await supabase
+        .from("undo_items")
+        .select("*")
+        .eq("user_id", userId)
+        .in("status", ["active", "snoozed"]);
+
+      if (existingError) {
+        throw new Error(existingError.message);
+      }
+
+      const duplicate = (existingItems ?? [])
+        .map((item) => toSupabaseItem(item as Record<string, unknown>))
+        .find((item) => sameRealWorldObligation(item, input));
+
+      if (duplicate) {
+        return duplicate;
       }
 
       const { data, error } = await supabase

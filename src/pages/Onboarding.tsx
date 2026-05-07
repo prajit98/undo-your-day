@@ -11,8 +11,11 @@ import { Candidate, CandidatePatch, candidateToItem } from "@/lib/candidates";
 import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { CategoryBadge } from "@/components/CategoryBadge";
-import { shortDue } from "@/lib/urgency";
+import { feedTimingFor } from "@/lib/urgency";
 import { appRepository } from "@/lib/persistence";
+import { summarizeItemAmounts } from "@/lib/money";
+import { dedupeObligations, obligationKeyFor } from "@/lib/obligations";
+import { detailForDisplay, titleForDisplay } from "@/lib/item-copy";
 import {
   clearGmailRetryAfter,
   formatGmailSyncError,
@@ -234,7 +237,7 @@ const Onboarding = () => {
     }
 
     await addItem(candidateToItem(candidate));
-    await appRepository.gmail.updateCandidateStatus(candidate.id, "kept");
+    await updateCandidateGroupStatus(candidate, "kept");
     return true;
   };
 
@@ -254,7 +257,7 @@ const Onboarding = () => {
     if (isPremium || items.length <= availableActiveSlots) {
       for (const candidate of items) {
         await addItem(candidateToItem(candidate));
-        await appRepository.gmail.updateCandidateStatus(candidate.id, "kept");
+        await updateCandidateGroupStatus(candidate, "kept");
       }
       await onboarding.savePrefs(picked);
       await onboarding.complete();
@@ -274,7 +277,7 @@ const Onboarding = () => {
 
     for (const candidate of items.slice(0, availableActiveSlots)) {
       await addItem(candidateToItem(candidate));
-      await appRepository.gmail.updateCandidateStatus(candidate.id, "kept");
+      await updateCandidateGroupStatus(candidate, "kept");
     }
     showUpgrade("limit");
 
@@ -283,8 +286,18 @@ const Onboarding = () => {
 
   const dismissCandidate = async (id: string) => {
     try {
-      await appRepository.gmail.updateCandidateStatus(id, "dismissed");
-      setDismissed((current) => new Set(current).add(id));
+      const candidate = candidates.find((entry) => entry.id === id);
+      const ids = candidate ? candidateIdsForObligation(candidate) : [id];
+      if (candidate) {
+        await updateCandidateGroupStatus(candidate, "dismissed");
+      } else {
+        await appRepository.gmail.updateCandidateStatus(id, "dismissed");
+      }
+      setDismissed((current) => {
+        const next = new Set(current);
+        ids.forEach((candidateId) => next.add(candidateId));
+        return next;
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Undo could not skip this suggestion.";
       toast.error(message);
@@ -292,9 +305,28 @@ const Onboarding = () => {
   };
 
   const dismissRemainingCandidates = async (remainingIds: string[]) => {
-    await Promise.all(
-      remainingIds.map((id) => appRepository.gmail.updateCandidateStatus(id, "dismissed")),
-    );
+    const ids = candidates
+      .filter((candidate) => remainingIds.includes(candidate.id))
+      .flatMap((candidate) => candidateIdsForObligation(candidate));
+
+    await Promise.all(Array.from(new Set(ids)).map((id) => appRepository.gmail.updateCandidateStatus(id, "dismissed")));
+  };
+
+  const candidateIdsForObligation = (candidate: Candidate) => {
+    const key = obligationKeyFor(candidate);
+    return candidates
+      .filter((entry) => obligationKeyFor(entry) === key)
+      .map((entry) => entry.id);
+  };
+
+  const updateCandidateGroupStatus = async (candidate: Candidate, status: "dismissed" | "kept") => {
+    const ids = candidateIdsForObligation(candidate);
+    await Promise.all(ids.map((id) =>
+      appRepository.gmail.updateCandidateStatus(id, status)
+    ));
+    setCandidates((current) => current.map((entry) => (
+      ids.includes(entry.id) ? { ...entry, status } : entry
+    )));
   };
 
   return (
@@ -824,10 +856,15 @@ function ReviewStep({
 }) {
   const [kept, setKept] = useState<Set<string>>(new Set());
 
-  const remaining = useMemo(() => candidates.filter((candidate) => !kept.has(candidate.id)), [candidates, kept]);
+  const remaining = useMemo(
+    () => dedupeObligations(candidates.filter((candidate) =>
+      !kept.has(candidate.id) && (candidate.status ?? "pending") === "pending"
+    )),
+    [candidates, kept],
+  );
   const anyKept = kept.size > 0;
   const totalAtRisk = useMemo(
-    () => remaining.reduce((sum, candidate) => sum + (candidate.amountValue ?? 0), 0),
+    () => summarizeItemAmounts(remaining),
     [remaining],
   );
 
@@ -836,7 +873,7 @@ function ReviewStep({
   }
 
   return (
-    <div className="flex flex-1 flex-col pb-32 animate-fade-in">
+    <div className="flex flex-1 flex-col pb-[calc(11rem+env(safe-area-inset-bottom))] animate-fade-in">
       <header className="px-6 pt-12">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.22em] text-primary">
           Gmail
@@ -857,13 +894,13 @@ function ReviewStep({
               suggestion{remaining.length === 1 ? "" : "s"}
             </span>
           </div>
-          {totalAtRisk > 0 && (
+          {totalAtRisk.hasAmount && (
             <div className="flex items-baseline gap-1.5">
               <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Still at risk
               </span>
               <span className="font-display text-[18px] leading-none text-foreground tabular-nums">
-                ${Math.round(totalAtRisk)}
+                {totalAtRisk.value}
               </span>
             </div>
           )}
@@ -926,16 +963,12 @@ function ReviewStep({
         )}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background/95 to-transparent px-6 pb-8 pt-8">
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md bg-gradient-to-t from-background via-background/95 to-transparent px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-8">
         <button
           onClick={() => void onFinish(kept.size, remaining.map((candidate) => candidate.id))}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
-          {anyKept
-            ? `Continue with ${kept.size} item${kept.size === 1 ? "" : "s"}`
-            : remaining.length === 0
-              ? "Go to the feed"
-              : "Skip"}
+          Continue
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
       </div>
@@ -952,8 +985,13 @@ function CandidateCard({
   onDismiss: () => void | Promise<void>;
   onEdit: (id: string, patch: CandidatePatch) => Promise<Candidate>;
 }) {
-  const isUrgent = Boolean(candidate.urgent);
+  const timing = feedTimingFor(candidate.dueAt);
+  const isOverdue = timing.level === "overdue";
+  const isDueToday = timing.level === "today";
+  const isUrgent = isOverdue || isDueToday;
   const sourceLabel = candidate.merchant ?? candidate.source;
+  const displayTitle = titleForDisplay(candidate);
+  const displayDetail = detailForDisplay(candidate);
   const [isEditing, setIsEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [draftTitle, setDraftTitle] = useState(candidate.title);
@@ -1005,7 +1043,7 @@ function CandidateCard({
     <article
       className={cn(
         "relative overflow-hidden rounded-[28px] bg-card/95 p-[22px] shadow-card animate-fade-up",
-        isUrgent && "ring-1 ring-critical/20",
+        isOverdue && "ring-1 ring-critical/20",
       )}
       style={{ animationDelay: `${index * 70}ms`, animationFillMode: "both" }}
     >
@@ -1013,7 +1051,7 @@ function CandidateCard({
         aria-hidden
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent",
-          isUrgent ? "from-critical/8" : "from-primary/6",
+          isOverdue ? "from-critical/8" : isDueToday ? "from-primary/8" : "from-primary/6",
         )}
       />
       <div className="flex items-center justify-between gap-3">
@@ -1021,10 +1059,14 @@ function CandidateCard({
           <span
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
-              isUrgent ? "bg-critical-soft text-critical" : "bg-surface text-foreground/60",
+              isOverdue
+                ? "bg-critical-soft text-critical"
+                : isDueToday
+                  ? "bg-primary-soft text-primary"
+                  : "bg-surface text-foreground/60",
             )}
           >
-            {isUrgent ? (
+            {isOverdue ? (
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-critical/60" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-critical" />
@@ -1032,13 +1074,22 @@ function CandidateCard({
             ) : (
               <Sparkles className="h-2.5 w-2.5" strokeWidth={2.2} />
             )}
-            {isUrgent ? "Urgent" : "Detected"}
+            {timing.chipLabel}
           </span>
-          <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {shortDue(candidate.dueAt)}
-            {sourceLabel && ` - ${sourceLabel}`}
-          </span>
+          {sourceLabel && (
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {sourceLabel}
+            </span>
+          )}
         </div>
+        <button
+          onClick={() => void onDismiss()}
+          aria-label="Dismiss"
+          title="Dismiss"
+          className="rounded-full p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
+        >
+          <X className="h-4 w-4" strokeWidth={1.7} />
+        </button>
       </div>
 
       <h3
@@ -1047,12 +1098,12 @@ function CandidateCard({
           isUrgent ? "text-[23px]" : "text-[20.5px]",
         )}
       >
-        {candidate.title}
+        {displayTitle}
       </h3>
 
-      {candidate.detail && (
+      {displayDetail && (
         <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-          {candidate.detail}
+          {displayDetail}
         </p>
       )}
 
@@ -1146,16 +1197,19 @@ function CandidateCard({
           <span
             className={cn(
               "inline-flex rounded-full px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] tabular-nums",
-              isUrgent ? "bg-critical-soft text-critical" : "bg-surface text-foreground/60",
+              isOverdue
+                ? "bg-critical-soft text-critical"
+                : isDueToday
+                  ? "bg-primary-soft text-primary"
+                  : "bg-surface text-foreground/60",
             )}
           >
-            {isUrgent ? "Save " : ""}
             {candidate.amount}
           </span>
         )}
       </div>
 
-      <div className="mt-5 flex items-center gap-2">
+      <div className="mt-5 grid grid-cols-[1fr_auto] items-center gap-2">
         <button
           onClick={() => void onKeep()}
           disabled={isEditing}
@@ -1167,18 +1221,11 @@ function CandidateCard({
         <button
           aria-label="Edit"
           title="Edit"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
+          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-surface px-4 text-[12.5px] font-medium text-foreground/65 transition-colors hover:text-foreground"
           onClick={() => setIsEditing((value) => !value)}
         >
           <Pencil className="h-4 w-4" strokeWidth={1.7} />
-        </button>
-        <button
-          onClick={() => void onDismiss()}
-          aria-label="Skip"
-          title="Skip"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground/65 transition-colors hover:text-foreground"
-        >
-          <X className="h-4 w-4" strokeWidth={1.7} />
+          Edit
         </button>
       </div>
     </article>

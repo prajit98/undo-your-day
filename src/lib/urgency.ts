@@ -16,6 +16,17 @@ export interface FeedTimingInfo {
 
 const hoursTo = (iso: string) => (new Date(iso).getTime() - Date.now()) / 36e5;
 
+function calendarDaysTo(iso: string) {
+  const due = new Date(iso);
+  if (Number.isNaN(due.getTime())) return Number.POSITIVE_INFINITY;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+
+  return Math.round((due.getTime() - today.getTime()) / 864e5);
+}
+
 export function urgencyFor(category: Category, dueAtIso: string): UrgencyInfo {
   const hoursLeft = hoursTo(dueAtIso);
   const level = reminderStateFor(category, dueAtIso);
@@ -40,16 +51,17 @@ export function shortDue(iso: string): string {
 
 export function feedTimingFor(iso: string): FeedTimingInfo {
   const h = hoursTo(iso);
+  const calendarDays = calendarDaysTo(iso);
 
   if (h < 0) {
     return { chipLabel: "Past due", level: "overdue" };
   }
 
-  if (h <= 24) {
+  if (calendarDays <= 0) {
     return { chipLabel: "Due today", level: "today" };
   }
 
-  if (Math.round(h / 24) <= 3) {
+  if (calendarDays <= 3) {
     return { chipLabel: "Due soon", level: "soon" };
   }
 
