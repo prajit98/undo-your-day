@@ -122,11 +122,31 @@ const Landing = () => {
       />
 
       {/* Nav */}
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-8">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="font-display text-2xl tracking-snug">Undo</span>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6 sm:pt-7">
+        <Link to="/" className="flex items-center gap-2.5 -ml-0.5">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-soft-pulse rounded-full bg-primary/70" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          </span>
+          <span className="font-display text-[28px] leading-none tracking-snug sm:text-[32px]">
+            Undo
+          </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-1 md:flex">
+          <a
+            href="#how"
+            className="inline-flex rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            How it works
+          </a>
+          <Link
+            to="/trust"
+            className="inline-flex rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Trust
+          </Link>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/auth"
             className="inline-flex rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -143,8 +163,8 @@ const Landing = () => {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pt-[64px] sm:pt-[88px]">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.08fr_1fr] lg:gap-16">
+      <section className="mx-auto max-w-6xl px-6 pt-10 sm:pt-14 lg:pt-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
           <div className="animate-fade-up-soft">
             <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft backdrop-blur-sm">
               <span className="relative flex h-1.5 w-1.5">
