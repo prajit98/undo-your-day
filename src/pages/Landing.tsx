@@ -10,7 +10,7 @@ import {
   CreditCard,
   Lock,
   Eye,
-  CheckCircle2,
+  
 } from "lucide-react";
 
 const TALLY_SRC =
@@ -212,13 +212,10 @@ const Landing = () => {
               className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
               style={{
                 background:
-                  "radial-gradient(closest-side, hsl(var(--primary) / 0.18), transparent 70%)",
+                  "radial-gradient(closest-side, hsl(var(--primary) / 0.22), transparent 70%)",
               }}
             />
-            <PhoneMock variant="feed" />
-            <p className="mt-4 text-center text-[12.5px] leading-relaxed text-muted-foreground text-balance">
-              Review likely trials, renewals, returns, and bills, then keep what still needs attention.
-            </p>
+            <PhoneMock variant="hero" />
           </div>
         </div>
       </section>
@@ -275,8 +272,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how" className="mx-auto mt-32 max-w-6xl px-6 sm:mt-40">
+      {/* How it works — connected rail */}
+      <section id="how" className="mx-auto mt-28 max-w-6xl px-6 sm:mt-32">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             How Undo works
@@ -286,120 +283,102 @@ const Landing = () => {
           </h2>
         </div>
 
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
-          {[
-            {
-              step: "01",
-              icon: Mail,
-              title: "Start with Gmail",
-              body: "Undo checks for likely trials, renewals, returns, and bills. Nothing broader.",
-            },
-            {
-              step: "02",
-              icon: Eye,
-              title: "Review what Undo found",
-              body: "Keep, edit, or skip each suggestion before anything reaches your feed.",
-            },
-            {
-              step: "03",
-              icon: ShieldCheck,
-              title: "Keep what matters",
-              body: "Your feed tracks only the things you choose to handle.",
-            },
-          ].map((s) => (
-            <div
-              key={s.step}
-              className="relative overflow-hidden rounded-[30px] border border-border/70 bg-card/95 p-8 shadow-soft"
-            >
-              <div className="flex items-start justify-between">
-                <span className="font-display text-[28px] text-muted-foreground/60">{s.step}</span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary">
-                  <s.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+        <div className="relative mt-12">
+          {/* Connecting rail (desktop only) */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 top-12 hidden h-px lg:block"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent 0%, hsl(var(--border)) 18%, hsl(var(--border)) 82%, transparent 100%)",
+            }}
+          />
+          <div className="relative grid gap-6 lg:grid-cols-3">
+            {[
+              {
+                step: "01",
+                icon: Mail,
+                title: "Connect Gmail",
+                body: "Undo scans only for likely trials, renewals, returns, and bills.",
+              },
+              {
+                step: "02",
+                icon: Eye,
+                title: "Review what Undo finds",
+                body: "Skim each suggestion. Keep, edit, or skip — nothing is kept until you decide.",
+              },
+              {
+                step: "03",
+                icon: ShieldCheck,
+                title: "Catch it in time",
+                body: "Your feed shows only what still needs attention, with the deadline.",
+              },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className="relative overflow-hidden rounded-[30px] border border-border/70 bg-card/95 p-8 shadow-soft"
+              >
+                <div className="flex items-start justify-between">
+                  <span className="font-display text-[28px] text-muted-foreground/60">{s.step}</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary ring-4 ring-background">
+                    <s.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+                  </div>
                 </div>
+                <h3 className="mt-8 font-display text-[26px] leading-tight tracking-snug">{s.title}</h3>
+                <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{s.body}</p>
               </div>
-              <h3 className="mt-8 font-display text-[26px] leading-tight tracking-snug">{s.title}</h3>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{s.body}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Trust section */}
-      <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
-        <div className="overflow-hidden rounded-[36px] border border-border/70 bg-card/95 shadow-card">
-          <div className="grid gap-0 lg:grid-cols-[1fr_1.1fr]">
-            <div className="p-10 sm:p-16">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
-                <Lock className="h-3 w-3" strokeWidth={2} />
-                Only you see this
-              </span>
-              <h2 className="mt-6 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
-                Only the four things that matter.
-              </h2>
-              <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo stays focused on:
-              </p>
+      {/* Trust — single, calm panel (no duplicated columns) */}
+      <section className="mx-auto mt-28 max-w-4xl px-6 sm:mt-32">
+        <div className="relative overflow-hidden rounded-[36px] border border-border/70 bg-card/95 p-10 shadow-card sm:p-14">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-60"
+            style={{
+              background:
+                "radial-gradient(closest-side at 80% 0%, hsl(var(--primary) / 0.10), transparent 70%)",
+            }}
+          />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
+              <Lock className="h-3 w-3" strokeWidth={2} />
+              Built for trust
+            </span>
+            <h2 className="mt-6 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
+              Read-only, by design.
+            </h2>
+            <p className="mt-5 max-w-xl text-[15.5px] leading-relaxed text-muted-foreground">
+              Undo never sends, deletes, or changes anything in Gmail. You stay
+              in control of what gets kept — and you can disconnect anytime.
+            </p>
 
-              <ul className="mt-6 space-y-4">
-                {[
-                  "Trial and renewal dates",
-                  "Payment due dates",
-                  "Return deadlines",
-                  "Amounts and merchant names",
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-3 text-[15px]">
-                    <CheckCircle2
-                      className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-primary"
-                      strokeWidth={1.75}
-                    />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
-                No suggestion reaches your feed until you keep it. Every suggestion starts in
-                review, where you can keep, edit, or skip it.
-              </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {[
+                { icon: Lock, label: "Read-only Gmail access" },
+                { icon: Eye, label: "You decide what to keep" },
+                { icon: ShieldCheck, label: "Disconnect anytime" },
+              ].map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 px-4 py-3"
+                >
+                  <Icon className="h-4 w-4 text-primary" strokeWidth={1.75} />
+                  <span className="text-[13.5px] font-medium">{label}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="relative bg-mist p-10 sm:p-16">
-              <div
-                className="absolute inset-0 opacity-60"
-                style={{
-                  background:
-                    "radial-gradient(closest-side at 70% 30%, hsl(var(--primary) / 0.10), transparent 70%)",
-                }}
-              />
-              <div className="relative">
-                <h3 className="font-display text-[26px] leading-tight tracking-snug">
-                  You stay in control.
-                </h3>
-                <div className="mt-7 space-y-4">
-                  {[
-                    {
-                      title: "Review before anything is kept",
-                      body: "No suggestion joins your feed until you tap Keep.",
-                    },
-                    {
-                      title: "Edit or dismiss freely",
-                      body: "Wrong amount? Not relevant? Skip anything that does not matter.",
-                    },
-                    {
-                      title: "Disconnect in one tap",
-                      body: "Change your mind? Undo steps back immediately.",
-                    },
-                  ].map((c) => (
-                    <div
-                      key={c.title}
-                      className="rounded-2xl border border-border bg-card p-5 shadow-soft"
-                    >
-                      <p className="text-[14.5px] font-medium">{c.title}</p>
-                      <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">{c.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="mt-7">
+              <Link
+                to="/trust"
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary underline-offset-4 hover:underline"
+              >
+                How Undo handles Gmail
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
         </div>
@@ -518,7 +497,7 @@ const Landing = () => {
 
 /* Phone mock */
 
-type PhoneVariant = "feed" | "permission" | "scanning" | "review";
+type PhoneVariant = "hero" | "feed" | "permission" | "scanning" | "review";
 
 const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: boolean }) => {
   const aspect = small ? "aspect-[9/18]" : "aspect-[9/19]";
@@ -529,6 +508,7 @@ const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: 
     >
       <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-b-2xl bg-foreground/90" />
       <div className="relative h-full w-full overflow-hidden rounded-[32px] bg-background">
+        {variant === "hero" && <HeroScreen />}
         {variant === "feed" && <FeedScreen />}
         {variant === "permission" && <PermissionScreen />}
         {variant === "scanning" && <ScanningScreen />}
@@ -537,6 +517,87 @@ const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: 
     </div>
   );
 };
+
+const HeroScreen = () => (
+  <div className="flex h-full flex-col px-4 pt-9">
+    <div className="flex items-center justify-between">
+      <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        Today · Tue Apr 22
+      </p>
+      <span className="inline-flex items-center gap-1 rounded-full bg-card px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground shadow-soft">
+        <span className="h-1 w-1 rounded-full bg-primary" />
+        Review first
+      </span>
+    </div>
+
+    <h3 className="mt-2 font-display text-[19px] leading-tight tracking-snug">
+      1 thing worth catching today.
+    </h3>
+    <p className="mt-1 text-[9.5px] text-muted-foreground">$19.99 at risk</p>
+
+    <div
+      className="relative mt-3 overflow-hidden rounded-2xl border border-critical/25 p-3 shadow-card"
+      style={{
+        background:
+          "linear-gradient(180deg, hsl(8 80% 98%) 0%, hsl(0 0% 100%) 60%)",
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="inline-flex items-center gap-1 rounded-full bg-critical/12 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-critical">
+          <span className="h-1 w-1 rounded-full bg-critical" />
+          Tomorrow
+        </span>
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider text-chip-foreground">
+          Renewal
+        </span>
+      </div>
+
+      <p className="mt-2 text-[12px] font-semibold leading-tight">
+        Apple may renew tomorrow
+      </p>
+      <p className="mt-0.5 text-[9px] text-muted-foreground">
+        iCloud+ 200GB · charges Wed
+      </p>
+
+      <div className="mt-2.5 flex items-baseline justify-between">
+        <span className="font-display text-[22px] leading-none tracking-snug">
+          $19.99
+        </span>
+        <span className="text-[8.5px] text-muted-foreground">at risk</span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <div className="rounded-full bg-foreground py-1.5 text-center text-[8.5px] font-medium text-background">
+          Keep
+        </div>
+        <div className="rounded-full border border-border bg-background py-1.5 text-center text-[8.5px] font-medium text-foreground">
+          Edit
+        </div>
+        <div className="rounded-full border border-border bg-background py-1.5 text-center text-[8.5px] font-medium text-muted-foreground">
+          Skip
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-2 rounded-xl border border-border bg-card/80 p-2.5">
+      <div className="flex items-center justify-between">
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider text-chip-foreground">
+          Return
+        </span>
+        <span className="text-[8.5px] text-muted-foreground">in 2 days</span>
+      </div>
+      <p className="mt-1.5 text-[10.5px] font-medium leading-tight">
+        Adidas return window closes
+      </p>
+      <p className="mt-0.5 text-[8.5px] text-muted-foreground">$84.00 · order #A-2241</p>
+    </div>
+
+    <div className="mt-auto flex items-center justify-center gap-1.5 pb-3 pt-2">
+      <Lock className="h-2.5 w-2.5 text-primary" />
+      <span className="text-[8px] text-muted-foreground">Read-only · You review first</span>
+    </div>
+  </div>
+);
 
 const FeedScreen = () => (
   <div className="flex h-full flex-col px-4 pt-9">
