@@ -332,82 +332,53 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Trust section */}
-      <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
-        <div className="overflow-hidden rounded-[36px] border border-border/70 bg-card/95 shadow-card">
-          <div className="grid gap-0 lg:grid-cols-[1fr_1.1fr]">
-            <div className="p-10 sm:p-16">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
-                <Lock className="h-3 w-3" strokeWidth={2} />
-                Only you see this
-              </span>
-              <h2 className="mt-6 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
-                Only the four things that matter.
-              </h2>
-              <p className="mt-5 text-[15.5px] leading-relaxed text-muted-foreground">
-                Undo stays focused on:
-              </p>
+      {/* Trust — single, calm panel (no duplicated columns) */}
+      <section className="mx-auto mt-28 max-w-4xl px-6 sm:mt-32">
+        <div className="relative overflow-hidden rounded-[36px] border border-border/70 bg-card/95 p-10 shadow-card sm:p-14">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-60"
+            style={{
+              background:
+                "radial-gradient(closest-side at 80% 0%, hsl(var(--primary) / 0.10), transparent 70%)",
+            }}
+          />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
+              <Lock className="h-3 w-3" strokeWidth={2} />
+              Built for trust
+            </span>
+            <h2 className="mt-6 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[44px]">
+              Read-only, by design.
+            </h2>
+            <p className="mt-5 max-w-xl text-[15.5px] leading-relaxed text-muted-foreground">
+              Undo never sends, deletes, or changes anything in Gmail. You stay
+              in control of what gets kept — and you can disconnect anytime.
+            </p>
 
-              <ul className="mt-6 space-y-4">
-                {[
-                  "Trial and renewal dates",
-                  "Payment due dates",
-                  "Return deadlines",
-                  "Amounts and merchant names",
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-3 text-[15px]">
-                    <CheckCircle2
-                      className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-primary"
-                      strokeWidth={1.75}
-                    />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="mt-8 text-[14.5px] leading-relaxed text-muted-foreground">
-                No suggestion reaches your feed until you keep it. Every suggestion starts in
-                review, where you can keep, edit, or skip it.
-              </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {[
+                { icon: Lock, label: "Read-only Gmail access" },
+                { icon: Eye, label: "You decide what to keep" },
+                { icon: ShieldCheck, label: "Disconnect anytime" },
+              ].map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 px-4 py-3"
+                >
+                  <Icon className="h-4 w-4 text-primary" strokeWidth={1.75} />
+                  <span className="text-[13.5px] font-medium">{label}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="relative bg-mist p-10 sm:p-16">
-              <div
-                className="absolute inset-0 opacity-60"
-                style={{
-                  background:
-                    "radial-gradient(closest-side at 70% 30%, hsl(var(--primary) / 0.10), transparent 70%)",
-                }}
-              />
-              <div className="relative">
-                <h3 className="font-display text-[26px] leading-tight tracking-snug">
-                  You stay in control.
-                </h3>
-                <div className="mt-7 space-y-4">
-                  {[
-                    {
-                      title: "Review before anything is kept",
-                      body: "No suggestion joins your feed until you tap Keep.",
-                    },
-                    {
-                      title: "Edit or dismiss freely",
-                      body: "Wrong amount? Not relevant? Skip anything that does not matter.",
-                    },
-                    {
-                      title: "Disconnect in one tap",
-                      body: "Change your mind? Undo steps back immediately.",
-                    },
-                  ].map((c) => (
-                    <div
-                      key={c.title}
-                      className="rounded-2xl border border-border bg-card p-5 shadow-soft"
-                    >
-                      <p className="text-[14.5px] font-medium">{c.title}</p>
-                      <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">{c.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="mt-7">
+              <Link
+                to="/trust"
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary underline-offset-4 hover:underline"
+              >
+                How Undo handles Gmail
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
         </div>
