@@ -212,13 +212,10 @@ const Landing = () => {
               className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
               style={{
                 background:
-                  "radial-gradient(closest-side, hsl(var(--primary) / 0.18), transparent 70%)",
+                  "radial-gradient(closest-side, hsl(var(--primary) / 0.22), transparent 70%)",
               }}
             />
-            <PhoneMock variant="feed" />
-            <p className="mt-4 text-center text-[12.5px] leading-relaxed text-muted-foreground text-balance">
-              Review likely trials, renewals, returns, and bills, then keep what still needs attention.
-            </p>
+            <PhoneMock variant="hero" />
           </div>
         </div>
       </section>
