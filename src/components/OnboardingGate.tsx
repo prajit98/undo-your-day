@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUndo } from "@/context/UndoContext";
 
-const PUBLIC_PATHS = new Set(["/", "/landing", "/early-access-confirmed", "/auth"]);
+const PUBLIC_PATHS = new Set(["/", "/landing", "/early-access-confirmed", "/auth", "/trust", "/privacy"]);
 
 export function OnboardingGate() {
   const navigate = useNavigate();

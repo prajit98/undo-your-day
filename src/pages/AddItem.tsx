@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, Image as ImageIcon, ClipboardPaste, Sparkles, Wand2,
+  ChevronLeft, ClipboardPaste, Sparkles, Wand2,
   Check, ChevronRight, RotateCcw,
 } from "lucide-react";
 import { MobileShell } from "@/components/MobileShell";
@@ -9,7 +9,7 @@ import { useUndo } from "@/context/UndoContext";
 import { usePremium } from "@/context/PremiumContext";
 import { Category, categoryMeta } from "@/lib/undo-data";
 import { CategoryIconRound } from "@/components/CategoryBadge";
-import { extractFromText, extractFromScreenshot, ExtractionResult } from "@/lib/extract";
+import { extractFromText, ExtractionResult } from "@/lib/extract";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -23,7 +23,6 @@ const PLACEHOLDERS = [
 ];
 
 type Stage = "input" | "extracting" | "review";
-type CaptureSource = "text" | "screenshot";
 
 const AddItem = () => {
   const navigate = useNavigate();
@@ -35,18 +34,15 @@ const AddItem = () => {
   const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)]);
   const [draft, setDraft] = useState<ExtractionResult | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
-  const [captureSource, setCaptureSource] = useState<CaptureSource>("text");
 
-  const runExtract = (input: string, source: "text" | "screenshot") => {
-    if (source === "text" && !input.trim()) {
+  const runExtract = (input: string) => {
+    if (!input.trim()) {
       toast.error("Paste or type something first");
       return;
     }
-    setCaptureSource(source);
     setStage("extracting");
     setTimeout(() => {
-      const result = source === "text" ? extractFromText(input) : extractFromScreenshot();
-      if (source === "screenshot" && !text) setText("Screenshot · " + result.title);
+      const result = extractFromText(input);
       setDraft(result);
       setStage("review");
     }, 1100);
@@ -57,7 +53,7 @@ const AddItem = () => {
       const t = await navigator.clipboard.readText();
       if (!t) { toast.error("Clipboard is empty"); return; }
       setText(t);
-      runExtract(t, "text");
+      runExtract(t);
     } catch {
       toast.error("Clipboard access is not available right now.");
     }
@@ -76,9 +72,9 @@ const AddItem = () => {
       amount: draft.amount,
       amountValue: draft.amountValue,
       source: draft.source,
-      sourceType: captureSource === "screenshot" ? "screenshot" : "text",
+      sourceType: "text",
       upload: {
-        fileType: captureSource === "screenshot" ? "screenshot" : "text",
+        fileType: "text",
         extractedText: text || draft.title,
       },
     });
@@ -112,9 +108,8 @@ const AddItem = () => {
           text={text}
           setText={setText}
           placeholder={placeholder}
-          onExtract={() => runExtract(text, "text")}
+          onExtract={() => runExtract(text)}
           onPaste={paste}
-          onScreenshot={() => runExtract("", "screenshot")}
         />
       )}
 
@@ -137,10 +132,10 @@ const AddItem = () => {
 /* --------------------------------- Input --------------------------------- */
 
 function InputStage({
-  text, setText, placeholder, onExtract, onPaste, onScreenshot,
+  text, setText, placeholder, onExtract, onPaste,
 }: {
   text: string; setText: (s: string) => void; placeholder: string;
-  onExtract: () => void; onPaste: () => void; onScreenshot: () => void;
+  onExtract: () => void; onPaste: () => void;
 }) {
   return (
     <div className="space-y-6 px-5 pt-6 animate-fade-up">
@@ -149,7 +144,7 @@ function InputStage({
           Paste anything. We'll figure out the rest.
         </p>
         <p className="mt-2 text-[13.5px] text-muted-foreground">
-          A receipt, a chat, an email, a screenshot — Undo extracts the date, amount, and what's at stake.
+          Paste a receipt, chat, or email. Undo extracts the date, amount, and what's at stake.
         </p>
       </div>
 
@@ -168,12 +163,6 @@ function InputStage({
             className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-[11.5px] font-medium text-foreground/75 hover:text-foreground"
           >
             <ClipboardPaste className="h-3.5 w-3.5" strokeWidth={1.8} /> Paste
-          </button>
-          <button
-            onClick={onScreenshot}
-            className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-[11.5px] font-medium text-foreground/75 hover:text-foreground"
-          >
-            <ImageIcon className="h-3.5 w-3.5" strokeWidth={1.8} /> Screenshot
           </button>
           <button
             onClick={onExtract}
@@ -220,7 +209,7 @@ function ExtractingStage({ text }: { text: string }) {
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">Reading</span>
         </div>
         <p className="mt-4 font-display text-[22px] leading-snug text-foreground/85">
-          {text ? `"${text.slice(0, 80)}${text.length > 80 ? "…" : ""}"` : "Looking at your screenshot…"}
+          {text ? `"${text.slice(0, 80)}${text.length > 80 ? "…" : ""}"` : "Reading what you pasted…"}
         </p>
         <div className="mt-6 space-y-2.5">
           <Bar label="Detecting category" />

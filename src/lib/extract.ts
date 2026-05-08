@@ -136,12 +136,7 @@ export function extractFromText(text: string): ExtractionResult {
   };
 }
 
-// Mock screenshot extraction — pretends to read a receipt / order email
+// Screenshot extraction is intentionally disabled until real image parsing exists.
 export function extractFromScreenshot(): ExtractionResult {
-  const samples = [
-    "Your Apple TV+ free trial converts on May 2 — you'll be charged $9.99.",
-    "Order #A12 — return by Friday for full refund of $84.20.",
-    "Your Verizon bill of $59.99 is due on the 18th.",
-  ];
-  return extractFromText(samples[Math.floor(Math.random() * samples.length)]);
+  throw new Error("Screenshot capture is coming later.");
 }

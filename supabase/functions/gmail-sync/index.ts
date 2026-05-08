@@ -3,9 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
   buildSearchQueries,
   messageToCandidate,
-  messageToCandidateWithTrace,
   type Candidate,
-  type GmailCandidateTrace,
   type GmailCategory,
   type GmailMessage,
 } from "../_shared/gmail.ts";
@@ -30,8 +28,6 @@ const DIAGNOSTIC_QUERY = "newer_than:30d";
 const DIAGNOSTIC_MAX_RESULTS = 2;
 const DIAGNOSTIC_MAX_FETCHES = 1;
 const DIAGNOSTIC_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
-const DEPLOYMENT_TRACE_VERSION = "gmail-sync-deploy-check-2026-05-02-v1";
-const BILL_TRACE_VERSION = "bill-trace-2026-05-02-v2";
 
 type StoredTokenRow = {
   access_token?: string | null;
@@ -87,7 +83,6 @@ type FailurePayload = {
   stack?: string;
   details?: Record<string, unknown>;
   userId?: string;
-  gmailEmail?: string;
   timestamp: string;
 };
 
@@ -128,17 +123,7 @@ type GmailDiagnosticResult = {
 type DiagnosticPhase = "list" | "message";
 
 function jsonResponse(body: unknown, status = 200) {
-  const markedBody = body && typeof body === "object" && !Array.isArray(body)
-    ? {
-        ...(body as Record<string, unknown>),
-        traceVersion: DEPLOYMENT_TRACE_VERSION,
-      }
-    : {
-        value: body,
-        traceVersion: DEPLOYMENT_TRACE_VERSION,
-      };
-
-  return Response.json(markedBody, {
+  return Response.json(body, {
     status,
     headers: withCorsHeaders({
       "Content-Type": "application/json",
@@ -148,20 +133,6 @@ function jsonResponse(body: unknown, status = 200) {
 
 function logSyncEvent(level: "log" | "warn" | "error", event: string, details?: Record<string, unknown>) {
   console[level](`[Undo Gmail Sync] ${event}`, details ?? {});
-}
-
-function logBillTraceMarker(marker: "BILL_TRACE_START" | "BILL_TRACE_END", details: Record<string, unknown>) {
-  console.log(marker, {
-    traceVersion: BILL_TRACE_VERSION,
-    ...details,
-  });
-}
-
-function shouldTraceInvoiceMessage(trace: GmailCandidateTrace) {
-  return trace.hint === "bill"
-    || trace.candidateCategory === "bill"
-    || trace.flags.containsBrightNet
-    || trace.flags.containsInvoice;
 }
 
 function selectMessageIdsForFirstPass(
@@ -217,7 +188,6 @@ function buildFailurePayload(
   context: {
     requestId: string;
     userId?: string;
-    gmailEmail?: string;
     details?: Record<string, unknown>;
   },
 ): FailurePayload {
@@ -234,7 +204,6 @@ function buildFailurePayload(
       ...(failure.details ?? {}),
     },
     userId: context.userId,
-    gmailEmail: context.gmailEmail,
     timestamp: new Date().toISOString(),
   };
 }
@@ -469,7 +438,6 @@ async function runGmailDiagnostic(input: {
   admin: ReturnType<typeof createAdminClient>;
 }): Promise<GmailDiagnosticResult> {
   let requestCountUsed = 0;
-  const gmailEmail = typeof input.connection?.gmail_email === "string" ? input.connection.gmail_email : undefined;
   const checks: GmailDiagnosticResult["checks"] = {
     connected: false,
     tokenLookupSucceeded: false,
@@ -487,7 +455,6 @@ async function runGmailDiagnostic(input: {
     code: string;
     message: string;
     details?: Record<string, unknown>;
-    stack?: string;
   }): GmailDiagnosticResult => ({
     diagnostic: true,
     success: result.success,
@@ -502,22 +469,17 @@ async function runGmailDiagnostic(input: {
     parsingSucceeded: checks.parsingSucceeded,
     checks: { ...checks },
     details: {
-      userId: input.userId,
-      gmailEmail,
       diagnosticPhase: input.phase,
       diagnosticQuery: DIAGNOSTIC_QUERY,
       maxListResults: DIAGNOSTIC_MAX_RESULTS,
       maxMessageFetches: DIAGNOSTIC_MAX_FETCHES,
       ...(result.details ?? {}),
     },
-    stack: result.stack,
     timestamp: new Date().toISOString(),
   });
 
   logSyncEvent("log", "diagnostic_started", {
     requestId: input.requestId,
-    userId: input.userId,
-    gmailEmail,
     phase: input.phase,
   });
 
@@ -650,7 +612,6 @@ async function runGmailDiagnostic(input: {
     const failure = buildFailurePayload(error, {
       requestId: input.requestId,
       userId: input.userId,
-      gmailEmail,
       details: { diagnostic: true },
     });
 
@@ -666,10 +627,8 @@ async function runGmailDiagnostic(input: {
       stage: failure.stage,
       code: failure.code,
       message: failure.message,
-      stack: failure.stack,
       details: {
         status: failure.status,
-        failureDetails: failure.details,
       },
     });
     logSyncEvent("error", "diagnostic_failed", result);
@@ -930,18 +889,10 @@ async function persistCandidateItems(
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   let userId: string | undefined;
-  let gmailEmail: string | undefined;
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-
-  console.log("GMAIL_SYNC_DEPLOYMENT_MARKER", {
-    requestId,
-    traceVersion: DEPLOYMENT_TRACE_VERSION,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-  });
 
   try {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
@@ -1004,7 +955,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    gmailEmail = typeof connection.gmail_email === "string" ? connection.gmail_email : undefined;
     const preferences = await ensurePreferencesRow(user.id, admin);
     const allowedCategories = (Array.isArray(preferences.enabled_categories) ? preferences.enabled_categories : [])
       .filter((category): category is GmailCategory => AUTO_CATEGORIES.has(String(category)));
@@ -1015,7 +965,6 @@ Deno.serve(async (req) => {
     logSyncEvent("log", "starting_sync", {
       requestId,
       userId: user.id,
-      gmailEmail,
       categories,
       searchQueryCount: searchQueries.length,
     });
@@ -1023,25 +972,6 @@ Deno.serve(async (req) => {
     const listedMessages: Array<{ id: string; category: GmailCategory }> = [];
     const listedMessageIds = new Set<string>();
     const listFailures: Array<Record<string, unknown>> = [];
-    const invoiceTrace: Record<string, unknown> = {
-      marker: "BILL_TRACE_RESPONSE",
-      traceVersion: BILL_TRACE_VERSION,
-      requestId,
-      billQueries: [],
-      selectedBillMessageIds: [],
-      billMessageTraces: [],
-    };
-    logBillTraceMarker("BILL_TRACE_START", {
-      requestId,
-      userId: user.id,
-      categories,
-      billQueries: searchQueries
-        .filter((query) => query.category === "bill")
-        .map((query) => ({
-          query: query.q,
-          maxResults: query.maxResults ?? MAX_RESULTS_PER_QUERY,
-        })),
-    });
 
     for (const { category, q, maxResults } of searchQueries) {
       try {
@@ -1053,15 +983,6 @@ Deno.serve(async (req) => {
           maxResults: maxResults ?? MAX_RESULTS_PER_QUERY,
           count: ids.length,
         });
-
-        if (category === "bill") {
-          (invoiceTrace.billQueries as Array<Record<string, unknown>>).push({
-            query: q,
-            maxResults: maxResults ?? MAX_RESULTS_PER_QUERY,
-            count: ids.length,
-            messageIds: ids,
-          });
-        }
 
         ids.forEach((id) => {
           if (!listedMessageIds.has(id)) {
@@ -1087,10 +1008,6 @@ Deno.serve(async (req) => {
       listedMessages,
       searchQueries.map((query) => query.category),
     );
-    invoiceTrace.selectedBillMessageIds = Array.from(messageIdsByHint.entries())
-      .filter(([, category]) => category === "bill")
-      .map(([messageId]) => messageId);
-    logSyncEvent("log", "bill_invoice_selection_trace", invoiceTrace);
 
     if (messageIdsByHint.size === 0 && listFailures.some((failure) => failure.code === "gmail_rate_limited")) {
       throw new SyncError({
@@ -1124,15 +1041,7 @@ Deno.serve(async (req) => {
     for (const [messageId, hint] of messageIdsByHint.entries()) {
       try {
         const message = await getMessage(accessToken, messageId);
-        const { candidate, trace } = messageToCandidateWithTrace(message, hint, categories);
-
-        if (shouldTraceInvoiceMessage(trace)) {
-          (invoiceTrace.billMessageTraces as GmailCandidateTrace[]).push(trace);
-          logSyncEvent("log", "bill_invoice_message_trace", {
-            requestId,
-            ...trace,
-          });
-        }
+        const candidate = messageToCandidate(message, hint, categories);
 
         if (candidate) {
           candidateResults.push(candidate);
@@ -1181,20 +1090,8 @@ Deno.serve(async (req) => {
       new Map(candidateResults.map((candidate) => [candidate.sourceMessageId, candidate])).values(),
     ).sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
       .slice(0, MAX_CANDIDATES_TO_RETURN);
-    invoiceTrace.detectedBillCandidateIds = candidateResults
-      .filter((candidate) => candidate.category === "bill")
-      .map((candidate) => candidate.sourceMessageId);
-    invoiceTrace.returnedBillCandidateIds = deduped
-      .filter((candidate) => candidate.category === "bill")
-      .map((candidate) => candidate.sourceMessageId);
-    invoiceTrace.detectedCandidateCount = candidateResults.length;
-    invoiceTrace.returnedCandidateCount = deduped.length;
-    logSyncEvent("log", "bill_invoice_candidate_trace", invoiceTrace);
 
     const pendingCandidates = await persistCandidateItems(user.id, deduped, admin, { requestId });
-    invoiceTrace.pendingBillCandidateIds = pendingCandidates
-      .filter((candidate) => candidate.category === "bill")
-      .map((candidate) => candidate.sourceMessageId);
 
     const { error: updateError } = await admin.from("gmail_connections").update({
       last_synced_at: new Date().toISOString(),
@@ -1220,21 +1117,17 @@ Deno.serve(async (req) => {
       listFailureCount: listFailures.length,
       messageFailureCount: messageFailures.length,
     });
-    logBillTraceMarker("BILL_TRACE_END", {
-      requestId,
-      billQueryCount: (invoiceTrace.billQueries as unknown[]).length,
-      selectedBillMessageIds: invoiceTrace.selectedBillMessageIds,
-      billMessageTraceCount: (invoiceTrace.billMessageTraces as unknown[]).length,
-      detectedBillCandidateIds: invoiceTrace.detectedBillCandidateIds,
-      returnedBillCandidateIds: invoiceTrace.returnedBillCandidateIds,
-      pendingBillCandidateIds: invoiceTrace.pendingBillCandidateIds,
-      responseCandidateCount: pendingCandidates.length,
-    });
 
-    return jsonResponse({ candidates: pendingCandidates, billTrace: invoiceTrace });
+    return jsonResponse({ candidates: pendingCandidates });
   } catch (error) {
-    const failure = buildFailurePayload(error, { requestId, userId, gmailEmail });
-    logSyncEvent("error", "sync_failed", failure);
+    const failure = buildFailurePayload(error, { requestId, userId });
+    logSyncEvent("error", "sync_failed", {
+      requestId: failure.requestId,
+      stage: failure.stage,
+      code: failure.code,
+      message: failure.message,
+      status: failure.status,
+    });
 
     try {
       if (userId) {
@@ -1262,11 +1155,7 @@ Deno.serve(async (req) => {
       code: failure.code,
       stage: failure.stage,
       status: failure.status,
-      stack: failure.stack,
-      details: failure.details,
       requestId: failure.requestId,
-      userId: failure.userId,
-      gmailEmail: failure.gmailEmail,
       timestamp: failure.timestamp,
     }, failure.status);
   }
