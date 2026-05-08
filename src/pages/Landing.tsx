@@ -122,11 +122,31 @@ const Landing = () => {
       />
 
       {/* Nav */}
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-8">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="font-display text-2xl tracking-snug">Undo</span>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6 sm:pt-7">
+        <Link to="/" className="flex items-center gap-2.5 -ml-0.5">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-soft-pulse rounded-full bg-primary/70" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          </span>
+          <span className="font-display text-[28px] leading-none tracking-snug sm:text-[32px]">
+            Undo
+          </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-1 md:flex">
+          <a
+            href="#how"
+            className="inline-flex rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            How it works
+          </a>
+          <Link
+            to="/trust"
+            className="inline-flex rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Trust
+          </Link>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/auth"
             className="inline-flex rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -143,8 +163,8 @@ const Landing = () => {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pt-[64px] sm:pt-[88px]">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.08fr_1fr] lg:gap-16">
+      <section className="mx-auto max-w-6xl px-6 pt-10 sm:pt-14 lg:pt-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
           <div className="animate-fade-up-soft">
             <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft backdrop-blur-sm">
               <span className="relative flex h-1.5 w-1.5">
@@ -180,14 +200,14 @@ const Landing = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
               Coming soon on iOS and Android
             </p>
-            <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
               Read-only Gmail access. You review first.
             </p>
           </div>
 
           {/* Phone mock */}
-          <div className="relative mx-auto w-full max-w-[344px] animate-fade-up-soft">
+          <div className="relative mx-auto w-full max-w-[320px] animate-fade-up-soft lg:max-w-[340px]">
             <div
               className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
               style={{
@@ -204,7 +224,7 @@ const Landing = () => {
       </section>
 
       {/* Problem */}
-      <section className="mx-auto mt-28 max-w-6xl px-6 sm:mt-36">
+      <section className="mx-auto mt-20 max-w-6xl px-6 sm:mt-28 lg:mt-24">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             What Undo catches
