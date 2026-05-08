@@ -207,7 +207,7 @@ const Landing = () => {
           </div>
 
           {/* Phone mock */}
-          <div className="relative mx-auto w-full max-w-[344px] animate-fade-up-soft">
+          <div className="relative mx-auto w-full max-w-[320px] animate-fade-up-soft lg:max-w-[340px]">
             <div
               className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
               style={{
@@ -224,7 +224,7 @@ const Landing = () => {
       </section>
 
       {/* Problem */}
-      <section className="mx-auto mt-28 max-w-6xl px-6 sm:mt-36">
+      <section className="mx-auto mt-20 max-w-6xl px-6 sm:mt-28 lg:mt-24">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             What Undo catches
