@@ -497,7 +497,7 @@ const Landing = () => {
 
 /* Phone mock */
 
-type PhoneVariant = "feed" | "permission" | "scanning" | "review";
+type PhoneVariant = "hero" | "feed" | "permission" | "scanning" | "review";
 
 const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: boolean }) => {
   const aspect = small ? "aspect-[9/18]" : "aspect-[9/19]";
@@ -508,6 +508,7 @@ const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: 
     >
       <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-b-2xl bg-foreground/90" />
       <div className="relative h-full w-full overflow-hidden rounded-[32px] bg-background">
+        {variant === "hero" && <HeroScreen />}
         {variant === "feed" && <FeedScreen />}
         {variant === "permission" && <PermissionScreen />}
         {variant === "scanning" && <ScanningScreen />}
@@ -516,6 +517,87 @@ const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: 
     </div>
   );
 };
+
+const HeroScreen = () => (
+  <div className="flex h-full flex-col px-4 pt-9">
+    <div className="flex items-center justify-between">
+      <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        Today · Tue Apr 22
+      </p>
+      <span className="inline-flex items-center gap-1 rounded-full bg-card px-1.5 py-0.5 text-[8px] font-medium text-muted-foreground shadow-soft">
+        <span className="h-1 w-1 rounded-full bg-primary" />
+        Review first
+      </span>
+    </div>
+
+    <h3 className="mt-2 font-display text-[19px] leading-tight tracking-snug">
+      1 thing worth catching today.
+    </h3>
+    <p className="mt-1 text-[9.5px] text-muted-foreground">$19.99 at risk</p>
+
+    <div
+      className="relative mt-3 overflow-hidden rounded-2xl border border-critical/25 p-3 shadow-card"
+      style={{
+        background:
+          "linear-gradient(180deg, hsl(8 80% 98%) 0%, hsl(0 0% 100%) 60%)",
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="inline-flex items-center gap-1 rounded-full bg-critical/12 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-critical">
+          <span className="h-1 w-1 rounded-full bg-critical" />
+          Tomorrow
+        </span>
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider text-chip-foreground">
+          Renewal
+        </span>
+      </div>
+
+      <p className="mt-2 text-[12px] font-semibold leading-tight">
+        Apple may renew tomorrow
+      </p>
+      <p className="mt-0.5 text-[9px] text-muted-foreground">
+        iCloud+ 200GB · charges Wed
+      </p>
+
+      <div className="mt-2.5 flex items-baseline justify-between">
+        <span className="font-display text-[22px] leading-none tracking-snug">
+          $19.99
+        </span>
+        <span className="text-[8.5px] text-muted-foreground">at risk</span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <div className="rounded-full bg-foreground py-1.5 text-center text-[8.5px] font-medium text-background">
+          Keep
+        </div>
+        <div className="rounded-full border border-border bg-background py-1.5 text-center text-[8.5px] font-medium text-foreground">
+          Edit
+        </div>
+        <div className="rounded-full border border-border bg-background py-1.5 text-center text-[8.5px] font-medium text-muted-foreground">
+          Skip
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-2 rounded-xl border border-border bg-card/80 p-2.5">
+      <div className="flex items-center justify-between">
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider text-chip-foreground">
+          Return
+        </span>
+        <span className="text-[8.5px] text-muted-foreground">in 2 days</span>
+      </div>
+      <p className="mt-1.5 text-[10.5px] font-medium leading-tight">
+        Adidas return window closes
+      </p>
+      <p className="mt-0.5 text-[8.5px] text-muted-foreground">$84.00 · order #A-2241</p>
+    </div>
+
+    <div className="mt-auto flex items-center justify-center gap-1.5 pb-3 pt-2">
+      <Lock className="h-2.5 w-2.5 text-primary" />
+      <span className="text-[8px] text-muted-foreground">Read-only · You review first</span>
+    </div>
+  </div>
+);
 
 const FeedScreen = () => (
   <div className="flex h-full flex-col px-4 pt-9">
