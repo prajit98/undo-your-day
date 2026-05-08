@@ -200,7 +200,7 @@ const Landing = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
               Coming soon on iOS and Android
             </p>
-            <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
               Read-only Gmail access. You review first.
             </p>
