@@ -272,8 +272,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how" className="mx-auto mt-32 max-w-6xl px-6 sm:mt-40">
+      {/* How it works — connected rail */}
+      <section id="how" className="mx-auto mt-28 max-w-6xl px-6 sm:mt-32">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             How Undo works
@@ -283,41 +283,52 @@ const Landing = () => {
           </h2>
         </div>
 
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
-          {[
-            {
-              step: "01",
-              icon: Mail,
-              title: "Start with Gmail",
-              body: "Undo checks for likely trials, renewals, returns, and bills. Nothing broader.",
-            },
-            {
-              step: "02",
-              icon: Eye,
-              title: "Review what Undo found",
-              body: "Keep, edit, or skip each suggestion before anything reaches your feed.",
-            },
-            {
-              step: "03",
-              icon: ShieldCheck,
-              title: "Keep what matters",
-              body: "Your feed tracks only the things you choose to handle.",
-            },
-          ].map((s) => (
-            <div
-              key={s.step}
-              className="relative overflow-hidden rounded-[30px] border border-border/70 bg-card/95 p-8 shadow-soft"
-            >
-              <div className="flex items-start justify-between">
-                <span className="font-display text-[28px] text-muted-foreground/60">{s.step}</span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary">
-                  <s.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+        <div className="relative mt-12">
+          {/* Connecting rail (desktop only) */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 top-12 hidden h-px lg:block"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent 0%, hsl(var(--border)) 18%, hsl(var(--border)) 82%, transparent 100%)",
+            }}
+          />
+          <div className="relative grid gap-6 lg:grid-cols-3">
+            {[
+              {
+                step: "01",
+                icon: Mail,
+                title: "Connect Gmail",
+                body: "Undo scans only for likely trials, renewals, returns, and bills.",
+              },
+              {
+                step: "02",
+                icon: Eye,
+                title: "Review what Undo finds",
+                body: "Skim each suggestion. Keep, edit, or skip — nothing is kept until you decide.",
+              },
+              {
+                step: "03",
+                icon: ShieldCheck,
+                title: "Catch it in time",
+                body: "Your feed shows only what still needs attention, with the deadline.",
+              },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className="relative overflow-hidden rounded-[30px] border border-border/70 bg-card/95 p-8 shadow-soft"
+              >
+                <div className="flex items-start justify-between">
+                  <span className="font-display text-[28px] text-muted-foreground/60">{s.step}</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary ring-4 ring-background">
+                    <s.icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+                  </div>
                 </div>
+                <h3 className="mt-8 font-display text-[26px] leading-tight tracking-snug">{s.title}</h3>
+                <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{s.body}</p>
               </div>
-              <h3 className="mt-8 font-display text-[26px] leading-tight tracking-snug">{s.title}</h3>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{s.body}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
