@@ -10,7 +10,7 @@ import {
   CreditCard,
   Lock,
   Eye,
-  CheckCircle2,
+  
 } from "lucide-react";
 
 const TALLY_SRC =
