@@ -323,7 +323,7 @@ export default function Trust() {
             <p className="mt-4 text-[14.5px] leading-[1.65] text-muted-foreground">
               Personal conversations, work threads, newsletters, photos — none
               of that is what Undo is here for. If it doesn't look like
-              something still worth fixing, Undo moves on.
+              something time-sensitive for review, Undo moves on.
             </p>
           </div>
         </Section>
