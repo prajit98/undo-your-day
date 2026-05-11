@@ -122,7 +122,7 @@ const Landing = () => {
       />
 
       {/* Nav — editorial: wordmark left, refined pill nav center, actions right */}
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6 sm:pt-7">
+      <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-6 pt-6 sm:pt-7">
         <Link to="/" className="flex items-center gap-2.5 -ml-0.5">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-soft-pulse rounded-full bg-primary/70" />
