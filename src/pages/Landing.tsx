@@ -275,7 +275,7 @@ const Landing = () => {
       </section>
 
       {/* How it works — connected rail */}
-      <section id="how" className="mx-auto mt-28 max-w-6xl px-6 sm:mt-32">
+      <section id="how" className="mx-auto mt-24 max-w-6xl px-6 sm:mt-28">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             How Undo works
@@ -335,7 +335,7 @@ const Landing = () => {
       </section>
 
       {/* Trust — single, calm panel (no duplicated columns) */}
-      <section className="mx-auto mt-28 max-w-4xl px-6 sm:mt-32">
+      <section className="mx-auto mt-24 max-w-4xl px-6 sm:mt-28">
         <div className="relative overflow-hidden rounded-[36px] border border-border/70 bg-card/95 p-10 shadow-card sm:p-14">
           <div
             className="pointer-events-none absolute inset-0 opacity-60"
@@ -417,7 +417,7 @@ const Landing = () => {
       </section>
 
       {/* Waitlist */}
-      <section id="waitlist" className="mx-auto mt-36 max-w-3xl px-6 pb-28 sm:mt-44">
+      <section id="waitlist" className="mx-auto mt-24 max-w-3xl px-6 pb-28 sm:mt-28">
             <div className="relative overflow-hidden rounded-[40px] border border-border/70 bg-card/95 p-8 shadow-card sm:p-14">
           <div
             className="pointer-events-none absolute inset-0 opacity-70"
