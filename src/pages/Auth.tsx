@@ -139,7 +139,9 @@ const Auth = () => {
           </button>
 
           <p className="pt-1 text-center text-[12px] leading-relaxed text-muted-foreground">
-            Gmail connects after signup. You review everything first.
+            {mode === "signup"
+              ? "Gmail connects after signup. You review everything first."
+              : "Your reviewed items, reminders, and history are ready when you log in."}
           </p>
         </div>
 
