@@ -64,21 +64,22 @@ const Auth = () => {
         }}
       />
 
-      <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 pb-12 pt-16">
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 pb-12 pt-14 sm:pt-12">
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3.5 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground shadow-soft backdrop-blur-sm">
           <Sparkles className="h-3 w-3 text-primary" strokeWidth={2} />
           Undo
         </div>
 
-        <h1 className="mt-7 max-w-[11ch] font-display text-[42px] leading-[1.01] tracking-snug text-foreground text-balance">
-          Keep what Undo is protecting{" "}
-          <em className="text-primary not-italic italic">with you.</em>
+        <h1 className="mt-6 max-w-[11ch] font-display text-[42px] leading-[1.01] tracking-snug text-foreground text-balance">
+          {mode === "signup" ? "Create your Undo account." : "Log in to Undo."}
         </h1>
-        <p className="mt-4 max-w-[32rem] text-[14.5px] leading-relaxed text-muted-foreground text-balance">
-          One calm account for your items, reminders, and decisions, so nothing important gets left behind.
+        <p className="mt-3 max-w-[32rem] text-[14.5px] leading-relaxed text-muted-foreground text-balance">
+          {mode === "signup"
+            ? "Keep reviewed items, reminders, and history in one calm place."
+            : "Open your reviewed items, reminders, and history."}
         </p>
 
-        <div className="mt-9 inline-flex rounded-full bg-surface/90 p-1 shadow-soft ring-1 ring-border/40">
+        <div className="mt-7 inline-flex rounded-full bg-surface/90 p-1 shadow-soft ring-1 ring-border/40">
           {[
             { value: "signup" as const, label: "Create account" },
             { value: "login" as const, label: "Log in" },
@@ -98,14 +99,14 @@ const Auth = () => {
           ))}
         </div>
 
-        <div className="mt-9 space-y-3 rounded-[30px] bg-card/95 p-6 shadow-card ring-1 ring-border/50">
+        <div className="mt-6 space-y-3 rounded-[30px] bg-card/95 p-6 shadow-card ring-1 ring-border/50">
           {mode === "signup" && (
             <Field
               icon={UserRound}
               label="Name"
               value={name}
               onChange={setName}
-              placeholder="How Undo should greet you"
+              placeholder="Your name"
               autoComplete="name"
             />
           )}
@@ -136,11 +137,9 @@ const Auth = () => {
             {mode === "signup" ? "Create account" : "Log in"}
             <ArrowRight className="h-4 w-4" strokeWidth={2} />
           </button>
-        </div>
 
-        <div className="mt-5 rounded-[28px] bg-primary-soft/60 p-5 ring-1 ring-primary/10">
-          <p className="text-[12.5px] leading-relaxed text-foreground/80 text-balance">
-            Undo keeps this simple. No inbox, no dashboards, no account maze. Just your items, reminders, and decisions in one calm place.
+          <p className="pt-1 text-center text-[12px] leading-relaxed text-muted-foreground">
+            Gmail connects after signup. You review everything first.
           </p>
         </div>
 

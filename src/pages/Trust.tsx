@@ -6,8 +6,6 @@ import {
   PackageOpen,
   Receipt,
   ShieldCheck,
-  Lock,
-  Eye,
   XCircle,
   CheckCircle2,
 } from "lucide-react";
@@ -35,8 +33,8 @@ const doesNotDo = [
 
 const faqs = [
   {
-    q: "Why does Undo need Gmail access?",
-    a: "Most trials, renewals, returns, and bills first show up as a confirmation email. Undo looks for those signals so you can act before the deadline.",
+    q: "Why does Undo ask for Gmail access?",
+    a: "Most trials, renewals, returns, and bills first show up in email. Undo uses read-only access to find likely deadlines, then you review every suggestion.",
   },
   {
     q: "Does Undo change anything in my inbox?",
@@ -48,11 +46,15 @@ const faqs = [
   },
   {
     q: "What does Undo store?",
-    a: "Just enough to show a candidate — merchant, date, amount — plus the items you choose to keep and your account basics.",
+    a: "Just enough to show a suggestion: merchant, date, amount, plus the items you choose to keep and your account basics.",
   },
   {
     q: "Does Undo support other inboxes?",
     a: "Gmail is the first integration. Anything outside Gmail can be added manually.",
+  },
+  {
+    q: "Do I review suggestions before they become items?",
+    a: "Yes. Nothing becomes active until you keep it.",
   },
 ];
 
@@ -167,8 +169,8 @@ export default function Trust() {
               ))}
             </ul>
           </div>
-          <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
-            Read-only means read-only.
+          <p className="mt-4 text-center text-[12.5px] text-muted-foreground">
+            Undo can look for matching signals, but it cannot send, delete, label, or move emails.
           </p>
         </Section>
 
@@ -181,7 +183,7 @@ export default function Trust() {
           <div className="overflow-hidden rounded-3xl border border-primary/20 bg-primary-soft/60 p-7 shadow-soft">
             <ol className="space-y-4">
               {[
-                ["Undo suggests", "Candidates show up in a quiet review screen."],
+                ["Undo suggests", "Suggestions appear in a quiet review screen."],
                 ["You decide", "Skim merchant, date, amount. Keep or skip."],
                 ["You stay in control", "Disconnect Gmail anytime in Settings."],
               ].map(([title, body], i) => (
@@ -213,10 +215,10 @@ export default function Trust() {
                   value={`item-${i}`}
                   className="border-border/70 px-4 last:border-b-0"
                 >
-                  <AccordionTrigger className="text-left text-[14.5px] font-medium text-foreground hover:no-underline">
+                  <AccordionTrigger className="text-left text-[15px] leading-[1.45] tracking-normal text-foreground hover:no-underline">
                     {q}
                   </AccordionTrigger>
-                  <AccordionContent className="pb-5 text-[14px] leading-[1.6] text-muted-foreground">
+                  <AccordionContent className="pb-5 font-sans text-[14px] leading-[1.65] text-muted-foreground">
                     {a}
                   </AccordionContent>
                 </AccordionItem>
