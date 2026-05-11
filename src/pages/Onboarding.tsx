@@ -22,6 +22,8 @@ import {
   GMAIL_RATE_LIMIT_COOLDOWN_MS,
   getGmailRetryAfter,
   isGmailRateLimitError,
+  isGmailReconnectError,
+  isGmailReconnectMessage,
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
 import { toast } from "sonner";
@@ -219,10 +221,14 @@ const Onboarding = () => {
       navigate("/onboarding", { replace: true });
     } catch (error) {
       const isRateLimited = isGmailRateLimitError(error);
+      const needsReconnect = isGmailReconnectError(error);
       const message = formatGmailSyncError(error);
       console.error("[Undo Gmail] first scan failed", error);
       if (isRateLimited) {
         setGmailRetryAfter(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS);
+      }
+      if (needsReconnect) {
+        clearGmailRetryAfter();
       }
       await refresh().catch(() => undefined);
       setSyncError(message);
@@ -329,6 +335,10 @@ const Onboarding = () => {
     )));
   };
 
+  const connectedStepError = syncError
+    ?? (isGmailReconnectMessage(gmailConnection?.lastSyncError) ? gmailConnection?.lastSyncError ?? null : null);
+  const connectedStepNeedsReconnect = isGmailReconnectMessage(connectedStepError);
+
   return (
     <div className="min-h-screen w-full bg-background">
       <div
@@ -378,7 +388,9 @@ const Onboarding = () => {
         {!loadingCandidates && step === "connected" && (
           <ConnectedStep
             picked={picked}
-            syncError={syncError}
+            syncError={connectedStepError}
+            needsReconnect={connectedStepNeedsReconnect}
+            onReconnect={() => void connectGmail()}
             onStartScan={() => void startFirstScan()}
             onSkip={() => void skipGmail()}
             onBack={() => setStep("permission")}
@@ -636,10 +648,12 @@ function PermissionStep({
 }
 
 function ConnectedStep({
-  picked, syncError, onStartScan, onSkip, onBack,
+  picked, syncError, needsReconnect, onReconnect, onStartScan, onSkip, onBack,
 }: {
   picked: Category[];
   syncError: string | null;
+  needsReconnect: boolean;
+  onReconnect: () => void | Promise<void>;
   onStartScan: () => void | Promise<void>;
   onSkip: () => void | Promise<void>;
   onBack: () => void;
@@ -703,11 +717,15 @@ function ConnectedStep({
 
       <footer className="px-7 pb-10 pt-8">
         <button
-          onClick={() => void onStartScan()}
+          onClick={() => void (needsReconnect ? onReconnect() : onStartScan())}
           className="group flex w-full items-center justify-center gap-2 rounded-full bg-foreground py-4 text-[14px] font-medium text-background shadow-glow transition-all active:scale-[0.99]"
         >
-          <Sparkles className="h-4 w-4" strokeWidth={1.9} />
-          Start first scan
+          {needsReconnect ? (
+            <Mail className="h-4 w-4" strokeWidth={1.9} />
+          ) : (
+            <Sparkles className="h-4 w-4" strokeWidth={1.9} />
+          )}
+          {needsReconnect ? "Reconnect Gmail" : "Start first scan"}
         </button>
         <button
           onClick={() => void onSkip()}

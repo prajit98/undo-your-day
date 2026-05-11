@@ -1,5 +1,6 @@
 export const GMAIL_SYNC_RETRY_AFTER_KEY = "undo.gmail.sync-retry-after";
 export const GMAIL_RATE_LIMIT_COOLDOWN_MS = 60_000;
+export const GMAIL_RECONNECT_MESSAGE = "Gmail needs to be reconnected.";
 
 function hasSessionStorage() {
   return typeof window !== "undefined" && Boolean(window.sessionStorage);
@@ -49,17 +50,39 @@ export function isGmailRateLimitError(error: unknown) {
   return errorCode(error) === "gmail_rate_limited";
 }
 
-export function formatGmailSyncError(error: unknown) {
+export function isGmailReconnectError(error: unknown) {
   const code = errorCode(error);
   const status = errorStatus(error);
+  const message = errorMessage(error);
+
+  return code === "gmail_reconnect_required"
+    || code === "gmail_refresh_token_missing"
+    || code === "gmail_not_connected"
+    || status === 409
+    || isGmailReconnectMessage(message);
+}
+
+export function isGmailReconnectMessage(message: string | null | undefined) {
+  if (!message) return false;
+
+  const normalized = message.toLowerCase();
+  return normalized.includes("gmail needs to be reconnected")
+    || normalized.includes("reconnect gmail")
+    || normalized.includes("permission has expired")
+    || normalized.includes("expired or revoked")
+    || normalized.includes("invalid_grant");
+}
+
+export function formatGmailSyncError(error: unknown) {
+  const code = errorCode(error);
   const message = errorMessage(error);
 
   if (code === "gmail_rate_limited") {
     return "Gmail is busy right now. Please wait a minute and try again.";
   }
 
-  if (code === "gmail_not_connected" || status === 409) {
-    return "Undo needs you to reconnect Gmail before scanning again.";
+  if (isGmailReconnectError(error)) {
+    return GMAIL_RECONNECT_MESSAGE;
   }
 
   if (message && !isTechnicalRecursionMessage(message)) {

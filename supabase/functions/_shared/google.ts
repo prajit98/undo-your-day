@@ -12,6 +12,20 @@ export interface GoogleTokenResponse {
   token_type?: string;
 }
 
+export class GoogleTokenError extends Error {
+  code: string;
+  description?: string;
+  status: number;
+
+  constructor(input: { code: string; description?: string; status: number }) {
+    super(input.description ?? input.code);
+    this.name = "GoogleTokenError";
+    this.code = input.code;
+    this.description = input.description;
+    this.status = input.status;
+  }
+}
+
 function requiredEnv(name: string) {
   const value = Deno.env.get(name)?.trim();
   if (!value) {
@@ -56,10 +70,35 @@ async function readTokenResponse(response: Response) {
   const text = await response.text();
 
   if (!response.ok) {
-    throw new Error(text || "Google token request failed.");
+    let parsed: Record<string, unknown> | null = null;
+    try {
+      parsed = text ? JSON.parse(text) as Record<string, unknown> : null;
+    } catch {
+      parsed = null;
+    }
+
+    throw new GoogleTokenError({
+      code: typeof parsed?.error === "string" ? parsed.error : "google_token_request_failed",
+      description: typeof parsed?.error_description === "string" ? parsed.error_description : undefined,
+      status: response.status,
+    });
   }
 
   return JSON.parse(text) as GoogleTokenResponse;
+}
+
+export function isGoogleInvalidGrantError(error: unknown) {
+  if (error instanceof GoogleTokenError) {
+    return error.code === "invalid_grant";
+  }
+
+  if (error instanceof Error) {
+    const normalized = error.message.toLowerCase();
+    return normalized.includes("invalid_grant")
+      || normalized.includes("expired or revoked");
+  }
+
+  return false;
 }
 
 export async function exchangeCodeForTokens(code: string) {

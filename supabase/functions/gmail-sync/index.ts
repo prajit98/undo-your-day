@@ -8,7 +8,7 @@ import {
   type GmailMessage,
 } from "../_shared/gmail.ts";
 import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
-import { refreshAccessToken } from "../_shared/google.ts";
+import { isGoogleInvalidGrantError, refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
 import {
   decryptGmailRefreshToken,
@@ -28,6 +28,7 @@ const DIAGNOSTIC_QUERY = "newer_than:30d";
 const DIAGNOSTIC_MAX_RESULTS = 2;
 const DIAGNOSTIC_MAX_FETCHES = 1;
 const DIAGNOSTIC_CATEGORIES: GmailCategory[] = ["trial", "renewal", "return", "bill"];
+const GMAIL_RECONNECT_MESSAGE = "Gmail needs to be reconnected.";
 
 type StoredTokenRow = {
   access_token?: string | null;
@@ -364,8 +365,23 @@ async function resolveAccessToken(userId: string, tokenRow: StoredTokenRow, admi
   try {
     refreshed = await refreshAccessToken(refreshToken);
   } catch (error) {
+    if (isGoogleInvalidGrantError(error)) {
+      throw new SyncError({
+        message: GMAIL_RECONNECT_MESSAGE,
+        stage: "token_refresh",
+        code: "gmail_reconnect_required",
+        status: 409,
+        details: {
+          userId,
+          tokenRefreshAttempted: true,
+          tokenRefreshSucceeded: false,
+          reason: "invalid_grant",
+        },
+      });
+    }
+
     throw new SyncError({
-      message: error instanceof Error ? error.message : "Could not refresh Gmail access.",
+      message: "Could not refresh Gmail access.",
       stage: "token_refresh",
       code: "gmail_refresh_failed",
       status: 502,

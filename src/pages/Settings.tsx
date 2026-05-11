@@ -15,6 +15,8 @@ import {
   GMAIL_RATE_LIMIT_COOLDOWN_MS,
   getGmailRetryAfter,
   isGmailRateLimitError,
+  isGmailReconnectError,
+  isGmailReconnectMessage,
   setGmailRetryAfter,
 } from "@/lib/gmail-flow";
 import { appRepository } from "@/lib/persistence";
@@ -93,8 +95,14 @@ const Settings = () => {
   const accountName = user?.name?.trim() || user?.email?.trim() || "Signed in";
   const accountMeta = user?.name?.trim() ? user?.email?.trim() ?? null : null;
   const hasScannedGmail = Boolean(gmailConnection?.lastSyncedAt) || gmailConnection?.lastSyncStatus === "error";
+  const gmailNeedsReconnect = Boolean(
+    gmailConnection
+      && (isGmailReconnectMessage(gmailActionError) || isGmailReconnectMessage(gmailConnection.lastSyncError)),
+  );
   const gmailScanLabel = !gmailConnection
     ? "Off"
+    : gmailNeedsReconnect
+      ? "Reconnect"
     : gmailConnection.lastSyncStatus === "error"
       ? "Needs retry"
       : hasScannedGmail
@@ -102,6 +110,8 @@ const Settings = () => {
         : "Ready to scan";
   const gmailScanSummary = !gmailConnection
     ? "Not connected."
+    : gmailNeedsReconnect
+      ? "Your Gmail permission has expired or was removed."
     : gmailConnection.lastSyncStatus === "error"
       ? "Last scan didn't finish."
       : hasScannedGmail
@@ -109,6 +119,8 @@ const Settings = () => {
         : "First scan not run yet.";
   const gmailActionLabel = !gmailConnection
     ? "Connect Gmail"
+    : gmailNeedsReconnect
+      ? "Reconnect Gmail"
     : hasScannedGmail
       ? "Scan Gmail now"
       : "Run first scan";
@@ -184,9 +196,13 @@ const Settings = () => {
       toast.success("Gmail is connected. Nothing urgent showed up.");
     } catch (error) {
       const isRateLimited = isGmailRateLimitError(error);
+      const needsReconnect = isGmailReconnectError(error);
       const message = formatGmailSyncError(error);
       if (isRateLimited) {
         setGmailRetryAfter(Date.now() + GMAIL_RATE_LIMIT_COOLDOWN_MS);
+      }
+      if (needsReconnect) {
+        clearGmailRetryAfter();
       }
       await refresh().catch(() => undefined);
       setGmailActionError(message);
@@ -285,7 +301,7 @@ const Settings = () => {
           </div>
 
           <button
-            onClick={() => void (gmailConnection ? runGmailScan() : connectGmail())}
+            onClick={() => void (!gmailConnection || gmailNeedsReconnect ? connectGmail() : runGmailScan())}
             disabled={scanningGmail}
             className="mt-4 w-full rounded-full bg-foreground py-3.5 text-[13px] font-medium text-background shadow-soft transition-transform active:scale-[0.99]"
           >
