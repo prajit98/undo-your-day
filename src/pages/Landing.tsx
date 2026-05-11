@@ -182,8 +182,8 @@ const Landing = () => {
               <em className="text-primary not-italic italic">before it's too late.</em>
             </h1>
             <p className="mt-7 max-w-[34rem] text-[17px] leading-[1.75] text-muted-foreground">
-              Undo finds likely trials, renewals, returns, and bills in Gmail, then brings them to
-              review before they turn into charges, late fees, or missed return windows.
+              Undo quietly finds likely trials, renewals, returns, and bills in
+              Gmail — and brings them up while there&apos;s still time to act.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
@@ -200,13 +200,11 @@ const Landing = () => {
                 See how it works
               </a>
             </div>
-            <p className="mt-4 inline-flex items-center gap-2 text-[12.5px] text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
-              Coming soon on iOS and Android
-            </p>
-            <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
+            <p className="mt-5 inline-flex items-center gap-2 text-[12.5px] text-muted-foreground">
               <Lock className="h-3 w-3 text-primary" strokeWidth={2} />
-              Read-only Gmail access. You review first.
+              Read-only Gmail · You review first
+              <span className="mx-1 h-1 w-1 rounded-full bg-border" />
+              Coming to iOS &amp; Android
             </p>
           </div>
 
