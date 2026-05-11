@@ -121,7 +121,7 @@ const Landing = () => {
         }}
       />
 
-      {/* Nav */}
+      {/* Nav — editorial: wordmark left, refined pill nav center, actions right */}
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6 sm:pt-7">
         <Link to="/" className="flex items-center gap-2.5 -ml-0.5">
           <span className="relative flex h-2 w-2">
@@ -132,20 +132,24 @@ const Landing = () => {
             Undo
           </span>
         </Link>
-        <div className="hidden items-center gap-1 md:flex">
-          <a
-            href="#how"
-            className="inline-flex rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            How it works
-          </a>
-          <Link
-            to="/trust"
-            className="inline-flex rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Trust
-          </Link>
+
+        <div className="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 md:block">
+          <div className="pointer-events-auto inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/80 p-1 shadow-soft backdrop-blur">
+            <a
+              href="#how"
+              className="inline-flex rounded-full px-3.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              How it works
+            </a>
+            <Link
+              to="/trust"
+              className="inline-flex rounded-full px-3.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Trust
+            </Link>
+          </div>
         </div>
+
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/auth"
