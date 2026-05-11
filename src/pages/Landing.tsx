@@ -387,21 +387,17 @@ const Landing = () => {
       </section>
 
       {/* Product preview */}
-      <section className="mx-auto mt-36 max-w-6xl px-6 sm:mt-44">
+      <section className="mx-auto mt-24 max-w-6xl px-6 sm:mt-28">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
             Inside Undo
           </p>
           <h2 className="mt-3 font-display text-[36px] leading-[1.05] tracking-snug sm:text-[48px]">
-            See how Undo works on screen.
+            From permission to peace of mind.
           </h2>
-          <p className="mt-4 max-w-[30rem] text-[14px] leading-relaxed text-muted-foreground">
-            These screens show the full path: Gmail scope, review first, and what still needs
-            action.
-          </p>
         </div>
 
-        <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { variant: "permission", label: "What Undo looks for" },
             { variant: "scanning", label: "Finding likely matches" },
@@ -418,21 +414,6 @@ const Landing = () => {
             </div>
           ))}
         </div>
-      </section>
-
-      {/* Why different */}
-      <section className="mx-auto mt-36 max-w-4xl px-6 text-center sm:mt-44">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-          Why it feels different
-        </p>
-        <h2 className="mt-4 font-display text-[40px] leading-[1.04] tracking-snug text-balance sm:text-[56px]">
-          Not a to-do app. <br />
-          <em className="text-primary not-italic italic">A protection layer.</em>
-        </h2>
-        <p className="mx-auto mt-7 max-w-xl text-[16.5px] leading-relaxed text-muted-foreground">
-          Undo is for the small things that turn into charges, late fees, and missed windows, not
-          for managing your whole life.
-        </p>
       </section>
 
       {/* Waitlist */}
