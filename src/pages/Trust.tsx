@@ -108,18 +108,17 @@ export default function Trust() {
           <h1 className="mt-6 font-display text-[44px] leading-[1.04] tracking-tight text-foreground sm:text-[56px]">
             Your inbox, handled carefully.
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[15.5px] leading-[1.6] text-muted-foreground">
-            Read-only Gmail access. Undo only looks for trials, renewals,
-            returns, and bills — and you review before anything is kept.
+          <p className="mx-auto mt-5 max-w-lg text-[15.5px] leading-[1.6] text-muted-foreground">
+            Read-only Gmail access. You review everything before it&apos;s kept.
           </p>
 
-          {/* Anchor nav, no big primary CTA up top */}
-          <nav className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12.5px] text-muted-foreground">
+          {/* Anchor nav — refined pill */}
+          <nav className="mx-auto mt-8 inline-flex max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-border/70 bg-card/80 p-1 shadow-soft backdrop-blur">
             {sectionAnchors.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                className="inline-flex rounded-full px-3 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
                 {s.label}
               </a>
@@ -226,33 +225,20 @@ export default function Trust() {
           </div>
         </Section>
 
-        {/* Soft closing — no pushy connect CTA */}
-        <section className="mt-16 text-center">
+        {/* Soft closing — single, calm reassurance */}
+        <section className="mt-20 text-center">
           <CheckCircle2 className="mx-auto h-5 w-5 text-primary" />
-          <p className="mt-4 font-display text-[26px] leading-[1.15] tracking-tight text-foreground">
+          <p className="mt-4 font-display text-[28px] leading-[1.15] tracking-tight text-foreground sm:text-[32px]">
             Built to be helpful, not invasive.
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
               to={primaryHref}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-[13.5px] font-medium text-foreground shadow-soft transition-colors hover:bg-secondary"
             >
               {primaryLabel}
             </Link>
-            <button
-              onClick={() => navigate(-1)}
-              className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
-            >
-              Go back
-            </button>
           </div>
-          <p className="mt-4 inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
-            <Lock className="h-3 w-3 text-primary" />
-            Read-only Gmail access · You review first
-            <span className="mx-1">·</span>
-            <Eye className="h-3 w-3 text-primary" />
-            Disconnect anytime
-          </p>
         </section>
       </main>
     </div>
@@ -271,7 +257,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="mt-14 scroll-mt-24">
+    <section id={id} className="mt-16 scroll-mt-24 sm:mt-20">
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-primary">
         {eyebrow}
       </p>
