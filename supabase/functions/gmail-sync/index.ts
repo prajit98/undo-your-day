@@ -443,6 +443,50 @@ function safeMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function obligationKeyForCandidate(candidate: Candidate) {
+  const merchant = (candidate.merchant ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const amount = typeof candidate.amountValue === "number"
+    ? candidate.amountValue.toFixed(2)
+    : "";
+  const currency = candidate.currency ?? "";
+  const dueDay = candidate.dueAt ? candidate.dueAt.slice(0, 10) : "";
+
+  return [
+    candidate.category,
+    merchant || candidate.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(),
+    amount,
+    currency,
+    dueDay,
+  ].join("|");
+}
+
+function candidateConfidenceScore(candidate: Candidate) {
+  let score = 0;
+  if (candidate.merchant) score += 2;
+  if (typeof candidate.amountValue === "number") score += 2;
+  if (candidate.dueAt) score += 1;
+  if (candidate.category === "bill") score += 1;
+  return score;
+}
+
+function dedupeCandidatesByObligation(candidates: Candidate[]) {
+  const byObligation = new Map<string, Candidate>();
+
+  candidates.forEach((candidate) => {
+    const key = obligationKeyForCandidate(candidate);
+    const existing = byObligation.get(key);
+
+    if (!existing || candidateConfidenceScore(candidate) > candidateConfidenceScore(existing)) {
+      byObligation.set(key, candidate);
+    }
+  });
+
+  return Array.from(byObligation.values());
+}
+
 async function runGmailDiagnostic(input: {
   requestId: string;
   userId: string;
@@ -1102,9 +1146,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const deduped = Array.from(
+    const dedupedByMessage = Array.from(
       new Map(candidateResults.map((candidate) => [candidate.sourceMessageId, candidate])).values(),
-    ).sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
+    );
+
+    const deduped = dedupeCandidatesByObligation(dedupedByMessage)
+      .sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
       .slice(0, MAX_CANDIDATES_TO_RETURN);
 
     const pendingCandidates = await persistCandidateItems(user.id, deduped, admin, { requestId });

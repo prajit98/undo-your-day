@@ -55,6 +55,8 @@ export interface GmailCandidateTrace {
     containsDueOn: boolean;
     containsPoundAmount: boolean;
     containsBillKeyword: boolean;
+    containsReceiptLikeLanguage: boolean;
+    containsStrongBillEvidence: boolean;
   };
 }
 
@@ -209,6 +211,56 @@ const CATEGORY_KEYWORDS: Record<GmailCategory, string[]> = {
     "auto-pay",
   ],
 };
+
+const RECEIPT_LIKE_BILL_PATTERNS = [
+  /\breceipts?\b/,
+  /\btrip receipt\b/,
+  /\bride receipt\b/,
+  /\bticket confirmation\b/,
+  /\bbooking confirmation\b/,
+  /\border confirmation\b/,
+  /\bpayment confirmation\b/,
+  /\bpayment successful\b/,
+  /\bpayment received\b/,
+  /\bpaid (?:with|by|using|on)\b/,
+  /\bthanks for your (?:order|purchase|payment)\b/,
+  /\byour (?:ride|trip|ticket|booking) (?:with|from|is)\b/,
+];
+
+const STRONG_BILL_EVIDENCE_PATTERNS = [
+  /\binvoice\b.{0,120}\bdue\b/,
+  /\bbill\b.{0,120}\bdue\b/,
+  /\bstatement\b.{0,120}\bdue\b/,
+  /\bpayment\s+(?:is\s+)?due\b/,
+  /\bbalance\s+due\b/,
+  /\bamount\s+due\b/,
+  /\bminimum\s+payment\s+due\b/,
+  /\btotal\s+due\b/,
+  /\bdue\s+(?:on|by|date)\b/,
+  /\bpay\s+by\b/,
+  /\boverdue\b/,
+  /\bpast\s+due\b/,
+  /\blate\s+fee\b/,
+];
+
+const EXPLICIT_OVERDUE_BILL_PATTERNS = [
+  /\boverdue\b/,
+  /\bpast\s+due\b/,
+  /\blate\s+fee\b/,
+];
+
+const UNPAID_BILL_EVIDENCE_PATTERNS = [
+  /\binvoice\b.{0,120}\bdue\b/,
+  /\bbill\b.{0,120}\bdue\b/,
+  /\bstatement\b.{0,120}\bdue\b/,
+  /\bpayment\s+(?:is\s+)?due\b/,
+  /\bbalance\s+due\b/,
+  /\bamount\s+due\b/,
+  /\bminimum\s+payment\s+due\b/,
+  /\btotal\s+due\b/,
+  /\bpay\s+by\b/,
+  ...EXPLICIT_OVERDUE_BILL_PATTERNS,
+];
 
 const MONTH_LOOKUP: Record<string, number> = {
   jan: 0,
@@ -517,62 +569,62 @@ function dateFromBaseDays(internalDate: string | undefined, days: number) {
   return withTime(date);
 }
 
-function extractDueDate(text: string, internalDate: string | undefined, category: GmailCategory) {
+function extractDueDateInfo(text: string, internalDate: string | undefined, category: GmailCategory) {
   const lower = text.toLowerCase();
 
   if (/\btonight\b/.test(lower)) {
-    return withTime(new Date(), 18).toISOString();
+    return { dueAt: withTime(new Date(), 18).toISOString(), inferred: false };
   }
 
   if (/\btoday\b/.test(lower)) {
-    return withTime(new Date()).toISOString();
+    return { dueAt: withTime(new Date()).toISOString(), inferred: false };
   }
 
   if (/\btomorrow\b/.test(lower)) {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return withTime(tomorrow).toISOString();
+    return { dueAt: withTime(tomorrow).toISOString(), inferred: false };
   }
 
   const inDaysMatch = lower.match(/\bin (\d{1,2}) days?\b/);
   if (inDaysMatch) {
     const next = new Date();
     next.setDate(next.getDate() + Number(inDaysMatch[1]));
-    return withTime(next).toISOString();
+    return { dueAt: withTime(next).toISOString(), inferred: false };
   }
 
   const daysLeftMatch = lower.match(/\b(\d{1,3})\s+days?\s+(?:left|remaining)\b/);
   if (daysLeftMatch) {
-    return dateFromBaseDays(internalDate, Number(daysLeftMatch[1])).toISOString();
+    return { dueAt: dateFromBaseDays(internalDate, Number(daysLeftMatch[1])).toISOString(), inferred: false };
   }
 
   const withinDaysMatch = lower.match(/\bwithin\s+(\d{1,3})\s+days?\b/);
   if (withinDaysMatch && category === "return") {
-    return dateFromBaseDays(internalDate, Number(withinDaysMatch[1])).toISOString();
+    return { dueAt: dateFromBaseDays(internalDate, Number(withinDaysMatch[1])).toISOString(), inferred: false };
   }
 
   const monthMatch = lower.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b/);
   if (monthMatch) {
     const date = parseMonthDate(monthMatch);
-    if (date) return date.toISOString();
+    if (date) return { dueAt: date.toISOString(), inferred: false };
   }
 
   const isoMatch = lower.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
   if (isoMatch) {
     const date = parseIsoDate(isoMatch);
-    if (date) return date.toISOString();
+    if (date) return { dueAt: date.toISOString(), inferred: false };
   }
 
   const numericMatch = lower.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
   if (numericMatch) {
     const date = parseNumericDate(numericMatch);
-    if (date) return date.toISOString();
+    if (date) return { dueAt: date.toISOString(), inferred: false };
   }
 
   const weekdayMatch = lower.match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
   if (weekdayMatch) {
     const date = nextWeekday(WEEKDAY_LOOKUP[weekdayMatch[1]]);
-    return date.toISOString();
+    return { dueAt: date.toISOString(), inferred: false };
   }
 
   const base = baseEmailDate(internalDate);
@@ -584,7 +636,7 @@ function extractDueDate(text: string, internalDate: string | undefined, category
   if (category === "return") fallback.setDate(fallback.getDate() + 10);
   if (category === "bill") fallback.setDate(fallback.getDate() + 5);
 
-  return fallback.toISOString();
+  return { dueAt: fallback.toISOString(), inferred: true };
 }
 
 function scoreCategory(text: string, category: GmailCategory) {
@@ -610,6 +662,30 @@ function chooseCategory(text: string, hint: GmailCategory, allowed: GmailCategor
   }
 
   return bestCategory;
+}
+
+function hasPattern(text: string, patterns: RegExp[]) {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function billConfidence(input: {
+  text: string;
+  dueDateInferred: boolean;
+}) {
+  const hasStrongBillEvidence = hasPattern(input.text, STRONG_BILL_EVIDENCE_PATTERNS);
+  const hasReceiptLikeLanguage = hasPattern(input.text, RECEIPT_LIKE_BILL_PATTERNS);
+  const hasExplicitOverdueLanguage = hasPattern(input.text, EXPLICIT_OVERDUE_BILL_PATTERNS);
+  const hasUnpaidBillEvidence = hasPattern(input.text, UNPAID_BILL_EVIDENCE_PATTERNS);
+
+  return {
+    hasStrongBillEvidence,
+    hasReceiptLikeLanguage,
+    hasExplicitOverdueLanguage,
+    hasUnpaidBillEvidence,
+    shouldSurface: hasStrongBillEvidence
+      && (!hasReceiptLikeLanguage || hasUnpaidBillEvidence)
+      && (!input.dueDateInferred || hasExplicitOverdueLanguage),
+  };
 }
 
 function shortDue(dateIso: string) {
@@ -738,12 +814,42 @@ export function messageToCandidateWithTrace(message: GmailMessage, hint: GmailCa
     searchableText,
   } = buildMessageContext(message);
   let candidate: Candidate | null = null;
+  let billSignals: ReturnType<typeof billConfidence> | null = null;
 
   if (searchableText) {
     const category = chooseCategory(searchableText, hint, allowed);
 
     if (category) {
-      const dueAt = extractDueDate(rawText, message.internalDate, category);
+      const dueDateInfo = extractDueDateInfo(rawText, message.internalDate, category);
+      const dueAt = dueDateInfo.dueAt;
+
+      if (category === "bill") {
+        billSignals = billConfidence({
+          text: searchableText,
+          dueDateInferred: dueDateInfo.inferred,
+        });
+
+        if (!billSignals.shouldSurface) {
+          const trace: GmailCandidateTrace = {
+            sourceMessageId: message.id,
+            hint,
+            candidateCreated: false,
+            searchableTextLength: searchableText.length,
+            flags: {
+              containsBrightNet: searchableText.includes("brightnet"),
+              containsInvoice: searchableText.includes("invoice"),
+              containsDueOn: searchableText.includes("due on"),
+              containsPoundAmount: /£\s?\d/.test(rawText),
+              containsBillKeyword: CATEGORY_KEYWORDS.bill.some((keyword) => searchableText.includes(keyword)),
+              containsReceiptLikeLanguage: billSignals.hasReceiptLikeLanguage,
+              containsStrongBillEvidence: billSignals.hasStrongBillEvidence,
+            },
+          };
+
+          return { candidate: null, trace };
+        }
+      }
+
       const parsedAmount = extractAmount(rawText);
       const amountValue = parsedAmount?.value;
       const amountCurrency = parsedAmount?.currency;
@@ -784,6 +890,8 @@ export function messageToCandidateWithTrace(message: GmailMessage, hint: GmailCa
       containsDueOn: searchableText.includes("due on"),
       containsPoundAmount: /£\s?\d/.test(rawText),
       containsBillKeyword: CATEGORY_KEYWORDS.bill.some((keyword) => searchableText.includes(keyword)),
+      containsReceiptLikeLanguage: billSignals?.hasReceiptLikeLanguage ?? hasPattern(searchableText, RECEIPT_LIKE_BILL_PATTERNS),
+      containsStrongBillEvidence: billSignals?.hasStrongBillEvidence ?? hasPattern(searchableText, STRONG_BILL_EVIDENCE_PATTERNS),
     },
   };
 
