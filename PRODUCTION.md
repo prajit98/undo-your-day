@@ -14,6 +14,7 @@ Before launch:
 - set the production environment variables from `.env.example`
 - set the production Edge Function secrets from `supabase/functions/.env.example`
 - set `GMAIL_TOKEN_ENCRYPTION_KEY` before deploying Gmail functions
+- optionally enable the Gmail AI verifier with `GMAIL_AI_VERIFIER_ENABLED=true` and a server-only verifier API key
 - verify RLS policies in production
 - turn on database backups
 
@@ -25,6 +26,7 @@ Do not ship with:
 
 Generate `GMAIL_TOKEN_ENCRYPTION_KEY` with `openssl rand -base64 32`.
 Existing plaintext Gmail refresh tokens are still readable for rollout safety, but new OAuth writes and successful refreshes store the encrypted `enc:v1:` format.
+The Gmail AI verifier is server-side only. It checks already-shortlisted message excerpts before candidates are persisted and should be enabled with Supabase Edge Function secrets, not client environment variables.
 
 ## 2. Native shell
 

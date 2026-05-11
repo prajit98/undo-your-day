@@ -67,6 +67,13 @@ Undo's Gmail MVP uses Supabase Edge Functions so OAuth tokens stay off the clien
    - `GOOGLE_OAUTH_REDIRECT_URI`
    - `APP_PUBLIC_URL`
    - `GMAIL_TOKEN_ENCRYPTION_KEY`
+   - optional AI verifier secrets:
+     - `GMAIL_AI_VERIFIER_ENABLED`
+     - `GMAIL_AI_VERIFIER_API_KEY` or `OPENAI_API_KEY`
+     - `GMAIL_AI_VERIFIER_ENDPOINT`
+     - `GMAIL_AI_VERIFIER_MODEL`
+     - `GMAIL_AI_VERIFIER_MIN_CONFIDENCE`
+     - `GMAIL_AI_VERIFIER_TIMEOUT_MS`
 5. Deploy these functions:
    - `gmail-authorize`
    - `gmail-callback`
@@ -77,6 +84,7 @@ Undo's Gmail MVP uses Supabase Edge Functions so OAuth tokens stay off the clien
 Generate one with `openssl rand -base64 32` and store it as a Supabase Edge Function secret.
 
 The Gmail scope for this MVP is read-only and Undo still sends every match through review before anything is kept.
+When `GMAIL_AI_VERIFIER_ENABLED=true`, `gmail-sync` sends only shortlisted Gmail excerpts to an OpenAI-compatible verifier before saving review suggestions.
 
 ## Native app shell
 

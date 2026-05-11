@@ -2,11 +2,17 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 import {
   buildSearchQueries,
+  buildVerificationEmailContext,
   messageToCandidate,
   type Candidate,
   type GmailCategory,
+  type GmailVerificationEmailContext,
   type GmailMessage,
 } from "../_shared/gmail.ts";
+import {
+  getCandidateVerifierConfig,
+  verifyCandidateWithAi,
+} from "../_shared/candidate-verifier.ts";
 import { corsHeaders, withCorsHeaders } from "../_shared/cors.ts";
 import { isGoogleInvalidGrantError, refreshAccessToken } from "../_shared/google.ts";
 import { createAdminClient, requireUser } from "../_shared/supabase.ts";
@@ -1021,12 +1027,14 @@ Deno.serve(async (req) => {
     const categories = allowedCategories.length > 0 ? allowedCategories : ["trial", "renewal", "return", "bill"];
     const accessToken = await ensureAccessToken(user.id, tokenRow as StoredTokenRow, admin);
     const searchQueries = buildSearchQueries(categories).slice(0, MAX_LIST_QUERIES_PER_RUN);
+    const verifierConfig = getCandidateVerifierConfig((name) => Deno.env.get(name));
 
     logSyncEvent("log", "starting_sync", {
       requestId,
       userId: user.id,
       categories,
       searchQueryCount: searchQueries.length,
+      aiVerifierEnabled: verifierConfig.enabled,
     });
 
     const listedMessages: Array<{ id: string; category: GmailCategory }> = [];
@@ -1096,7 +1104,8 @@ Deno.serve(async (req) => {
     }
 
     const messageFailures: Array<Record<string, unknown>> = [];
-    const candidateResults: Candidate[] = [];
+    const extractedCandidates: Candidate[] = [];
+    const verificationContexts = new Map<string, GmailVerificationEmailContext>();
 
     for (const [messageId, hint] of messageIdsByHint.entries()) {
       try {
@@ -1104,7 +1113,8 @@ Deno.serve(async (req) => {
         const candidate = messageToCandidate(message, hint, categories);
 
         if (candidate) {
-          candidateResults.push(candidate);
+          extractedCandidates.push(candidate);
+          verificationContexts.set(candidate.sourceMessageId, buildVerificationEmailContext(message));
         }
       } catch (error) {
         const failure = normalizeError(error);
@@ -1120,7 +1130,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (candidateResults.length === 0 && messageFailures.some((failure) => failure.code === "gmail_rate_limited")) {
+    if (extractedCandidates.length === 0 && messageFailures.some((failure) => failure.code === "gmail_rate_limited")) {
       throw new SyncError({
         message: "Gmail is busy right now. Please wait a minute and try again.",
         stage: "gmail_api",
@@ -1133,7 +1143,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (candidateResults.length === 0 && messageFailures.length === messageIdsByHint.size && messageIdsByHint.size > 0) {
+    if (extractedCandidates.length === 0 && messageFailures.length === messageIdsByHint.size && messageIdsByHint.size > 0) {
       throw new SyncError({
         message: "Undo could not finish reading Gmail right now.",
         stage: "candidate_processing",
@@ -1147,10 +1157,39 @@ Deno.serve(async (req) => {
     }
 
     const dedupedByMessage = Array.from(
-      new Map(candidateResults.map((candidate) => [candidate.sourceMessageId, candidate])).values(),
+      new Map(extractedCandidates.map((candidate) => [candidate.sourceMessageId, candidate])).values(),
     );
 
-    const deduped = dedupeCandidatesByObligation(dedupedByMessage)
+    const candidatesForVerification = dedupeCandidatesByObligation(dedupedByMessage);
+    const verifiedCandidates: Candidate[] = [];
+
+    for (const candidate of candidatesForVerification) {
+      const verification = await verifyCandidateWithAi({
+        candidate,
+        email: verificationContexts.get(candidate.sourceMessageId) ?? {
+          subject: candidate.title,
+          from: candidate.merchant ?? "",
+          snippet: candidate.detail ?? "",
+          bodyExcerpt: "",
+        },
+      }, verifierConfig);
+
+      if (verification.enabled) {
+        logSyncEvent(verification.approved ? "log" : "warn", verification.approved ? "candidate_verifier_approved" : "candidate_verifier_rejected", {
+          requestId,
+          sourceMessageId: candidate.sourceMessageId,
+          category: verification.category ?? candidate.category,
+          confidence: verification.confidence,
+          rejectionCode: verification.rejectionCode,
+        });
+      }
+
+      if (verification.approved && verification.candidate) {
+        verifiedCandidates.push(verification.candidate);
+      }
+    }
+
+    const deduped = verifiedCandidates
       .sort((left, right) => +new Date(left.dueAt) - +new Date(right.dueAt))
       .slice(0, MAX_CANDIDATES_TO_RETURN);
 
@@ -1175,6 +1214,8 @@ Deno.serve(async (req) => {
       requestId,
       userId: user.id,
       fetchedMessageCount: messageIdsByHint.size,
+      extractedCandidateCount: extractedCandidates.length,
+      verificationCandidateCount: candidatesForVerification.length,
       candidateCount: deduped.length,
       pendingCandidateCount: pendingCandidates.length,
       listFailureCount: listFailures.length,

@@ -40,6 +40,14 @@ export interface GmailMessage {
   payload?: GmailMessagePart;
 }
 
+export interface GmailVerificationEmailContext {
+  subject: string;
+  from: string;
+  snippet: string;
+  bodyExcerpt: string;
+  internalDate?: string;
+}
+
 export interface GmailCandidateTrace {
   sourceMessageId: string;
   hint: GmailCategory;
@@ -786,6 +794,16 @@ function buildMessageContext(message: GmailMessage) {
     bodyText,
     rawText,
     searchableText,
+  };
+}
+
+export function buildVerificationEmailContext(message: GmailMessage): GmailVerificationEmailContext {
+  return {
+    subject: getHeader(message.payload, "Subject"),
+    from: getHeader(message.payload, "From"),
+    snippet: normalizeWhitespace(message.snippet ?? ""),
+    bodyExcerpt: normalizeWhitespace(extractBodyText(message.payload)).slice(0, 2_400),
+    internalDate: message.internalDate,
   };
 }
 
