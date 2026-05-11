@@ -502,7 +502,8 @@ const PhoneMock = ({ variant, small = false }: { variant: PhoneVariant; small?: 
 };
 
 const HeroScreen = () => (
-  <div className="flex h-full flex-col px-4 pt-9">
+  <div className="flex h-full flex-col px-3.5 pt-8">
+    {/* Top status row */}
     <div className="flex items-center justify-between">
       <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         Today · Tue Apr 22
@@ -513,69 +514,104 @@ const HeroScreen = () => (
       </span>
     </div>
 
-    <h3 className="mt-2 font-display text-[19px] leading-tight tracking-snug">
-      1 thing worth catching today.
+    {/* Editorial heading + summary rail */}
+    <h3 className="mt-2 font-display text-[18px] leading-[1.05] tracking-snug">
+      3 things need review.
     </h3>
-    <p className="mt-1 text-[9.5px] text-muted-foreground">$19.99 at risk</p>
+    <div className="mt-2 flex items-center justify-between rounded-xl border border-border/70 bg-card/90 px-2.5 py-1.5 shadow-soft">
+      <div className="flex items-baseline gap-1">
+        <span className="font-display text-[13px] leading-none tracking-snug">$137</span>
+        <span className="text-[8.5px] text-muted-foreground">at risk today</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">Trial</span>
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">Renewal</span>
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">Return</span>
+      </div>
+    </div>
 
+    {/* Standout urgent card */}
     <div
-      className="relative mt-3 overflow-hidden rounded-2xl border border-critical/25 p-3 shadow-card"
+      className="relative mt-2.5 overflow-hidden rounded-2xl border border-critical/25 p-2.5 shadow-card"
       style={{
         background:
           "linear-gradient(180deg, hsl(8 80% 98%) 0%, hsl(0 0% 100%) 60%)",
       }}
     >
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1 rounded-full bg-critical/12 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-critical">
+        <span className="inline-flex items-center gap-1 rounded-full bg-critical/12 px-1.5 py-0.5 text-[7.5px] font-semibold uppercase tracking-wider text-critical">
           <span className="h-1 w-1 rounded-full bg-critical" />
           Tomorrow
         </span>
-        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider text-chip-foreground">
+        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">
           Renewal
         </span>
       </div>
 
-      <p className="mt-2 text-[12px] font-semibold leading-tight">
-        Apple may renew tomorrow
+      <p className="mt-1.5 text-[11.5px] font-semibold leading-tight">
+        Apple iCloud+ renews tomorrow
       </p>
-      <p className="mt-0.5 text-[9px] text-muted-foreground">
-        iCloud+ 200GB · charges Wed
+      <p className="mt-0.5 text-[8.5px] text-muted-foreground">
+        200GB plan · charges Wed 8:14am
       </p>
 
-      <div className="mt-2.5 flex items-baseline justify-between">
-        <span className="font-display text-[22px] leading-none tracking-snug">
+      <div className="mt-2 flex items-baseline justify-between">
+        <span className="font-display text-[20px] leading-none tracking-snug">
           $19.99
         </span>
-        <span className="text-[8.5px] text-muted-foreground">at risk</span>
+        <span className="text-[8px] text-muted-foreground">/month at risk</span>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
-        <div className="rounded-full bg-foreground py-1.5 text-center text-[8.5px] font-medium text-background">
+      <div className="mt-2 grid grid-cols-3 gap-1">
+        <div className="rounded-full bg-foreground py-1 text-center text-[8px] font-medium text-background">
           Keep
         </div>
-        <div className="rounded-full border border-border bg-background py-1.5 text-center text-[8.5px] font-medium text-foreground">
+        <div className="rounded-full border border-border bg-background py-1 text-center text-[8px] font-medium text-foreground">
           Edit
         </div>
-        <div className="rounded-full border border-border bg-background py-1.5 text-center text-[8.5px] font-medium text-muted-foreground">
+        <div className="rounded-full border border-border bg-background py-1 text-center text-[8px] font-medium text-muted-foreground">
           Skip
         </div>
       </div>
     </div>
 
-    <div className="mt-2 rounded-xl border border-border bg-card/80 p-2.5">
-      <div className="flex items-center justify-between">
-        <span className="rounded-full bg-chip px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wider text-chip-foreground">
-          Return
-        </span>
-        <span className="text-[8.5px] text-muted-foreground">in 2 days</span>
+    {/* Calmer secondary cards */}
+    <div className="mt-2 space-y-1.5">
+      <div className="rounded-xl border border-border bg-card/90 p-2">
+        <div className="flex items-center justify-between">
+          <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">
+            Trial
+          </span>
+          <span className="text-[8px] text-muted-foreground">in 2 days</span>
+        </div>
+        <p className="mt-1 text-[10px] font-medium leading-tight">Notion AI trial converts</p>
+        <p className="mt-0.5 text-[8px] text-muted-foreground">$10.00 / mo · ends Thu</p>
       </div>
-      <p className="mt-1.5 text-[10.5px] font-medium leading-tight">
-        Adidas return window closes
-      </p>
-      <p className="mt-0.5 text-[8.5px] text-muted-foreground">$84.00 · order #A-2241</p>
+
+      <div className="rounded-xl border border-border bg-card/90 p-2">
+        <div className="flex items-center justify-between">
+          <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">
+            Return
+          </span>
+          <span className="text-[8px] text-muted-foreground">due this week</span>
+        </div>
+        <p className="mt-1 text-[10px] font-medium leading-tight">Adidas return window closes</p>
+        <p className="mt-0.5 text-[8px] text-muted-foreground">$84.00 · order #A-2241</p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card/90 p-2">
+        <div className="flex items-center justify-between">
+          <span className="rounded-full bg-chip px-1.5 py-0.5 text-[7.5px] font-medium uppercase tracking-wider text-chip-foreground">
+            Bill
+          </span>
+          <span className="text-[8px] text-muted-foreground">in 5 days</span>
+        </div>
+        <p className="mt-1 text-[10px] font-medium leading-tight">ConEd bill due</p>
+        <p className="mt-0.5 text-[8px] text-muted-foreground">$112.40 · autopay off</p>
+      </div>
     </div>
 
-    <div className="mt-auto flex items-center justify-center gap-1.5 pb-3 pt-2">
+    <div className="mt-auto flex items-center justify-center gap-1.5 pb-2.5 pt-2">
       <Lock className="h-2.5 w-2.5 text-primary" />
       <span className="text-[8px] text-muted-foreground">Read-only · You review first</span>
     </div>
