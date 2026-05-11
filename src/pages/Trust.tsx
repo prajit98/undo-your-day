@@ -270,7 +270,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="mt-14 scroll-mt-24">
+    <section id={id} className="mt-16 scroll-mt-24 sm:mt-20">
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-primary">
         {eyebrow}
       </p>
